@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaLLM
-from .memory import ChatMemory
+from .memory import ConversationMemory
 from .personality import Personality
 from .tools import execute_tool
 
@@ -44,18 +44,18 @@ class Gateway:
         self.system_prompt = self.personality.to_system_prompt()
         self.principles = self.personality.get_principles()
         self.llm = OllamaLLM(model=model, base_url=ollama_url)
-        self._memories: dict[str, ChatMemory] = {}
+        self.memory = ConversationMemory()
 
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.
 
         This is the main entry point — all transports call this.
         """
-        memory = self._get_memory(chat_id)
-        memory.add_message("user", text)
+        self.memory.add(chat_id, "user", text)
 
         # Build context from conversation history
-        messages = memory.get_context_messages()
+        history = self.memory.get_history(chat_id, limit=20)
+        messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
         # Call LLM
         llm_resp = self.llm.chat(
@@ -67,19 +67,19 @@ class Gateway:
         # Handle tool calls if any
         tools_called: list[dict[str, Any]] = []
         if llm_resp.tool_calls:
-            tools_called = self._handle_tool_calls(llm_resp, messages, memory)
+            tools_called = self._handle_tool_calls(llm_resp, messages)
 
         # Get final response text
         response_text = llm_resp.content or "I'm thinking about that..."
 
         # Save assistant response
-        memory.add_message("assistant", response_text)
+        self.memory.add(chat_id, "assistant", response_text)
 
         return GatewayResponse(
             text=response_text,
             tools_called=tools_called,
             principles=self.principles,
-            memory_count=memory.message_count(),
+            memory_count=self.memory.message_count(chat_id),
             input_tokens=llm_resp.input_tokens,
             output_tokens=llm_resp.output_tokens,
             duration_ms=llm_resp.duration_ms,
@@ -89,7 +89,6 @@ class Gateway:
         self,
         llm_resp: LLMResponse,
         messages: list[dict],
-        memory: ChatMemory,
     ) -> list[dict[str, Any]]:
         """Execute tool calls and re-query the LLM with results."""
         tools_called: list[dict[str, Any]] = []
@@ -124,12 +123,6 @@ class Gateway:
             llm_resp.output_tokens += follow_up.output_tokens
 
         return tools_called
-
-    def _get_memory(self, chat_id: str) -> ChatMemory:
-        """Get or create memory for a chat session."""
-        if chat_id not in self._memories:
-            self._memories[chat_id] = ChatMemory(chat_id)
-        return self._memories[chat_id]
 
     def get_personality_info(self) -> dict:
         """Return personality metadata for debug panels."""

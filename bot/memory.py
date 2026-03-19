@@ -1,92 +1,77 @@
-"""Conversation memory — per-chat history with fact extraction."""
+"""Conversation memory — JSONL-backed per-conversation history.
+
+Storage layout:
+    ~/.local/share/afterburner-bot/conversations/<conversation_id>.jsonl
+
+Each line is a JSON object:
+    {"role": "user"|"assistant", "content": "...", "timestamp": "...", "metadata": {...}}
+"""
 
 from __future__ import annotations
 
 import json
-import time
-from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
-MEMORY_ROOT = Path.home() / ".config" / "afterburner-bots" / "memory"
+from .config import DEFAULT_DATA_DIR
 
 
-@dataclass
-class Message:
-    role: str  # "user" or "assistant"
-    content: str
-    timestamp: float = field(default_factory=time.time)
+class ConversationMemory:
+    """Manages conversation history across multiple conversation IDs.
 
-    def to_dict(self) -> dict:
-        return {"role": self.role, "content": self.content, "ts": self.timestamp}
+    All conversations are stored as JSONL files in a single directory,
+    one file per conversation_id.
+    """
 
-    @classmethod
-    def from_dict(cls, d: dict) -> Message:
-        return cls(role=d["role"], content=d["content"], timestamp=d.get("ts", 0))
+    def __init__(self, storage_dir: Path | str | None = None) -> None:
+        self._storage_dir = Path(storage_dir) if storage_dir else DEFAULT_DATA_DIR / "conversations"
+        self._storage_dir.mkdir(parents=True, exist_ok=True)
 
+    def _conversation_path(self, conversation_id: str) -> Path:
+        return self._storage_dir / f"{conversation_id}.jsonl"
 
-class ChatMemory:
-    """Manages conversation history for a single chat session."""
+    def add(self, conversation_id: str, role: str, content: str, metadata: dict | None = None) -> dict:
+        """Append a message to a conversation's JSONL file."""
+        entry = {
+            "role": role,
+            "content": content,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "metadata": metadata or {},
+        }
+        path = self._conversation_path(conversation_id)
+        with open(path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+        return entry
 
-    def __init__(self, chat_id: str, memory_root: Path | None = None) -> None:
-        self.chat_id = chat_id
-        self.root = (memory_root or MEMORY_ROOT) / "conversations" / chat_id
-        self.root.mkdir(parents=True, exist_ok=True)
-        self.history_path = self.root / "history.jsonl"
-        self.facts_path = self.root / "facts.json"
-        self.summary_path = self.root / "summary.md"
-        self._messages: list[Message] = self._load_history()
+    def get_history(self, conversation_id: str, limit: int = 50) -> list[dict]:
+        """Return the most recent messages for a conversation."""
+        path = self._conversation_path(conversation_id)
+        if not path.exists():
+            return []
 
-    @property
-    def messages(self) -> list[Message]:
-        return list(self._messages)
+        messages: list[dict] = []
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line:
+                messages.append(json.loads(line))
 
-    def add_message(self, role: str, content: str) -> Message:
-        """Append a message and persist to JSONL."""
-        msg = Message(role=role, content=content)
-        self._messages.append(msg)
-        with open(self.history_path, "a") as f:
-            f.write(json.dumps(msg.to_dict()) + "\n")
-        return msg
+        return messages[-limit:]
 
-    def get_context_messages(self, max_messages: int = 20) -> list[dict]:
-        """Return recent messages formatted for LLM context."""
-        recent = self._messages[-max_messages:]
-        return [{"role": m.role, "content": m.content} for m in recent]
+    def list_conversations(self) -> list[str]:
+        """Return all conversation IDs (filenames without .jsonl extension)."""
+        return sorted(
+            p.stem for p in self._storage_dir.glob("*.jsonl")
+        )
 
-    def get_facts(self) -> dict:
-        """Load extracted facts if available."""
-        if self.facts_path.exists():
-            return json.loads(self.facts_path.read_text())
-        return {}
+    def clear(self, conversation_id: str) -> None:
+        """Delete a conversation's data file."""
+        path = self._conversation_path(conversation_id)
+        if path.exists():
+            path.unlink()
 
-    def save_facts(self, facts: dict) -> None:
-        """Save extracted facts."""
-        self.facts_path.write_text(json.dumps(facts, indent=2))
-
-    def save_summary(self, summary: str) -> None:
-        """Save LLM-generated conversation summary."""
-        self.summary_path.write_text(summary)
-
-    def get_summary(self) -> str | None:
-        if self.summary_path.exists():
-            return self.summary_path.read_text()
-        return None
-
-    def message_count(self) -> int:
-        return len(self._messages)
-
-    def clear(self) -> None:
-        """Reset conversation (for testing)."""
-        self._messages.clear()
-        if self.history_path.exists():
-            self.history_path.unlink()
-
-    def _load_history(self) -> list[Message]:
-        """Load messages from JSONL file."""
-        messages: list[Message] = []
-        if self.history_path.exists():
-            for line in self.history_path.read_text().splitlines():
-                line = line.strip()
-                if line:
-                    messages.append(Message.from_dict(json.loads(line)))
-        return messages
+    def message_count(self, conversation_id: str) -> int:
+        """Return the number of messages in a conversation."""
+        path = self._conversation_path(conversation_id)
+        if not path.exists():
+            return 0
+        return sum(1 for line in path.read_text().splitlines() if line.strip())

@@ -2,12 +2,9 @@
 """CLI for afterburner-customer-bot.
 
 Usage:
-    afterburner-bot start                     # Start web server + Telegram polling
-    afterburner-bot chat                      # Interactive CLI chat
-    afterburner-bot chat "message"            # Single message
-    afterburner-bot chat --personality NAME   # Use specific personality
-    afterburner-bot status                    # Check health
-    afterburner-bot evaluate NAME             # Run evaluation scenarios (Phase 2)
+    python3 cli.py start                     # Start web server on port 1203
+    python3 cli.py chat                      # Interactive CLI chat loop
+    python3 cli.py status                    # Show bot status
 """
 
 from __future__ import annotations
@@ -17,14 +14,15 @@ import logging
 import signal
 import sys
 
+import httpx
+
 from bot.config import BotConfig
-from bot.gateway import Gateway
-from bot.polling import TelegramPoller
+from bot.memory import ConversationMemory
 from bot.server import start_server
 
 
 def cmd_start(args: argparse.Namespace) -> None:
-    """Start the bot server + optional Telegram polling."""
+    """Start the web server and print the URL."""
     config = BotConfig.load()
     personality = args.personality or config.personality
 
@@ -35,6 +33,9 @@ def cmd_start(args: argparse.Namespace) -> None:
     )
     log = logging.getLogger("bot")
 
+    # Import Gateway here to avoid import errors when just running status
+    from bot.gateway import Gateway
+
     log.info("Loading personality: %s", personality)
     gateway = Gateway(
         personality_name=personality,
@@ -42,28 +43,14 @@ def cmd_start(args: argparse.Namespace) -> None:
         ollama_url=config.ollama_url,
     )
 
-    # Start web server
     port = args.port or config.server_port
     server = start_server(gateway, port=port)
-    log.info("Web chat: http://127.0.0.1:%d/chat", port)
+    url = f"http://127.0.0.1:{port}/chat"
+    log.info("Web chat: %s", url)
+    print(f"Server running at {url}")
 
-    # Start Telegram polling if configured
-    poller = None
-    if config.telegram_enabled and config.telegram_token:
-        poller = TelegramPoller(config.telegram_token, gateway)
-        if poller.health_check():
-            poller.start()
-            log.info("Telegram polling active")
-        else:
-            log.warning("Telegram bot token invalid — polling disabled")
-    else:
-        log.info("Telegram polling disabled (no token configured)")
-
-    # Wait for Ctrl+C
     def shutdown(sig, frame):  # type: ignore[no-untyped-def]
         log.info("Shutting down...")
-        if poller:
-            poller.stop()
         server.shutdown()
         sys.exit(0)
 
@@ -73,9 +60,11 @@ def cmd_start(args: argparse.Namespace) -> None:
 
 
 def cmd_chat(args: argparse.Namespace) -> None:
-    """Interactive or single-message CLI chat."""
+    """Interactive CLI chat loop — reads from stdin, prints responses."""
     config = BotConfig.load()
     personality = args.personality or config.personality
+
+    from bot.gateway import Gateway
 
     gateway = Gateway(
         personality_name=personality,
@@ -85,15 +74,7 @@ def cmd_chat(args: argparse.Namespace) -> None:
 
     chat_id = "cli-session"
 
-    # Single message mode
-    if args.message:
-        message = " ".join(args.message)
-        resp = gateway.process_message(chat_id, message)
-        print(resp.text)
-        return
-
-    # Interactive mode
-    print(f"Customer Discovery Agent ({config.model} · {personality})")
+    print(f"Afterburner Bot ({config.model} / {personality})")
     print("Type 'quit' to exit.\n")
 
     while True:
@@ -109,24 +90,28 @@ def cmd_chat(args: argparse.Namespace) -> None:
         resp = gateway.process_message(chat_id, text)
         print(f"\nBot: {resp.text}\n")
 
-        if resp.tools_called:
-            for tc in resp.tools_called:
-                print(f"  [tool: {tc['name']}]")
-            print()
-
 
 def cmd_status(args: argparse.Namespace) -> None:
-    """Check system health."""
+    """Show bot status: server reachability, personality, conversation count."""
     config = BotConfig.load()
-    gateway = Gateway(
-        personality_name=config.personality,
-        model=config.model,
-        ollama_url=config.ollama_url,
-    )
-    health = gateway.health_check()
-    for key, val in health.items():
-        status = "ok" if val not in ("unavailable",) else "FAIL"
-        print(f"  {key}: {val} {'✓' if status == 'ok' else '✗'}")
+    memory = ConversationMemory()
+
+    conversations = memory.list_conversations()
+
+    # Check if server is running
+    port = config.server_port
+    server_status = "not running"
+    try:
+        r = httpx.get(f"http://127.0.0.1:{port}/api/health", timeout=2.0)
+        if r.status_code == 200:
+            server_status = "running"
+    except (httpx.ConnectError, httpx.TimeoutException):
+        pass
+
+    print(f"  Server:        {server_status} (port {port})")
+    print(f"  Personality:   {config.personality}")
+    print(f"  Model:         {config.model}")
+    print(f"  Conversations: {len(conversations)}")
 
 
 def main() -> None:
@@ -137,17 +122,16 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command")
 
     # start
-    p_start = sub.add_parser("start", help="Start web server + Telegram polling")
+    p_start = sub.add_parser("start", help="Start web server on port 1203")
     p_start.add_argument("--personality", "-p", help="Personality name")
     p_start.add_argument("--port", type=int, help="Web server port")
 
     # chat
-    p_chat = sub.add_parser("chat", help="Interactive or single-message chat")
-    p_chat.add_argument("message", nargs="*", help="Message (omit for interactive)")
+    p_chat = sub.add_parser("chat", help="Interactive CLI chat loop")
     p_chat.add_argument("--personality", "-p", help="Personality name")
 
     # status
-    sub.add_parser("status", help="Check system health")
+    sub.add_parser("status", help="Show bot status")
 
     args = parser.parse_args()
 

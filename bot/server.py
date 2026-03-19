@@ -39,11 +39,9 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         elif path == "/api/history":
             qs = parse_qs(parsed.query)
             chat_id = qs.get("chat_id", ["web-default"])[0]
-            memory = self.gateway._get_memory(chat_id)
+            messages = self.gateway.memory.get_history(chat_id)
             self._json_response({
-                "messages": [m.to_dict() for m in memory.messages],
-                "facts": memory.get_facts(),
-                "summary": memory.get_summary(),
+                "messages": messages,
             })
         else:
             self.send_error(404)

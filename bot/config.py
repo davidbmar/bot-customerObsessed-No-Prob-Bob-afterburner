@@ -7,34 +7,27 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 CONFIG_PATH = Path.home() / ".config" / "afterburner-bots" / "config.json"
-
-DEFAULT_CONFIG = {
-    "personality": "customer-discovery",
-    "llm": {
-        "provider": "ollama",
-        "model": "qwen3.5:latest",
-        "baseUrl": "http://localhost:11434",
-    },
-    "telegram": {
-        "botToken": "",
-        "enabled": False,
-    },
-    "server": {
-        "port": 1203,
-        "host": "127.0.0.1",
-    },
-}
+DEFAULT_DATA_DIR = Path.home() / ".local" / "share" / "afterburner-bot"
 
 
 @dataclass
 class BotConfig:
     personality: str = "customer-discovery"
-    model: str = "qwen3.5:latest"
+    model: str = "qwen3:4b"
     ollama_url: str = "http://localhost:11434"
+    data_dir: str = ""
     telegram_token: str = ""
     telegram_enabled: bool = False
     server_port: int = 1203
     server_host: str = "127.0.0.1"
+
+    def __post_init__(self) -> None:
+        if not self.data_dir:
+            self.data_dir = str(DEFAULT_DATA_DIR)
+
+    @property
+    def conversations_dir(self) -> Path:
+        return Path(self.data_dir) / "conversations"
 
     @classmethod
     def load(cls, path: Path | None = None) -> BotConfig:
@@ -56,6 +49,7 @@ class BotConfig:
             personality=data.get("personality", "customer-discovery"),
             model=llm.get("model", "qwen3:4b"),
             ollama_url=llm.get("baseUrl", "http://localhost:11434"),
+            data_dir=data.get("data_dir", ""),
             telegram_token=telegram.get("botToken", ""),
             telegram_enabled=telegram.get("enabled", False),
             server_port=server.get("port", 1203),
@@ -68,6 +62,7 @@ class BotConfig:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "personality": self.personality,
+            "data_dir": self.data_dir,
             "llm": {
                 "provider": "ollama",
                 "model": self.model,

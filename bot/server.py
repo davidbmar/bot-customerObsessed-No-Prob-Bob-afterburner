@@ -7,7 +7,6 @@ import logging
 import os
 import signal
 import subprocess
-import sys
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -39,12 +38,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._json_response(self.gateway.health_check())
         elif path == "/api/history":
             qs = parse_qs(parsed.query)
-            conversation_id = qs.get("conversation_id", ["web-default"])[0]
-            memory = self.gateway._get_memory(conversation_id)
+            chat_id = qs.get("chat_id", ["web-default"])[0]
+            messages = self.gateway.memory.get_history(chat_id)
             self._json_response({
-                "messages": [m.to_dict() for m in memory.messages],
-                "facts": memory.get_facts(),
-                "summary": memory.get_summary(),
+                "messages": messages,
             })
         else:
             self.send_error(404)
@@ -65,17 +62,17 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             return
 
         text = body.get("message", "").strip()
-        conversation_id = body.get("conversation_id", "web-default")
+        chat_id = body.get("chat_id", "web-default")
 
         if not text:
             self._json_response({"error": "Empty message"}, status=400)
             return
 
-        response = self.gateway.process_message(conversation_id, text)
+        response = self.gateway.process_message(chat_id, text)
         self._json_response({
             "response": response.text,
             "tools_called": response.tools_called,
-            "principles_active": response.principles,
+            "principles": response.principles,
             "memory_count": response.memory_count,
             "input_tokens": response.input_tokens,
             "output_tokens": response.output_tokens,
@@ -170,40 +167,3 @@ def start_server(gateway: Gateway, port: int = PORT) -> ThreadedHTTPServer:
 
     log.info("Bot web server started at http://%s:%d/chat", HOST, port)
     return server
-
-
-def main() -> None:
-    """Run the server standalone: python3 bot/server.py"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-
-    _kill_stale_server(PORT)
-
-    gateway = Gateway()
-    log.info(
-        "Config: model=%s personality=%s port=%d",
-        gateway.llm.model,
-        gateway.personality.name,
-        PORT,
-    )
-
-    BotHTTPHandler.gateway = gateway
-    server = ThreadedHTTPServer((HOST, PORT), BotHTTPHandler)
-
-    def _shutdown(signum: int, frame: object) -> None:
-        log.info("Shutting down server (signal %d)...", signum)
-        server.shutdown()
-        gateway.llm.close()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, _shutdown)
-    signal.signal(signal.SIGTERM, _shutdown)
-
-    log.info("Bot web server started at http://%s:%d/chat", HOST, PORT)
-    server.serve_forever()
-
-
-if __name__ == "__main__":
-    main()

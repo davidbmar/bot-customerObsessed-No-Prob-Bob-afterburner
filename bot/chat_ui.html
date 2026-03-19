@@ -46,10 +46,29 @@
     font-weight: 600;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .header-meta {
     font-size: 12px;
     color: var(--text-muted);
   }
+
+  .btn-small {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .btn-small:hover { color: var(--text); border-color: var(--accent); }
 
   .status-dot {
     display: inline-block;
@@ -164,6 +183,14 @@
     padding: 16px;
     overflow-y: auto;
     font-size: 12px;
+    transition: width 0.2s, padding 0.2s;
+  }
+
+  .debug-panel.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+    border-left: none;
   }
 
   .debug-panel h3 {
@@ -207,9 +234,13 @@
 
 <div class="header">
   <h1>Customer Discovery Agent</h1>
-  <div class="header-meta">
-    <span class="status-dot loading" id="statusDot"></span>
-    <span id="modelInfo">connecting...</span>
+  <div class="header-actions">
+    <button class="btn-small" onclick="newConversation()" title="Start a new conversation">New Chat</button>
+    <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panel">Debug</button>
+    <div class="header-meta">
+      <span class="status-dot loading" id="statusDot"></span>
+      <span id="modelInfo">connecting...</span>
+    </div>
   </div>
 </div>
 
@@ -223,12 +254,12 @@
     </div>
   </div>
 
-  <div class="debug-panel">
+  <div class="debug-panel" id="debugPanel">
     <h3>Status</h3>
     <div class="debug-value" id="debugStatus">Connecting...</div>
 
-    <h3>Principles</h3>
-    <div id="debugPrinciples">—</div>
+    <h3>Principles Active</h3>
+    <div id="debugPrinciples">&mdash;</div>
 
     <h3>Tools Called</h3>
     <div class="debug-value" id="debugTools">none</div>
@@ -237,89 +268,113 @@
     <div class="debug-value" id="debugMemory">0 messages</div>
 
     <h3>Tokens</h3>
-    <div class="debug-value" id="debugTokens">—</div>
+    <div class="debug-value" id="debugTokens">&mdash;</div>
+
+    <h3>Latency</h3>
+    <div class="debug-value" id="debugLatency">&mdash;</div>
+
+    <h3>Conversation</h3>
+    <div class="debug-value" id="debugConvId">&mdash;</div>
   </div>
 </div>
 
 <script>
-const API = '';  // same origin
-let chatId = 'web-' + Date.now().toString(36);
+var API = '';  // same origin
+var conversationId = 'web-' + Date.now().toString(36);
 
-async function init() {
-  try {
-    const resp = await fetch(API + '/api/health');
-    const data = await resp.json();
-    const dot = document.getElementById('statusDot');
-    dot.className = 'status-dot ' + (data.ollama === 'ok' ? 'ok' : 'error');
-    document.getElementById('modelInfo').textContent = data.model + ' \u00b7 ' + data.personality;
-    document.getElementById('debugStatus').textContent = 'Ollama: ' + data.ollama;
+function init() {
+  document.getElementById('debugConvId').textContent = conversationId;
+  fetch(API + '/api/health')
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+      var dot = document.getElementById('statusDot');
+      dot.className = 'status-dot ' + (data.ollama === 'ok' ? 'ok' : 'error');
+      document.getElementById('modelInfo').textContent = data.model + ' \u00b7 ' + data.personality;
+      document.getElementById('debugStatus').textContent = 'Ollama: ' + data.ollama;
 
-    const pResp = await fetch(API + '/api/personality');
-    const pData = await pResp.json();
-    const el = document.getElementById('debugPrinciples');
-    el.textContent = '';
-    pData.principles.forEach(function(p) {
-      const tag = document.createElement('span');
-      tag.className = 'debug-tag';
-      tag.textContent = p;
-      el.appendChild(tag);
+      return fetch(API + '/api/personality');
+    })
+    .then(function(resp) { return resp.json(); })
+    .then(function(pData) {
+      var el = document.getElementById('debugPrinciples');
+      el.textContent = '';
+      pData.principles.forEach(function(p) {
+        var tag = document.createElement('span');
+        tag.className = 'debug-tag';
+        tag.textContent = p;
+        el.appendChild(tag);
+      });
+    })
+    .catch(function(e) {
+      document.getElementById('statusDot').className = 'status-dot error';
+      document.getElementById('modelInfo').textContent = 'disconnected';
+      document.getElementById('debugStatus').textContent = 'Error: ' + e.message;
     });
-  } catch(e) {
-    document.getElementById('statusDot').className = 'status-dot error';
-    document.getElementById('modelInfo').textContent = 'disconnected';
-    document.getElementById('debugStatus').textContent = 'Error: ' + e.message;
-  }
+}
+
+function newConversation() {
+  conversationId = 'web-' + Date.now().toString(36);
+  document.getElementById('messages').textContent = '';
+  document.getElementById('debugConvId').textContent = conversationId;
+  document.getElementById('debugMemory').textContent = '0 messages';
+  document.getElementById('debugTools').textContent = 'none';
+  document.getElementById('debugTokens').textContent = '\u2014';
+  document.getElementById('debugLatency').textContent = '\u2014';
+  document.getElementById('input').focus();
+}
+
+function toggleDebug() {
+  var panel = document.getElementById('debugPanel');
+  panel.classList.toggle('collapsed');
 }
 
 function addMessage(role, text) {
-  const el = document.createElement('div');
+  var el = document.createElement('div');
   el.className = 'message ' + role;
 
-  const label = document.createElement('div');
+  var label = document.createElement('div');
   label.className = 'label';
   label.textContent = role === 'user' ? 'You' : 'Bot';
   el.appendChild(label);
 
-  const body = document.createElement('div');
+  var body = document.createElement('div');
   body.textContent = text;
   el.appendChild(body);
 
-  const container = document.getElementById('messages');
+  var container = document.getElementById('messages');
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
 }
 
-async function sendMessage() {
-  const input = document.getElementById('input');
-  const text = input.value.trim();
+function sendMessage() {
+  var input = document.getElementById('input');
+  var text = input.value.trim();
   if (!text) return;
 
   input.value = '';
   input.style.height = 'auto';
   addMessage('user', text);
 
-  const btn = document.getElementById('sendBtn');
+  var btn = document.getElementById('sendBtn');
   btn.disabled = true;
 
   // Show typing indicator
-  const typing = document.createElement('div');
+  var typing = document.createElement('div');
   typing.className = 'typing';
   typing.textContent = 'Thinking...';
   typing.id = 'typing';
-  const container = document.getElementById('messages');
+  var container = document.getElementById('messages');
   container.appendChild(typing);
   container.scrollTop = container.scrollHeight;
 
-  try {
-    const resp = await fetch(API + '/api/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: text, chat_id: chatId})
-    });
-    const data = await resp.json();
-
-    // Remove typing indicator
-    const typingEl = document.getElementById('typing');
+  fetch(API + '/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: text, conversation_id: conversationId})
+  })
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    var typingEl = document.getElementById('typing');
     if (typingEl) typingEl.remove();
 
     if (data.error) {
@@ -327,23 +382,27 @@ async function sendMessage() {
     } else {
       addMessage('assistant', data.response);
 
-      // Update debug panel using textContent (safe)
+      // Update debug panel
       document.getElementById('debugTools').textContent =
-        data.tools_called.length > 0
+        data.tools_called && data.tools_called.length > 0
           ? data.tools_called.map(function(t) { return t.name; }).join(', ')
           : 'none called';
       document.getElementById('debugMemory').textContent = data.memory_count + ' messages';
       document.getElementById('debugTokens').textContent =
-        data.input_tokens + ' in / ' + data.output_tokens + ' out (' + (data.duration_ms/1000).toFixed(1) + 's)';
+        data.input_tokens + ' in / ' + data.output_tokens + ' out';
+      document.getElementById('debugLatency').textContent =
+        (data.duration_ms / 1000).toFixed(1) + 's (' + data.duration_ms + 'ms)';
     }
-  } catch(e) {
-    const typingEl = document.getElementById('typing');
+  })
+  .catch(function(e) {
+    var typingEl = document.getElementById('typing');
     if (typingEl) typingEl.remove();
     addMessage('assistant', 'Connection error: ' + e.message);
-  }
-
-  btn.disabled = false;
-  input.focus();
+  })
+  .finally(function() {
+    btn.disabled = false;
+    input.focus();
+  });
 }
 
 // Auto-resize textarea

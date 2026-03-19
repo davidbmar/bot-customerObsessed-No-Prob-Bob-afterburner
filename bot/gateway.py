@@ -1,6 +1,6 @@
 """Gateway — the central brain that connects transports to the LLM.
 
-Transport-agnostic: receives text + chat_id, returns response text.
+Transport-agnostic: receives text + conversation_id, returns response text.
 Handles personality loading, memory management, and tool execution.
 """
 
@@ -10,7 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaLLM
+from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient
 from .memory import ChatMemory
 from .personality import Personality
 from .tools import execute_tool
@@ -37,21 +37,21 @@ class Gateway:
     def __init__(
         self,
         personality_name: str = "customer-discovery",
-        model: str = "qwen3:4b",
+        model: str = "qwen3.5:latest",
         ollama_url: str = "http://localhost:11434",
     ) -> None:
         self.personality = Personality(personality_name)
         self.system_prompt = self.personality.to_system_prompt()
         self.principles = self.personality.get_principles()
-        self.llm = OllamaLLM(model=model, base_url=ollama_url)
+        self.llm = OllamaClient(model=model, base_url=ollama_url)
         self._memories: dict[str, ChatMemory] = {}
 
-    def process_message(self, chat_id: str, text: str) -> GatewayResponse:
+    def process_message(self, conversation_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.
 
         This is the main entry point — all transports call this.
         """
-        memory = self._get_memory(chat_id)
+        memory = self._get_memory(conversation_id)
         memory.add_message("user", text)
 
         # Build context from conversation history
@@ -125,11 +125,11 @@ class Gateway:
 
         return tools_called
 
-    def _get_memory(self, chat_id: str) -> ChatMemory:
+    def _get_memory(self, conversation_id: str) -> ChatMemory:
         """Get or create memory for a chat session."""
-        if chat_id not in self._memories:
-            self._memories[chat_id] = ChatMemory(chat_id)
-        return self._memories[chat_id]
+        if conversation_id not in self._memories:
+            self._memories[conversation_id] = ChatMemory(conversation_id)
+        return self._memories[conversation_id]
 
     def get_personality_info(self) -> dict:
         """Return personality metadata for debug panels."""

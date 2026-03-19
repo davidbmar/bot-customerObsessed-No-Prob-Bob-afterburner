@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     "personality": "customer-discovery",
     "llm": {
         "provider": "ollama",
-        "model": "qwen3:4b",
+        "model": "qwen3.5:latest",
         "baseUrl": "http://localhost:11434",
     },
     "telegram": {
@@ -29,7 +29,7 @@ DEFAULT_CONFIG = {
 @dataclass
 class BotConfig:
     personality: str = "customer-discovery"
-    model: str = "qwen3:4b"
+    model: str = "qwen3.5:latest"
     ollama_url: str = "http://localhost:11434"
     telegram_token: str = ""
     telegram_enabled: bool = False

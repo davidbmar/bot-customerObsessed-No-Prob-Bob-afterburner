@@ -1,0 +1,12 @@
+name: "Surface-level feature request"
+input: "We need a dark mode"
+principles_tested:
+  - Customer Obsession
+  - Dive Deep
+pass_criteria:
+  - response contains a question about why or who
+  - response does NOT immediately accept the request
+  - response does NOT ask "what kind of dark mode"
+fail_criteria:
+  - response says "sure, I'll add that"
+  - response jumps to implementation details

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link ">Vision</a>
+      <a href="plan.html" class="site-nav-link nav-active">Plan</a>
+      <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+    </nav>
+    <main class="site-main">
+      <h1>Plan</h1>
+<h2>Problem</h2>
+<p>Afterburner handles engineering (sprints, agents, code), but there&#x27;s no customer-facing layer that captures what to build and why. The gap between &#x27;customer has a problem&#x27; and &#x27;engineer writes code&#x27; is filled by meetings, Slack threads, and tribal knowledge. There is no automated bridge from customer conversations to engineering pipelines — discovery interviews are manual, requirements flow through Notion/Jira, and context is lost at every handoff.</p>
+<h2>Appetite</h2>
+<p>3 phases over approximately 6-8 sprints to reach full production. Phase 1 (2-3 sprints): Personality framework + web chat + text bot MVP. Phase 2 (2-3 sprints): Full Afterburner integration + evaluation framework. Phase 3 (2 sprints): Voice + multi-platform + customer profiles.</p>
+<h2>Solution Sketch</h2>
+<p>The bot uses a gateway pattern — a single LLM orchestration layer (Qwen 3:4b via Ollama) with multiple transport adapters (web chat on port 1203, Telegram polling, CLI). The personality framework reads markdown documents that encode principles, not rigid rules, allowing the LLM to use judgment. Key architectural decisions: Personality as markdown documents with inheritance (base.md → customer-discovery.md). Memory as a separate JSONL-based system, not embedded in personality. Tool calls bridge the bot to Afterburner (save_discovery, generate_vision, add_to_backlog, get_project_summary, get_sprint_status). Web chat includes a debug panel showing principles, tools, memory, and token usage. The bot translates customer conversations into seed docs, which flow into Afterburner&#x27;s lifecycle pipeline (Vision → Plan → Sprint → Shipped code → Customer feedback loop).</p>
+<h2>Market Fit Analysis</h2>
+<p>No existing tool bridges customer conversations to automated engineering pipelines. Current alternatives: manual discovery interviews → Notion/Jira → engineering tickets. This bot automates the entire chain: conversation → seed docs → vision → plan → sprint → shipped code → customer feedback loop. Most AI dev tools start with the code and assume you know what to build. This starts with the customer, obsessively understanding the problem before a single line is written.</p>
+<h2>Differentiation Strategy</h2>
+<p>Starts with the customer, not the code — most AI dev tools assume you know what to build. Personality framework is reusable — future bots (tech support, internal PM) plug into the same system with personality inheritance. Local LLM inference (Ollama) means no API costs, full privacy, works offline. Deep integration with Afterburner&#x27;s sprint pipeline — bot outputs become engineering inputs automatically. Personality is encoded as markdown documents that LLMs read directly, not config files or YAML schemas, allowing natural authoring and LLM judgment. Scenario-based evaluation framework tests whether the bot behaves according to its principles, not just unit test correctness.</p>
+<h2>Rabbit Holes</h2>
+<p>Don&#x27;t over-engineer the personality format — markdown is enough, no YAML schemas needed. Don&#x27;t build a custom vector DB for memory — JSONL + JSON facts is sufficient for Phase 1. Don&#x27;t try to support every LLM provider in Phase 1 — Ollama only, add Claude/OpenAI later. Voice/STT is Phase 3 — don&#x27;t let it creep into earlier phases. Avoid embedding memory rules inside the personality; keep memory as a separate reusable service. Don&#x27;t try to automate sprint launching from bot conversations — a human should review seed docs first.</p>
+<h2>No-Gos</h2>
+<p>No WhatsApp in Phase 1 (requires Business API approval). No vector database or embedding-based retrieval in Phase 1. No multi-tenant or cloud-hosted deployment — local only. No payment or billing integration. No automated sprint launching from bot conversations (human reviews seed docs first).</p>
+<h2>Sprint Candidates</h2>
+<p>Sprint 1 — Foundation: Personality loader with inheritance, base + customer-discovery personality docs, Qwen 3:4b via Ollama with tool calling, web chat UI (port 1203) with debug panel, conversation memory (JSONL per chat), CLI commands (start, chat, status). Sprint 2 — Telegram + Tools: Telegram polling transport, tools (save_discovery, get_project_summary), end-to-end test (conversation → seed doc written to project), config system (~/.config/afterburner-bots/config.json). Sprint 3 — Evaluation + Integration: Evaluation framework with YAML scenarios, more tools (generate_vision, add_to_backlog, get_sprint_status), fact extraction from conversations, post-sprint feedback loop. Sprint 4 — Polish + Docs Site: Web chat settings panel, multi-project support, documentation site built and deployed to S3/CloudFront, README and getting-started guide.</p>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

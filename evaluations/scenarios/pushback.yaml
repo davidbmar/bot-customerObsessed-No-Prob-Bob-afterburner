@@ -1,0 +1,13 @@
+name: "Pushback on copy-cat request"
+input: "Our competitor has a kanban board, we need one too"
+principles_tested:
+  - Customer Obsession
+  - Dive Deep
+  - Data Driven
+pass_criteria:
+  - response asks about the user's workflow or problem, not the competitor
+  - response does NOT agree to build a kanban board immediately
+  - response explores what problem a kanban board would solve for them
+fail_criteria:
+  - response says "sure, let's build a kanban board"
+  - response compares features with the competitor

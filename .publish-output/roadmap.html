@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roadmap — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link ">Vision</a>
+      <a href="plan.html" class="site-nav-link ">Plan</a>
+      <a href="roadmap.html" class="site-nav-link nav-active">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+    </nav>
+    <main class="site-main">
+      <h1>Roadmap</h1>
+<h2>Roadmap</h2>
+<h3>Current Focus</h3>
+<ul><li>Create Afterburner project: <code>afterburner create_project afterburner-customer-bot</code></li><li>Personality loader (reads markdown, generates system prompt)</li><li>Base personality + customer-discovery personality docs</li><li>Qwen 3.5 via Ollama with tool-calling (<code>bot/llm.py</code>)</li><li><strong>Web chat UI at <code>http://localhost:1203/chat</code></strong> — dark theme, debug panel showing tools/principles/memory</li><li><strong>Web chat API</strong>: <code>POST /api/chat</code> (send message, get response), <code>GET /api/history</code> (conversation), <code>GET /api/personality</code> (current personality info)</li><li>Telegram polling loop (runs alongside web server)</li><li>Tools: save_discovery, get_project_summary</li><li>Conversation memory (JSONL per chat, works for both web and Telegram)</li><li>CLI: <code>afterburner-bot start</code> (server + polling), <code>afterburner-bot chat</code> (interactive CLI)</li><li>Test: have a real discovery conversation via web chat AND Telegram</li></ul>
+<h3>Next Up</h3>
+<ul><li>More tools: generate_vision, add_to_backlog, get_sprint_status</li><li>Post-sprint feedback loop (&quot;here&#x27;s what shipped, does it match?&quot;)</li><li>Evaluation framework with scenario tests</li><li>Fact extraction from conversations (LLM-generated summaries)</li><li>Multi-project support (backend registry)</li><li>Web chat settings panel: switch personality, switch model, view memory</li></ul>
+<h2>Architecture</h2>
+<h3>Key Decisions</h3>
+<ol><li><strong>Personality as a document, not config.</strong> Markdown that the LLM reads directly — humans write and review it naturally, the LLM interprets as guidance not rules.</li></ol>
+<ol><li><strong>Principles over patterns.</strong> Encode the <em>spirit</em> (&quot;understand the problem before proposing solutions&quot;) not the exact phrases (&quot;say &#x27;tell me more about...&#x27;&quot;). The LLM has judgment — let it use it.</li></ol>
+<ol><li><strong>Separate principles from prompts.</strong> Principles are the <em>what</em> (Customer Obsession). The system prompt is the <em>how</em> for a specific LLM. Different LLMs need different prompting — Qwen 3.5 might need more explicit instructions than Claude.</li></ol>
+<ol><li><strong>Memory as a separate system.</strong> Don&#x27;t embed memory rules in the personality. A reusable memory service that summarizes past conversations, extracts key facts, and feeds relevant context per conversation.</li></ol>
+<ol><li><strong>Personality inheritance.</strong> A base personality (polite, helpful, honest) that specific personalities extend with domain-specific principles.</li></ol>
+<ol><li><strong>Scenario-based evaluation.</strong> Test personalities with conversation scenarios, not unit tests. &quot;Given this input, does the bot behave according to its principles?&quot;</li></ol>
+<h3>Tech Stack</h3>
+<ul><li><strong>Bot backend:</strong> Python 3.11+, httpx, PyYAML</li><li><strong>LLM:</strong> Qwen 3:4b via Ollama (local inference — no API costs, privacy, works offline)</li><li><strong>Web chat:</strong> Self-contained HTML/CSS/JS served by bot&#x27;s HTTP server (port 1203)</li><li><strong>Telegram:</strong> Bot API polling via httpx</li><li><strong>Memory:</strong> JSONL per-chat + JSON fact extraction</li><li><strong>Evaluation:</strong> YAML scenario files tested against LLM responses</li><li><strong>Docs site:</strong> Static HTML deployed to S3 + CloudFront</li></ul>
+<p>--- implementation-phases.md ---</p>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

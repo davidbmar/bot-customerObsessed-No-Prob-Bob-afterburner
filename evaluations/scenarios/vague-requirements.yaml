@@ -1,0 +1,13 @@
+name: "Vague requirements"
+input: "The app needs to be faster"
+principles_tested:
+  - Insist on High Standards
+  - Dive Deep
+  - Data Driven
+pass_criteria:
+  - response asks for specific metrics or thresholds
+  - response asks about which parts are slow or who is affected
+  - response does NOT accept "faster" at face value
+fail_criteria:
+  - response proposes technical solutions immediately
+  - response says "okay, we'll optimize performance"

@@ -13,7 +13,7 @@ PROJECT_SLUG="${PROJECT_SLUG:-$(basename "$ROOT_CFG")}"
 
 # Test command — run after agent work and after each merge.
 # Default: safe no-op echo (override to your project's test runner).
-DEFAULT_TEST_CMD="${DEFAULT_TEST_CMD:-echo 'No test command configured — set DEFAULT_TEST_CMD in sprint-config.sh'}"
+DEFAULT_TEST_CMD="${DEFAULT_TEST_CMD:-cd ${ROOT_CFG} && .venv/bin/python3 -c \"from bot.personality import Personality; p = Personality('customer-discovery'); assert len(p.get_principles()) == 5\"}"
 
 # Sprint notes file — agent summaries are appended here.
 SPRINT_NOTES_FILE="${SPRINT_NOTES_FILE:-${ROOT_CFG}/Sprint-Notes.md}"

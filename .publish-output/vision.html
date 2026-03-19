@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link nav-active">Vision</a>
+      <a href="plan.html" class="site-nav-link ">Plan</a>
+      <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+    </nav>
+    <main class="site-main">
+      <h1>Vision</h1>
+<h2>Product Name</h2>
+<p>Afterburner Customer Bot</p>
+<h2>Problem Statement</h2>
+<p>Afterburner handles engineering (sprints, agents, code), but there&#x27;s no customer-facing layer that captures <strong>what to build and why</strong>. The gap between &quot;customer has a problem&quot; and &quot;engineer writes code&quot; is filled by meetings, Slack threads, and tribal knowledge. Discovery interviews are manual, requirements flow through Notion/Jira, and context is lost at every handoff. Most AI dev tools start with the code — they assume you already know what to build.</p>
+<h2>Target Audience</h2>
+<p><strong>Product builders and solo founders</strong> who talk to customers but struggle to translate conversations into engineering requirements. They know their customers have real problems but lack the tooling to systematically capture, structure, and act on what they learn. They use Afterburner for engineering but need a front door that starts with the customer, not the code.</p>
+<h2>Key Differentiators</h2>
+<ul><li><strong>Customer-first, not code-first.</strong> The bot obsessively understands the problem before a single line is written — it won&#x27;t accept &quot;add a dark mode&quot; without asking why.</li><li><strong>Personality framework is reusable.</strong> Future bots (tech support, sales, internal PM) plug into the same system with personality inheritance.</li><li><strong>Local LLM inference</strong> via Ollama — no API costs, full data privacy, works offline.</li><li><strong>Deep Afterburner integration</strong> — bot outputs (seed docs) become engineering inputs automatically. Conversation → Vision → Plan → Sprint → Shipped code → Customer feedback loop.</li><li><strong>Principles over scripts.</strong> Personalities are markdown documents encoding the <em>spirit</em> of behavior, not rigid response templates. The LLM uses judgment.</li></ul>
+<h2>Solution Overview</h2>
+<p>A conversational AI bot with three interfaces — web chat (localhost:1203), Telegram, and CLI — sharing a single brain (Qwen 3:4b via Ollama). The bot is guided by a markdown personality document (customer-discovery.md) that encodes principles like Customer Obsession, Dive Deep, and Bias for Action.</p>
+<p>When a customer says &quot;we need better reporting,&quot; the bot doesn&#x27;t ask &quot;what kind of reports?&quot; — it asks &quot;tell me about the last time someone used a report to make a decision.&quot; After 5-7 exchanges of deep discovery, the bot synthesizes findings into Problem/Users/Use Cases/Success Criteria format and writes seed docs to the Afterburner project.</p>
+<p>The personality framework supports inheritance (base.md → customer-discovery.md), scenario-based evaluation, and a separate memory system (JSONL per chat + fact extraction). A debug panel in the web chat shows which principles are active, what tools were called, memory state, and token usage.</p>
+<h2>Success Criteria</h2>
+<ul><li>Bot asks about users and use cases when given a feature request (not &quot;what kind of feature?&quot;)</li><li>5-7 exchange conversations produce structured synthesis (Problem/Users/Use Cases/Success Criteria)</li><li>save_discovery tool writes seed docs that Afterburner&#x27;s lifecycle pipeline can consume</li><li>Web chat debug panel shows principles, tools, memory, and latency</li><li>Conversations don&#x27;t bleed between sessions (memory isolation)</li><li>Existing tool-telegram-whatsapp notifications continue working independently</li></ul>
+<h2>FAQ</h2>
+<p><strong>Q: Why Qwen 3:4b instead of Claude or GPT-4?</strong> A: Local inference means zero API costs for potentially hundreds of customer conversations, full privacy for sensitive discovery data, and the bot works without internet. The personality framework compensates for the smaller model by providing explicit behavioral guidance.</p>
+<p><strong>Q: Can this work with other LLMs?</strong> A: Yes — the personality framework separates principles (what) from prompts (how). Phase 2 adds multi-provider support. The gateway pattern means swapping the LLM is a config change, not an architecture change.</p>
+<p><strong>Q: How is this different from just using ChatGPT to talk to customers?</strong> A: Three things: (1) the personality framework ensures consistent discovery behavior across conversations, (2) tool integration means discoveries automatically become Afterburner seed docs, and (3) the evaluation framework lets you test whether the bot actually follows its principles.</p>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

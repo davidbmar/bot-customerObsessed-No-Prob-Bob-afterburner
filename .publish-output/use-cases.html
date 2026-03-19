@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Use Cases — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link ">Vision</a>
+      <a href="plan.html" class="site-nav-link ">Plan</a>
+      <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link nav-active">Use Cases</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+    </nav>
+    <main class="site-main">
+      <h1>Use Cases</h1>
+<div class="seed-entry"><h3>README</h3><h1>Seed Directory</h1>
+<p>Drop source materials here to auto-generate lifecycle document drafts.</p>
+<h2>Supported Formats</h2>
+<ul><li><strong>Markdown</strong> (<code>.md</code>) — best support, headings are parsed as sections</li><li><strong>Text</strong> (<code>.txt</code>) — plain text, parsed by heading patterns</li><li><strong>Word</strong> (<code>.docx</code>) — text extracted from document XML</li></ul>
+<h2>What to Put Here</h2>
+<p>Any documents that describe your product vision, architecture, sprint plans, or technical decisions:</p>
+<ul><li>Product briefs or blueprints</li><li>Architecture decision documents</li><li>Sprint execution guides</li><li>Technical specs or RFCs</li><li>Meeting notes with key decisions</li></ul>
+<h2>How It Works</h2>
+<ol><li>Drop files into this <code>docs/seed/</code> directory</li><li>Open the Sprint Dashboard → Lifecycle tab</li><li>Click <strong>Scan Seed Directory</strong> to see detected files</li><li>Click <strong>Generate Drafts</strong> to auto-populate Vision, Plan, and Roadmap forms</li><li>Review and edit the generated drafts — they&#x27;re starting points, not final versions</li></ol>
+<h2>What Gets Extracted</h2>
+<p>The generator looks for:</p>
+<ul><li><strong>Vision</strong>: product name, problem statements, target audience, differentiators, solution descriptions</li><li><strong>Plan</strong>: appetite/timeline, solution sketches, market analysis, rabbit holes, no-gos, sprint candidates</li><li><strong>Roadmap</strong>: current focus, milestones, system architecture, key decisions, tech stack, constraints</li><li><strong>Codebase signals</strong>: package.json (name, dependencies), Prisma schema (data models), README (description)</li></ul>
+<p>Drafts fill empty fields only — they never overwrite content you&#x27;ve already written.</p></div><hr>
+<div class="seed-entry"><h3>customer-discovery-bot</h3><h1>Customer Discovery Bot — Architecture &amp; Implementation</h1>
+<h2>Context</h2>
+<p>Afterburner handles engineering (sprints, agents, code). But there&#x27;s no customer-facing layer that captures <strong>what to build and why</strong>. We need a bot that lives in Telegram/WhatsApp, talks to customers, obsessively clarifies use cases, and translates conversations into requirements Afterburner can execute.</p>
+<pre><code class="lang-">Customer ←→ Bot (discovery + requirements) ←→ Afterburner (engineering)
+             │                                    │
+             │ Personality: customer-discovery.md  │
+             │ Brain: Qwen 3.5 (local)            │
+             │ Memory: per-customer history        │
+             │ Tools: Afterburner APIs             │
+             │                                    │
+             └── Seed docs, Vision, Plan ────────→┘</code></pre>
+<h2>Architecture</h2>
+<pre><code class="lang-">┌──────────────────────────────────────────────┐
+│  afterburner-customer-bot                    │
+│                                              │
+│  Three interfaces (same brain):              │
+│                                              │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐  │
+│  │ Web Chat │ │ Telegram │ │    CLI      │  │
+│  │ :1203    │ │ polling  │ │ bot chat    │  │
+│  │ /chat    │ │          │ │ &quot;message&quot;   │  │
+│  └────┬─────┘ └────┬─────┘ └──────┬──────┘  │
+│       └─────────────┼─────────────┘          │
+│                     ▼                        │
+│        Qwen 3.5 (Ollama) + personality       │
+│                     │                        │
+│                     │ tool calls             │
+│                     ▼                        │
+│  Tools:                                      │
+│    ├── save_discovery(slug, content)          │
+│    │     → writes seed docs to project       │
+│    ├── generate_vision(slug)                  │
+│    │     → calls Afterburner lifecycle API    │
+│    ├── add_to_backlog(slug, title, context)   │
+│    │     → adds feature/bug to backlog        │
+│    ├── get_sprint_status(slug)                │
+│    │     → checks what&#x27;s been built           │
+│    └── get_project_summary(slug)              │
+│          → what&#x27;s shipped, what&#x27;s planned     │
+│                                              │
+│  Memory:                                     │
+│    ├── conversation history (per chat)       │
+│    ├── fact extraction (LLM-generated)       │
+│    └── customer profiles (cross-session)     │
+└──────────────────────────────────────────────┘</code></pre>
+<h2>Three Interfaces</h2>
+<h3>1. Web Chat — <code>http://localhost:1203/chat</code> (fastest dev loop)</h3>
+<ul><li>Dark-themed chat UI served by the bot&#x27;s own HTTP server</li><li>Type messages, see responses in real time</li><li>Debug panel shows: tools called, principles active, memory state, raw LLM output</li><li>Change personality markdown → reload page → test immediately</li><li>No Telegram needed — instant local testing</li></ul>
+<h3>2. Telegram (real usage from phone)</h3>
+<ul><li>Same bot token as tool-telegram-whatsapp notifications</li><li>Polls getUpdates, routes messages through LLM</li><li>Voice messages processed via Whisper STT (Phase 3)</li><li>Group-aware: knows which project a group belongs to</li></ul>
+<h3>3. CLI (scripting and quick tests)</h3>
+<pre><code class="lang-bash">afterburner-bot chat                              # Interactive
+afterburner-bot chat &quot;We need a login page&quot;       # Single message
+afterburner-bot chat --personality tech-support    # Specify personality
+afterburner-bot chat --project grassyknoll         # Against a specific project</code></pre>
+<h2>Project Structure</h2>
+<pre><code class="lang-">~/src/afterburner-customer-bot/
+├── bot/
+│   ├── __init__.py
+│   ├── gateway.py           # Main entry — start server + polling + LLM
+│   ├── polling.py           # Telegram getUpdates loop
+│   ├── llm.py               # Qwen 3.5 via Ollama with tool calling
+│   ├── tools.py             # Afterburner API tool definitions
+│   ├── memory.py            # Conversation memory + fact extraction
+│   ├── personality.py       # Load + apply personality from markdown
+│   ├── server.py            # HTTP server (:1203) — web chat + API
+│   └── chat_ui.html         # Web chat interface (self-contained)
+├── personalities/
+│   ├── base.md
+│   └── customer-discovery.md
+├── evaluations/
+│   ├── runner.py            # Run scenario tests
+│   └── scenarios/
+│       ├── surface-request.yaml
+│       ├── vague-requirements.yaml
+│       └── pushback.yaml
+├── cli.py                   # afterburner-bot start|chat|evaluate|status
+├── pyproject.toml
+└── README.md</code></pre>
+<h2>Configuration</h2>
+<pre><code class="lang-json">{
+  &quot;botToken&quot;: &quot;...&quot;,
+  &quot;personality&quot;: &quot;customer-discovery&quot;,
+  &quot;llm&quot;: {
+    &quot;provider&quot;: &quot;ollama&quot;,
+    &quot;model&quot;: &quot;qwen3.5:4b&quot;,
+    &quot;baseUrl&quot;: &quot;http://localhost:11434&quot;
+  },
+  &quot;backends&quot;: [
+    {
+      &quot;name&quot;: &quot;local&quot;,
+      &quot;url&quot;: &quot;http://127.0.0.1:1201&quot;
+    }
+  ],
+  &quot;voice&quot;: {
+    &quot;enabled&quot;: false,
+    &quot;sttModel&quot;: &quot;whisper-small&quot;
+  }
+}</code></pre></div><hr>
+<div class="seed-entry"><h3>documentation-site</h3><h1>Documentation Site — Published to S3 + CloudFront</h1>
+<h2>What Gets Published</h2>
+<p>A polished, user-friendly documentation site covering the entire Afterburner ecosystem — the vision, architecture, how to use it, and how each piece fits together. Readable by anyone with the URL.</p>
+<h2>Site Structure</h2>
+<pre><code class="lang-">docs-site/
+├── index.html              # Landing page — the big picture
+├── vision.html             # Vision: why this exists, what problem it solves
+├── architecture.html       # How the pieces fit together (diagrams)
+├── customer-bot.html       # The customer discovery bot — personality, tools, UX
+├── personality-framework.html  # How personalities work — principles, memory, evaluation
+├── afterburner.html        # Afterburner sprint engine overview
+├── tool-telegram.html      # tool-telegram-whatsapp — setup, config, API
+├── getting-started.html    # Quick start: install, configure, first conversation
+├── api-reference.html      # All APIs across all tools
+├── css/styles.css          # Dark theme consistent with Afterburner dashboard
+└── js/nav.js               # Sidebar navigation</code></pre>
+<h2>Deployment</h2>
+<p>Using <code>~/src/tool-s3-cloudfront-push/</code>:</p>
+<ol><li>Build the static HTML site locally</li><li>Serve it on a local port (e.g., <code>python3 -m http.server 8080</code>)</li><li>Run <code>step2-onetime-create-s3-bucket-and-cloudfront-once-per-site.sh</code> to create the bucket</li><li>Run <code>step1-crawl-site.sh</code> to snapshot the site</li><li>Run <code>step3-deploy-upload-files-to-s3-and-refresh-cloudfront-cache.sh</code> to deploy</li></ol>
+<p>The site gets a CloudFront URL (HTTPS, globally cached).</p>
+<h2>Content Highlights</h2>
+<p>The documentation should tell a story:</p>
+<p><strong>Landing page</strong>: &quot;Build products by talking to customers. The AI does the engineering.&quot;</p>
+<p><strong>The flow</strong>: Customer conversation → Seed docs → Vision → Plan → Sprint → Shipped code → Customer feedback → Loop</p>
+<p><strong>Why it&#x27;s different</strong>: Most AI dev tools start with the code. This starts with the customer. The bot obsessively understands the problem before a single line is written.</p></div><hr>
+<div class="seed-entry"><h3>ecosystem-vision</h3><h1>Afterburner Ecosystem — Vision &amp; Context</h1>
+<h2>The Problem</h2>
+<p>Afterburner handles engineering (sprints, agents, code). But there&#x27;s no customer-facing layer that captures <strong>what to build and why</strong>. The gap between &quot;customer has a problem&quot; and &quot;engineer writes code&quot; is filled by meetings, Slack threads, and tribal knowledge.</p>
+<h2>The Solution</h2>
+<p>A conversational AI customer discovery bot that:</p>
+<ul><li>Lives in Telegram, WhatsApp, and a web chat interface</li><li>Talks to customers and obsessively clarifies use cases</li><li>Translates conversations into requirements Afterburner can execute</li><li>Closes the loop after engineering ships (&quot;does this match what you described?&quot;)</li></ul>
+<pre><code class="lang-">Customer ←→ Bot (discovery + requirements) ←→ Afterburner (engineering)
+             │                                    │
+             │ Personality: customer-discovery.md  │
+             │ Brain: Qwen 3.5 (local)            │
+             │ Memory: per-customer history        │
+             │ Tools: Afterburner APIs             │
+             │                                    │
+             └── Seed docs, Vision, Plan ────────→┘</code></pre>
+<h2>Why It&#x27;s Different</h2>
+<p>Most AI dev tools start with the code. This starts with the customer. The bot obsessively understands the problem before a single line is written.</p>
+<p><strong>The flow:</strong> Customer conversation → Seed docs → Vision → Plan → Sprint → Shipped code → Customer feedback → Loop</p>
+<h2>Three Pillars</h2>
+<h3>1. Personality Framework (reusable)</h3>
+<p>A system for encoding bot personalities with principles, conversation patterns, memory, and evaluation. Not config files — markdown documents that LLMs read directly. Personality inheritance (base → customer-discovery). Scenario-based evaluation.</p>
+<h3>2. Customer Discovery Bot (first consumer)</h3>
+<p>The first bot built on the personality framework. Three interfaces (web chat, Telegram, CLI) sharing one brain (Qwen 3.5 via Ollama). Tools that write seed docs, check project status, and trigger Afterburner pipelines.</p>
+<h3>3. Documentation Site (published)</h3>
+<p>A polished docs site on S3/CloudFront covering the entire Afterburner ecosystem — vision, architecture, bot UX, personality framework, getting started guide.</p>
+<h2>This Is an Afterburner Project</h2>
+<p>Built with Afterburner&#x27;s own sprint tooling:</p>
+<ul><li>Sprint automation (<code>.sprint/scripts/</code>)</li><li>Project memory (<code>docs/project-memory/sessions/</code>, <code>adr/</code>, <code>backlog/</code>)</li><li>Lifecycle docs (<code>docs/lifecycle/VISION.md</code>, <code>PLAN.md</code>, <code>ROADMAP.md</code>)</li><li>Dashboard tracking at <code>http://localhost:1201/afterburner-customer-bot/</code></li></ul>
+<h2>Tech Stack</h2>
+<ul><li><strong>Bot backend:</strong> Python 3.11+, httpx, PyYAML</li><li><strong>LLM:</strong> Qwen 3:4b via Ollama (local inference — no API costs, privacy, works offline)</li><li><strong>Web chat:</strong> Self-contained HTML/CSS/JS served by bot&#x27;s HTTP server (port 1203)</li><li><strong>Telegram:</strong> Bot API polling via httpx</li><li><strong>Memory:</strong> JSONL per-chat + JSON fact extraction</li><li><strong>Evaluation:</strong> YAML scenario files tested against LLM responses</li><li><strong>Docs site:</strong> Static HTML deployed to S3 + CloudFront</li></ul></div><hr>
+<div class="seed-entry"><h3>implementation-phases</h3><h1>Implementation Phases</h1>
+<h2>Phase 1: Personality framework + web chat + text bot MVP</h2>
+<ul><li>Create Afterburner project: <code>afterburner create_project afterburner-customer-bot</code></li><li>Personality loader (reads markdown, generates system prompt)</li><li>Base personality + customer-discovery personality docs</li><li>Qwen 3.5 via Ollama with tool-calling (<code>bot/llm.py</code>)</li><li><strong>Web chat UI at <code>http://localhost:1203/chat</code></strong> — dark theme, debug panel showing tools/principles/memory</li><li><strong>Web chat API</strong>: <code>POST /api/chat</code> (send message, get response), <code>GET /api/history</code> (conversation), <code>GET /api/personality</code> (current personality info)</li><li>Telegram polling loop (runs alongside web server)</li><li>Tools: save_discovery, get_project_summary</li><li>Conversation memory (JSONL per chat, works for both web and Telegram)</li><li>CLI: <code>afterburner-bot start</code> (server + polling), <code>afterburner-bot chat</code> (interactive CLI)</li><li>Test: have a real discovery conversation via web chat AND Telegram</li></ul>
+<h2>Phase 2: Full Afterburner integration + evaluation</h2>
+<ul><li>More tools: generate_vision, add_to_backlog, get_sprint_status</li><li>Post-sprint feedback loop (&quot;here&#x27;s what shipped, does it match?&quot;)</li><li>Evaluation framework with scenario tests</li><li>Fact extraction from conversations (LLM-generated summaries)</li><li>Multi-project support (backend registry)</li><li>Web chat settings panel: switch personality, switch model, view memory</li></ul>
+<h2>Phase 3: Voice + multi-platform</h2>
+<ul><li>Whisper STT for Telegram voice messages</li><li>WhatsApp support (reuse tool-telegram-whatsapp transport layer)</li><li>Customer profiles (cross-conversation memory)</li><li>TTS responses (optional — using existing voice repos)</li><li>Personality inheritance tested with a second bot type (e.g., tech-support)</li></ul>
+<h2>Verification (Phase 1)</h2>
+<ol><li>Personality loader: <code>python3 -c &quot;from bot.personality import Personality; p = Personality(&#x27;customer-discovery&#x27;); print(len(p.to_system_prompt()))&quot;</code></li><li>Start bot: <code>afterburner-bot start</code> (starts web server on :1203 + Telegram polling)</li><li><strong>Web chat test</strong>: Open <code>http://localhost:1203/chat</code>, type &quot;We need a login page&quot; → bot asks about users and use cases (not &quot;what kind of login?&quot;)</li><li><strong>Debug panel</strong>: Verify principles shown as &quot;Customer Obsession, Dive Deep&quot;, tools as &quot;none called&quot;</li><li><strong>Multi-turn</strong>: Have 5-7 exchange conversation in web chat → bot synthesizes into Problem/Users/Use Cases/Success Criteria</li><li><strong>Telegram test</strong>: Send same message in Telegram → same quality response</li><li><strong>CLI test</strong>: <code>afterburner-bot chat &quot;We need a login page&quot;</code> → bot responds</li><li><strong>Tool call</strong>: Confirm summary → bot calls save_discovery → seed doc written to project</li><li><strong>Memory</strong>: Start new conversation, verify it doesn&#x27;t bleed into previous</li><li>Existing tool-telegram-whatsapp notifications still work independently</li><li>Afterburner dashboard shows the project at <code>http://localhost:1201/afterburner-customer-bot/</code></li></ol></div><hr>
+<div class="seed-entry"><h3>personality-framework</h3><h1>Personality Framework Design</h1>
+<h2>Design Principles (lessons from critiquing the YAML approach)</h2>
+<ol><li><strong>Personality as a document, not config.</strong> Markdown that the LLM reads directly — humans write and review it naturally, the LLM interprets as guidance not rules.</li></ol>
+<ol><li><strong>Principles over patterns.</strong> Encode the <em>spirit</em> (&quot;understand the problem before proposing solutions&quot;) not the exact phrases (&quot;say &#x27;tell me more about...&#x27;&quot;). The LLM has judgment — let it use it.</li></ol>
+<ol><li><strong>Separate principles from prompts.</strong> Principles are the <em>what</em> (Customer Obsession). The system prompt is the <em>how</em> for a specific LLM. Different LLMs need different prompting — Qwen 3.5 might need more explicit instructions than Claude.</li></ol>
+<ol><li><strong>Memory as a separate system.</strong> Don&#x27;t embed memory rules in the personality. A reusable memory service that summarizes past conversations, extracts key facts, and feeds relevant context per conversation.</li></ol>
+<ol><li><strong>Personality inheritance.</strong> A base personality (polite, helpful, honest) that specific personalities extend with domain-specific principles.</li></ol>
+<ol><li><strong>Scenario-based evaluation.</strong> Test personalities with conversation scenarios, not unit tests. &quot;Given this input, does the bot behave according to its principles?&quot;</li></ol>
+<h2>Personality Document Format</h2>
+<pre><code class="lang-">~/.config/afterburner-bots/personalities/
+
+base.md                      ← shared foundation all bots inherit
+customer-discovery.md        ← customer-facing discovery agent
+tech-support.md              ← (future) patient, precise, escalates well
+internal-pm.md               ← (future) blunt, data-driven, deadline-aware</code></pre>
+<h3><code>base.md</code> — Foundation personality</h3>
+<pre><code class="lang-markdown"># Base Personality
+
+## Core Values
+- Be honest. If you don&#x27;t know, say so.
+- Be helpful. Your goal is to make the person&#x27;s life easier.
+- Be respectful. Every person&#x27;s time matters.
+- Stay focused. Don&#x27;t ramble or over-explain.
+
+## Communication Style
+- One idea per message. Don&#x27;t overwhelm.
+- Use simple language. Avoid jargon unless the person uses it first.
+- Confirm understanding before taking action.</code></pre>
+<h3><code>customer-discovery.md</code> — The first bot</h3>
+<p>A bot that talks to customers before anything gets built. Its superpower is asking the right questions to uncover the real problem. It never accepts a feature request at face value — it always digs into the use case behind it.</p>
+<p><strong>Principles:</strong> Customer Obsession, Dive Deep, Insist on High Standards, Bias for Action, Data Driven.</p>
+<p><strong>Conversation flow:</strong> Opening → Discovery (3-7 exchanges) → Synthesis (Problem/Users/Use Cases/Success Criteria) → Handoff (seed docs, vision, sprint candidates) → Follow-up.</p>
+<h2>Personality Loader</h2>
+<pre><code class="lang-python">class Personality:
+    def __init__(self, path: str):
+        self.content = read_markdown(path)
+        self.base = self._load_base()  # reads &quot;Extends: base.md&quot;
+
+    def to_system_prompt(self) -&gt; str:
+        return f&quot;{self.base}\n\n{self.content}&quot;
+
+    def get_principles(self) -&gt; list[str]:
+        ...</code></pre>
+<h2>Memory System (separate from personality)</h2>
+<pre><code class="lang-">~/.config/afterburner-bots/memory/
+├── conversations/
+│   ├── chat-12345/              ← per Telegram chat
+│   │   ├── history.jsonl        ← raw message log
+│   │   ├── summary.md           ← LLM-generated summary of key facts
+│   │   └── facts.json           ← extracted: {&quot;users&quot;: 2, &quot;current_tool&quot;: &quot;spreadsheets&quot;}
+│   └── chat-67890/
+└── shared/
+    └── customer-profiles.json   ← cross-conversation customer knowledge</code></pre>
+<p>Memory service responsibilities:</p>
+<ul><li>Log every message (history.jsonl)</li><li>After each conversation, summarize key facts (LLM call)</li><li>Before each response, inject relevant context from past conversations</li><li>Extract structured data (user count, pain points, tools mentioned)</li><li>This service is reusable across ALL bots</li></ul>
+<h2>Evaluation Framework</h2>
+<pre><code class="lang-yaml">name: &quot;Surface-level feature request&quot;
+input: &quot;We need a dark mode&quot;
+principles_tested: [Customer Obsession, Dive Deep]
+pass_criteria:
+  - response contains a question about why or who
+  - response does NOT immediately accept the request
+  - response does NOT ask &quot;what kind of dark mode&quot;
+fail_criteria:
+  - response says &quot;sure, I&#x27;ll add that&quot;
+  - response jumps to implementation details</code></pre>
+<p>Run evaluations:</p>
+<pre><code class="lang-bash">afterburner-bot evaluate customer-discovery
+# Runs all scenarios, reports which principles held vs broke</code></pre></div><hr>
+<div class="seed-entry"><h3>plan-inputs</h3><h1>Plan Inputs</h1>
+<h2>Appetite</h2>
+<p>3 phases over approximately 6-8 sprints to reach full production.</p>
+<p>Phase 1 (2-3 sprints): Personality framework + web chat + text bot MVP Phase 2 (2-3 sprints): Full Afterburner integration + evaluation framework Phase 3 (2 sprints): Voice + multi-platform + customer profiles</p>
+<h2>Solution Sketch</h2>
+<p>The bot uses a <strong>gateway pattern</strong> — a single LLM orchestration layer (Qwen 3:4b via Ollama) with multiple transport adapters (web chat on port 1203, Telegram polling, CLI). The personality framework reads markdown documents that encode principles, not rigid rules, allowing the LLM to use judgment.</p>
+<p>Key architectural decisions:</p>
+<ul><li>Personality as markdown documents with inheritance (base.md → customer-discovery.md)</li><li>Memory as a separate JSONL-based system, not embedded in personality</li><li>Tool calls bridge the bot to Afterburner (save_discovery, get_project_summary)</li><li>Web chat includes a debug panel showing principles, tools, memory, and token usage</li></ul>
+<h2>Market Fit</h2>
+<p>No existing tool bridges customer conversations to automated engineering pipelines. Current alternatives: manual discovery interviews → Notion/Jira → engineering tickets. This bot automates the entire chain: conversation → seed docs → vision → plan → sprint → shipped code → customer feedback loop.</p>
+<h2>Differentiation</h2>
+<ul><li>Starts with the customer, not the code. Most AI dev tools assume you know what to build.</li><li>Personality framework is reusable — future bots (tech support, internal PM) plug into the same system.</li><li>Local LLM inference (Ollama) means no API costs, full privacy, works offline.</li><li>Deep integration with Afterburner&#x27;s sprint pipeline — bot outputs become engineering inputs automatically.</li></ul>
+<h2>Rabbit Holes</h2>
+<ul><li>Don&#x27;t over-engineer the personality format — markdown is enough, no YAML schemas needed.</li><li>Don&#x27;t build a custom vector DB for memory — JSONL + JSON facts is sufficient for Phase 1.</li><li>Don&#x27;t try to support every LLM provider in Phase 1 — Ollama only, add Claude/OpenAI later.</li><li>Voice/STT is Phase 3 — don&#x27;t let it creep into earlier phases.</li></ul>
+<h2>No Gos</h2>
+<ul><li>No WhatsApp in Phase 1 (requires Business API approval).</li><li>No vector database or embedding-based retrieval in Phase 1.</li><li>No multi-tenant or cloud-hosted deployment — local only.</li><li>No payment or billing integration.</li><li>No automated sprint launching from bot conversations (human reviews seed docs first).</li></ul>
+<h2>Sprint Candidates</h2>
+<h3>Sprint 1: Foundation</h3>
+<ul><li>Personality loader with inheritance</li><li>Base + customer-discovery personality docs</li><li>Qwen 3:4b via Ollama with tool calling</li><li>Web chat UI (port 1203) with debug panel</li><li>Conversation memory (JSONL per chat)</li><li>CLI: start, chat, status commands</li></ul>
+<h3>Sprint 2: Telegram + Tools</h3>
+<ul><li>Telegram polling transport</li><li>Tools: save_discovery, get_project_summary</li><li>End-to-end test: conversation → seed doc written to project</li><li>Config system (~/.config/afterburner-bots/config.json)</li></ul>
+<h3>Sprint 3: Evaluation + Integration</h3>
+<ul><li>Evaluation framework with YAML scenarios</li><li>More tools: generate_vision, add_to_backlog, get_sprint_status</li><li>Fact extraction from conversations</li><li>Post-sprint feedback loop</li></ul>
+<h3>Sprint 4: Polish + Docs Site</h3>
+<ul><li>Web chat settings panel</li><li>Multi-project support</li><li>Documentation site built and deployed to S3/CloudFront</li><li>README and getting-started guide</li></ul></div><hr>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

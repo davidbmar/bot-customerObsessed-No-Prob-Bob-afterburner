@@ -140,3 +140,54 @@ class TestAutoDiscovery:
             cfg = BotConfig()
         assert cfg.active_project == "auto"
         assert "auto" in cfg.projects
+
+    def test_dashboard_with_string_entries(self, tmp_path: Path) -> None:
+        """B-011: projects.json with string entries instead of dicts doesn't crash."""
+        dashboard = tmp_path / "projects.json"
+        dashboard.write_text(json.dumps(["proj-a", "proj-b"]))
+        with patch("bot.config.REGISTRY_PATH", tmp_path / "nope.json"), \
+             patch("bot.config.DASHBOARD_PROJECTS_PATH", dashboard):
+            result = _auto_discover_projects()
+        assert result == {}
+
+    def test_dashboard_with_mixed_entries(self, tmp_path: Path) -> None:
+        """B-011: projects.json with mix of dicts and strings skips invalid entries."""
+        dashboard = tmp_path / "projects.json"
+        dashboard.write_text(json.dumps([
+            "bad-entry",
+            {"slug": "good", "rootPath": "/home/user/good"},
+            42,
+        ]))
+        with patch("bot.config.REGISTRY_PATH", tmp_path / "nope.json"), \
+             patch("bot.config.DASHBOARD_PROJECTS_PATH", dashboard):
+            result = _auto_discover_projects()
+        assert result == {"good": "/home/user/good"}
+
+    def test_dashboard_with_non_list_json(self, tmp_path: Path) -> None:
+        """B-011: projects.json that's a dict (not a list) returns empty."""
+        dashboard = tmp_path / "projects.json"
+        dashboard.write_text(json.dumps({"key": "value"}))
+        with patch("bot.config.REGISTRY_PATH", tmp_path / "nope.json"), \
+             patch("bot.config.DASHBOARD_PROJECTS_PATH", dashboard):
+            result = _auto_discover_projects()
+        assert result == {}
+
+    def test_registry_with_string_entries(self, tmp_path: Path) -> None:
+        """B-011: registry.json with string entries skips them gracefully."""
+        registry = tmp_path / "registry.json"
+        registry.write_text(json.dumps(["just-a-string"]))
+        with patch("bot.config.REGISTRY_PATH", registry), \
+             patch("bot.config.DASHBOARD_PROJECTS_PATH", tmp_path / "nope.json"):
+            result = _auto_discover_projects()
+        assert result == {}
+
+    def test_registry_dict_format(self, tmp_path: Path) -> None:
+        """Registry with {projects: [...]} dict format works."""
+        registry = tmp_path / "registry.json"
+        registry.write_text(json.dumps({
+            "projects": [{"slug": "p1", "rootPath": "/tmp/p1"}]
+        }))
+        with patch("bot.config.REGISTRY_PATH", registry), \
+             patch("bot.config.DASHBOARD_PROJECTS_PATH", tmp_path / "nope.json"):
+            result = _auto_discover_projects()
+        assert "p1" in result

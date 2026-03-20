@@ -1,18 +1,18 @@
-agentA-multi-project-vision — Sprint 8
+agentA-fixes-and-polish — Sprint 9
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 7: web chat polished — debug panel shows real data (principles, tokens, latency, facts), settings panel (switch personality/model), typing indicator, timestamps, markdown rendering, get_sprint_status tool. 100 tests pass.
-- All Phase 1+2 features complete. Phase 3 roadmap: multi-project, voice, customer profiles.
-- Backlog: F-013 (multi-project), F-014 (feedback loop), F-015 (generate_vision) are highest priority planned items.
+- Sprint 8: multi-project support, generate_vision tool, feedback_on_sprint tool — 129 tests pass
+- Bugs found: B-011 (CLI status crashes on projects.json format), B-012 (tool naming inconsistency)
+- generate_vision and feedback_on_sprint both exist and work, but CLI status can't load config
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Multi-project support — bot can work with multiple Afterburner projects (F-013)
-- generate_vision tool — bot synthesizes discovery conversation into Vision doc (F-015)
-- Post-sprint feedback loop (F-014)
+- Fix CLI status crash (B-011) and tool naming inconsistency (B-012)
+- Add conversation export (F-016) and personality hot-reload (F-017)
+- Harden the bot for real usage
 
 Constraints
 - Use the project venv: .venv/bin/python3
@@ -22,47 +22,41 @@ Constraints
 
 
 Objective
-- Add multi-project support, generate_vision tool, and post-sprint feedback
+- Fix crashes, add conversation export, personality hot-reload
 
 Tasks
-1. Multi-project support in `bot/config.py` (F-013):
-   - Add `projects` dict to BotConfig: maps project slug → project root path
-   - Add `active_project` field — the currently selected project
-   - Method: `add_project(slug, root_path)` — registers a project
-   - Method: `switch_project(slug)` — changes active project
-   - Method: `list_projects() -> list[str]` — returns registered slugs
-   - Default: auto-discover from `~/.config/afterburner/registry.json` if it exists, or from Afterburner dashboard projects.json
-   - Save projects to config file so they persist
+1. Fix `bot/config.py` `_auto_discover_projects()` (B-011):
+   - The function reads dashboard projects.json but expects dict entries where projects.json has a different format
+   - Read the actual projects.json format: it's a list of objects with `slug`, `name`, `rootPath` fields
+   - Parse correctly: `{slug: rootPath}` mapping
+   - Make it graceful: if projects.json doesn't exist or is malformed, return empty dict instead of crashing
+   - Test: `python3 cli.py status` must work without crashing
 
-2. Update `bot/tools.py` — all project-aware tools (save_discovery, get_project_summary, add_to_backlog, get_sprint_status) should use `config.active_project` as the default project root instead of hardcoded paths
+2. Normalize tool naming (B-012):
+   - Ensure all tool functions follow `verb_noun` pattern consistently
+   - Current tools: save_discovery, get_project_summary, add_to_backlog, get_sprint_status, generate_vision, feedback_on_sprint
+   - These are fine — just make sure exports and TOOL_DEFINITIONS use consistent names
+   - Add `feedback_on_sprint` to the `__all__` or ensure it's importable
 
-3. Add `generate_vision` tool to `bot/tools.py` (F-015):
-   - Takes structured discovery data (problem, users, use_cases, differentiators, success_criteria)
-   - Generates a Vision markdown document following Afterburner format (Product Name, Problem Statement, Target Audience, Key Differentiators, Solution Overview, Success Criteria, FAQ)
-   - Writes to active project's `docs/lifecycle/VISION.md`
-   - Register as LLM tool
+3. Add conversation export (F-016):
+   - New endpoint: `GET /api/conversations/export?conversation_id=X` — returns full conversation as markdown
+   - Format: `# Conversation {id}\n\n**User:** message\n\n**Bot:** response\n\n---\n\n` for each exchange
+   - Add "Export" button to chat UI that downloads the markdown file
+   - Add `export` subcommand to cli.py: `python3 cli.py export <conversation_id>` — prints markdown to stdout
 
-4. Add post-sprint feedback to `bot/gateway.py` (F-014):
-   - New method: `feedback_on_sprint(project_slug)` — reads latest PROJECT_STATUS doc and summarizes what was shipped
-   - Returns structured summary the bot can present: "Here's what Sprint N shipped: [deliverables]. Does this match what you expected?"
-   - Add as a tool the LLM can call
+4. Add personality hot-reload (F-017):
+   - New endpoint: `POST /api/personality/reload` — re-reads personality files without restarting server
+   - Gateway stores personality loader reference, reload method re-reads from disk
+   - Add "Reload Personality" button to settings panel in chat UI
+   - Useful when editing personality docs while bot is running
 
-5. Add API endpoints to `bot/server.py`:
-   - `GET /api/projects` — list registered projects
-   - `POST /api/projects/switch` — switch active project
-   - Update settings panel in chat_ui.html to show project selector
+5. Write tests for all new features — target 140+ tests total
 
-6. Write tests:
-   - `tests/test_tools.py`: test generate_vision writes correct markdown
-   - `tests/test_config.py`: test multi-project config (add, switch, list)
-   - Target: 110+ tests
-
-7. Update backlog: mark F-013, F-014, F-015 as Complete (Sprint 8)
+6. Update backlog: mark B-011, B-012, F-016, F-017 as Complete (Sprint 9)
 
 Acceptance Criteria
-- `from bot.tools import generate_vision` works
-- Bot can switch between projects and tools use the active project
-- generate_vision writes a valid Vision doc to the active project
-- Settings panel shows project selector
-- `.venv/bin/python3 -m pytest tests/ -v` — 110+ tests, 0 failures
+- `python3 cli.py status` works without crashing
+- `GET /api/conversations/export?conversation_id=test` returns markdown
+- `POST /api/personality/reload` re-reads personality files
+- `.venv/bin/python3 -m pytest tests/ -v` — 140+ tests, 0 failures
 - Backlog updated

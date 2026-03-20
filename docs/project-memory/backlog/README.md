@@ -16,8 +16,8 @@ Track bugs and feature requests here.
 | B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Open |
 | B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Open |
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
-| B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Open |
-| B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Open |
+| B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Fixed (Sprint 9) |
+| B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Fixed (Sprint 9) |
 
 ## Features
 
@@ -38,5 +38,5 @@ Track bugs and feature requests here.
 | F-013 | Multi-project support — bot can switch between Afterburner projects | High | Complete (Sprint 8) |
 | F-014 | Post-sprint feedback loop — "here's what shipped, does it match?" | Medium | Complete (Sprint 8) |
 | F-015 | generate_vision tool — bot generates Vision doc from discovery conversation | High | Complete (Sprint 8) |
-| F-016 | Conversation export — download chat as markdown | Low | Planned |
-| F-017 | Bot personality hot-reload — change personality without restarting server | Medium | Planned |
+| F-016 | Conversation export — download chat as markdown | Low | Complete (Sprint 9) |
+| F-017 | Bot personality hot-reload — change personality without restarting server | Medium | Complete (Sprint 9) |

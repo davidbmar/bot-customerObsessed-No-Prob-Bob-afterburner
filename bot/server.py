@@ -49,6 +49,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_get_personalities()
         elif path == "/api/config":
             self._handle_get_config()
+        elif path == "/api/conversations/export":
+            self._handle_export_conversation(parsed)
         elif path == "/api/projects":
             self._handle_get_projects()
         else:
@@ -64,6 +66,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_post_config()
         elif path == "/api/conversations/new":
             self._handle_new_conversation()
+        elif path == "/api/personality/reload":
+            self._handle_personality_reload()
         elif path == "/api/projects/switch":
             self._handle_switch_project()
         else:
@@ -159,6 +163,38 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             "projects": config.list_projects(),
             "active_project": config.active_project,
         })
+
+    def _handle_personality_reload(self) -> None:
+        """Re-read personality files from disk without restarting."""
+        try:
+            self.gateway.reload_personality()
+            self._json_response({
+                "status": "reloaded",
+                "personality": self.gateway.personality.name,
+                "principles": self.gateway.principles,
+            })
+        except FileNotFoundError as exc:
+            self._json_response({"error": str(exc)}, status=404)
+
+    def _handle_export_conversation(self, parsed) -> None:
+        """Export a conversation as markdown."""
+        qs = parse_qs(parsed.query)
+        conversation_id = qs.get("conversation_id", [""])[0]
+        if not conversation_id:
+            self._json_response({"error": "Missing conversation_id"}, status=400)
+            return
+        markdown = self.gateway.memory.export_markdown(conversation_id)
+        if not markdown:
+            self._json_response({"error": "Conversation not found or empty"}, status=404)
+            return
+        body = markdown.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/markdown; charset=utf-8")
+        self.send_header("Content-Disposition", f'attachment; filename="{conversation_id}.md"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_switch_project(self) -> None:
         """Switch the active project."""

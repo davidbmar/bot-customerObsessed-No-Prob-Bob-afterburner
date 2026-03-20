@@ -115,6 +115,35 @@ class TestClear:
         assert memory.message_count("conv1") == 0
 
 
+class TestExportMarkdown:
+    def test_export_basic_conversation(self, memory: ConversationMemory):
+        memory.add("conv1", "user", "Hello")
+        memory.add("conv1", "assistant", "Hi there!")
+        md = memory.export_markdown("conv1")
+        assert "# Conversation conv1" in md
+        assert "**User:** Hello" in md
+        assert "**Bot:** Hi there!" in md
+        assert "---" in md
+
+    def test_export_empty_conversation(self, memory: ConversationMemory):
+        md = memory.export_markdown("nonexistent")
+        assert md == ""
+
+    def test_export_multiple_exchanges(self, memory: ConversationMemory):
+        memory.add("conv1", "user", "Q1")
+        memory.add("conv1", "assistant", "A1")
+        memory.add("conv1", "user", "Q2")
+        memory.add("conv1", "assistant", "A2")
+        md = memory.export_markdown("conv1")
+        assert md.count("**User:**") == 2
+        assert md.count("**Bot:**") == 2
+
+    def test_export_preserves_content(self, memory: ConversationMemory):
+        memory.add("conv1", "user", "Tell me about **markdown**")
+        md = memory.export_markdown("conv1")
+        assert "**markdown**" in md
+
+
 class TestJsonlFormat:
     def test_stored_as_valid_jsonl(self, memory: ConversationMemory, tmp_path):
         memory.add("conv1", "user", "line 1")

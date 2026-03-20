@@ -133,7 +133,10 @@ def _auto_discover_projects() -> dict[str, str]:
         try:
             data = json.loads(REGISTRY_PATH.read_text())
             projects: dict[str, str] = {}
-            for entry in data if isinstance(data, list) else data.get("projects", []):
+            entries = data if isinstance(data, list) else data.get("projects", []) if isinstance(data, dict) else []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
                 slug = entry.get("slug", "")
                 root = entry.get("rootPath", "").replace("~", str(Path.home()))
                 if slug and root:
@@ -147,14 +150,18 @@ def _auto_discover_projects() -> dict[str, str]:
     if DASHBOARD_PROJECTS_PATH.exists():
         try:
             data = json.loads(DASHBOARD_PROJECTS_PATH.read_text())
+            if not isinstance(data, list):
+                return {}
             projects = {}
             for entry in data:
+                if not isinstance(entry, dict):
+                    continue
                 slug = entry.get("slug", "")
                 root = entry.get("rootPath", "").replace("~", str(Path.home()))
                 if slug and root:
                     projects[slug] = root
             return projects
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, TypeError):
             pass
 
     return {}

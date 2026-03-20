@@ -149,6 +149,16 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
     sys.exit(0 if failed == 0 else 1)
 
 
+def cmd_export(args: argparse.Namespace) -> None:
+    """Export a conversation as markdown to stdout."""
+    memory = ConversationMemory()
+    markdown = memory.export_markdown(args.conversation_id)
+    if not markdown:
+        print(f"No conversation found: {args.conversation_id}", file=sys.stderr)
+        sys.exit(1)
+    print(markdown)
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     """Show bot status: server reachability, personality, conversation count."""
     config = BotConfig.load()
@@ -192,6 +202,10 @@ def main() -> None:
     # status
     sub.add_parser("status", help="Show bot status")
 
+    # export
+    p_export = sub.add_parser("export", help="Export conversation as markdown")
+    p_export.add_argument("conversation_id", help="Conversation ID to export")
+
     # evaluate
     sub.add_parser("evaluate", help="Run evaluation scenarios")
 
@@ -203,6 +217,8 @@ def main() -> None:
         cmd_chat(args)
     elif args.command == "status":
         cmd_status(args)
+    elif args.command == "export":
+        cmd_export(args)
     elif args.command == "evaluate":
         cmd_evaluate(args)
     else:

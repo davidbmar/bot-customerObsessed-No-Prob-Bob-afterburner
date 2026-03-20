@@ -1,4 +1,4 @@
-agentB-ui-polish — Sprint 13
+agentA-synthesis-and-fixes — Sprint 13
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -29,33 +29,38 @@ Constraints
 
 
 Objective
-- Add auto-scroll, "Save as Seed" button, mobile responsive CSS
+- Fix server direct-run, add save_discovery UI integration, add auto-synthesis
 
 Tasks
-1. **Auto-scroll** — Update `bot/chat_ui.html`:
-   - After appending any message (user, bot, or streaming chunk), scroll chat container to bottom
-   - Use `element.scrollTop = element.scrollHeight` after DOM update
-   - Also scroll on initial page load after restoring conversation from localStorage
+1. **Fix `python3 bot/server.py` direct run** (B-017):
+   - The fallback import block in server.py line 23-26 catches ImportError for relative imports and tries absolute imports
+   - But gateway.py also uses relative imports internally, causing a chain failure
+   - Fix: add `__main__.py` to bot/ that does `from bot.server import main; main()` OR fix all imports to work both ways
+   - Simplest fix: ensure `bot/__main__.py` exists and works, and fix server.py to handle both cases
 
-2. **"Save as Seed Doc" button** — Update `bot/chat_ui.html`:
-   - Add a button in the chat header or below the last bot message: "Save as Seed Doc"
-   - Button only appears after 3+ exchanges (meaningful conversation)
-   - On click: POST to `/api/tools/save_discovery` with current conversation_id and active project slug
-   - Show success toast: "Saved seed doc to [project]" or error message
-   - Button text changes to "Saved ✓" after successful save
+2. **Save as Seed Doc API endpoint** — Add `POST /api/tools/save_discovery` to `bot/server.py`:
+   - Accepts: `{project_slug, conversation_id}`
+   - Reads conversation history for that conversation_id
+   - Calls `save_discovery(slug, content)` tool with a formatted summary of the conversation
+   - Returns: `{ok: true, path: "docs/seed/discovery-YYYY-MM-DD.md"}`
+   - This bridges the web chat UI to the Afterburner pipeline
 
-3. **Mobile responsive** — Update `bot/chat_ui.html`:
-   - Add `<meta name="viewport" content="width=device-width, initial-scale=1">` to head
-   - Debug panel: hidden by default on mobile (screen width < 768px), shown via toggle
-   - Settings panel: full-width overlay on mobile instead of side panel
-   - Chat input: full width, larger touch targets for Send button
-   - Provider cards in settings: stack vertically on mobile
-   - Message bubbles: max-width 95% on mobile (currently ~80%)
+3. **Auto-synthesis after 5+ exchanges** — Update `bot/gateway.py`:
+   - Track exchange count per conversation (count user messages)
+   - After the 5th user message, append to the system prompt: "You have had enough exchanges. In your next response, synthesize the conversation into a structured summary with sections: Problem, Users, Use Cases, Success Criteria. Present this as a formatted summary."
+   - This triggers the bot's discovery synthesis behavior
+   - Add a `synthesis_triggered` flag to prevent re-triggering
 
-4. **Update backlog** — Mark F-031, F-027 as Complete (Sprint 13)
+4. **Write tests**:
+   - Test server direct-run imports work
+   - Test save_discovery API endpoint
+   - Test synthesis triggers after 5 exchanges
+   - Target: 220+ total tests
+
+5. **Update backlog** — Mark B-017, F-033, F-034 as Complete (Sprint 13)
 
 Acceptance Criteria
-- Chat auto-scrolls when new messages arrive
-- "Save as Seed Doc" button appears after 3+ exchanges
-- On mobile viewport (375px wide), chat is usable with no horizontal scroll
-- Debug panel hidden by default on mobile
+- `python3 bot/server.py` starts without import errors
+- After 5+ message exchanges, bot produces a structured summary
+- POST /api/tools/save_discovery writes a seed doc to the target project
+- `.venv/bin/python3 -m pytest tests/ -v` — 220+ tests, 0 failures

@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+# Bootstrap: when run directly as `python3 bot/server.py`, ensure the parent
+# directory is on sys.path so `bot.*` package imports resolve correctly.
+import sys
+from pathlib import Path as _Path
+
+if __name__ == "__main__" and __package__ is None:
+    _parent = str(_Path(__file__).resolve().parent.parent)
+    if _parent not in sys.path:
+        sys.path.insert(0, _parent)
+    __package__ = "bot"
+
 import json
 import logging
 import os
 import signal
 import subprocess
-import sys
 import threading
 
 # Ignore SIGPIPE — prevents crash when external API clients (anthropic/openai)
@@ -19,12 +29,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-try:
-    from .gateway import Gateway
-    from .personality import PersonalityLoader
-except ImportError:
-    from gateway import Gateway  # type: ignore[no-redef]
-    from personality import PersonalityLoader  # type: ignore[no-redef]
+from .gateway import Gateway
+from .personality import PersonalityLoader
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +128,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_llm_switch()
         elif path == "/api/llm/config":
             self._handle_post_llm_config()
+        elif path == "/api/tools/save_discovery":
+            self._handle_save_discovery()
         else:
             self.send_error(404)
 
@@ -415,6 +423,46 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         save_provider_config(provider_id, config_data)
         self._json_response({"status": "saved", "provider_id": provider_id})
 
+    def _handle_save_discovery(self) -> None:
+        """Save conversation as a seed discovery document."""
+        from .tools import tool_save_discovery
+
+        body = self._read_body()
+        if body is None:
+            return
+
+        project_slug = body.get("project_slug", "").strip()
+        conversation_id = body.get("conversation_id", "").strip()
+
+        if not project_slug:
+            self._json_response({"error": "Missing 'project_slug'"}, status=400)
+            return
+        if not conversation_id:
+            self._json_response({"error": "Missing 'conversation_id'"}, status=400)
+            return
+
+        history = self.gateway.memory.get_history(conversation_id)
+        if not history:
+            self._json_response({"error": "No conversation history found"}, status=404)
+            return
+
+        # Format conversation into a discovery document
+        lines = ["# Discovery Notes\n"]
+        for msg in history:
+            role = msg["role"].title()
+            lines.append(f"**{role}:** {msg['content']}\n")
+
+        content = "\n".join(lines)
+        result = tool_save_discovery(slug=project_slug, content=content)
+
+        if "not found" in result.lower():
+            self._json_response({"error": result}, status=404)
+            return
+
+        # Extract path from result like "Discovery notes saved to /path/to/file"
+        path = result.split("saved to ")[-1] if "saved to" in result else result
+        self._json_response({"ok": True, "path": path})
+
     def _serve_chat_ui(self) -> None:
         """Serve the self-contained chat UI HTML."""
         if not CHAT_UI_PATH.exists():
@@ -523,16 +571,13 @@ def start_server(gateway: Gateway, port: int = PORT) -> ThreadedHTTPServer:
     return server
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for running the server directly."""
     import signal as _sig
-    import sys as _sys
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
-    try:
-        from config import BotConfig  # type: ignore[no-redef]
-    except ImportError:
-        from bot.config import BotConfig  # type: ignore[no-redef,assignment]
+    from .config import BotConfig
 
     cfg = BotConfig.load()
     gw = Gateway(
@@ -545,8 +590,12 @@ if __name__ == "__main__":
     def _shutdown(sig, frame):  # type: ignore[no-untyped-def]
         logging.info("Shutting down...")
         srv.shutdown()
-        _sys.exit(0)
+        sys.exit(0)
 
     _sig.signal(_sig.SIGINT, _shutdown)
     _sig.signal(_sig.SIGTERM, _shutdown)
     _sig.pause()
+
+
+if __name__ == "__main__":
+    main()

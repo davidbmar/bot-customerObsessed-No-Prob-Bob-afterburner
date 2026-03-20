@@ -1,57 +1,54 @@
-agentC-memory-cli — Sprint 1
+agentB-telegram-tools — Sprint 2
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- This is Sprint 1 — no previous sprint. Project scaffolding exists with stub modules in bot/ (personality.py, llm.py, gateway.py, memory.py, server.py, tools.py, config.py, polling.py). Personality docs exist (base.md, customer-discovery.md). pyproject.toml configured.
+- Sprint 1 delivered: personality framework with inheritance (9 principles), LLM client (OllamaClient), memory system (JSONL), web chat UI skeleton
+- Merge conflicts between agents B and C left import mismatches: gateway.py references OllamaLLM but llm.py exports OllamaClient, config field names don't match between modules, server.py can't start
+- Personality and memory work correctly in isolation
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Build the foundation: personality framework, LLM gateway with web chat, and memory system
-- Deliver a working bot you can talk to at http://localhost:1203/chat
-- Customer discovery personality guides all conversations
+- Fix all critical merge bugs so the bot actually runs (B-001, B-002, B-003, B-004)
+- Add Telegram transport + discovery tools (F-001, F-002)
+- Deliver a working bot on both web chat AND Telegram
 
 Constraints
-- Use Qwen 3.5 via Ollama (local inference, no API costs)
-- All bot code goes in `bot/` directory, CLI in `cli.py`
-- Personality docs go in `personalities/` (base.md, customer-discovery.md)
-- Web chat serves on port 1203
-- Python 3.11+, httpx for HTTP, no heavy frameworks
+- Use the project venv: .venv/bin/python3
+- Ollama must be running for LLM calls (qwen3.5:latest)
 - Agents run non-interactively — MUST NOT ask for confirmation
+- All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 
 
 Objective
-- Build the conversation memory system and CLI commands
+- Add Telegram polling transport and the save_discovery tool
 
 Tasks
-- Rewrite `bot/memory.py` with a `ConversationMemory` class that:
-  - Stores conversations as JSONL files (one file per conversation_id)
-  - Storage dir: `~/.local/share/afterburner-bot/conversations/`
-  - Method: `add(role, content, metadata=None)` — appends to JSONL
-  - Method: `get_history(conversation_id, limit=50) -> list[dict]` — returns messages
-  - Method: `list_conversations() -> list[str]` — returns conversation IDs
-  - Method: `clear(conversation_id)` — deletes a conversation
-  - Each entry: `{"role": "user"|"assistant", "content": "...", "timestamp": "...", "metadata": {...}}`
-  - Conversations don't bleed between IDs (isolation)
-- Rewrite `cli.py` with three commands using argparse:
-  - `python3 cli.py start` — starts the web server (port 1203) + prints URL
-  - `python3 cli.py chat` — interactive CLI chat loop (reads from stdin, prints responses)
-  - `python3 cli.py status` — shows bot status: is server running? which personality? how many conversations?
-  - Uses the same gateway as the web chat (shared code path)
-- Write tests in `tests/test_memory.py`:
-  - Add messages and retrieve history
-  - Conversation isolation (different IDs don't mix)
-  - List conversations returns correct IDs
-  - Clear deletes conversation data
-- Rewrite `bot/config.py` for centralized configuration:
-  - Config file: `~/.config/afterburner-bots/config.json`
-  - Defaults: ollama_url, model_name, personality_name, data_dir
-  - Method: `load() -> Config` with sensible defaults if file doesn't exist
+- Implement `bot/polling.py` with a `TelegramPoller` class:
+  - Uses httpx to poll Telegram Bot API (getUpdates long polling)
+  - Configurable bot token via `BotConfig.telegram_token`
+  - Routes incoming messages through the same Gateway as web chat
+  - Sends responses back via sendMessage API
+  - Handles /start command (welcome message with personality intro)
+  - Non-blocking: runs in asyncio alongside the web server
+  - Graceful shutdown on SIGINT
+- Add `telegram_token` field to `bot/config.py` `BotConfig` (default: empty string, polling disabled when empty)
+- Implement `bot/tools.py` with the `save_discovery` tool:
+  - Receives structured discovery output (problem, users, use_cases, success_criteria)
+  - Writes a seed document to a configurable Afterburner project path
+  - Filename: `discovery-{timestamp}.md` in the project's `docs/seed/` directory
+  - Markdown format matching Afterburner seed doc conventions
+  - Register it as a tool the LLM can call (add to tool definitions in llm.py)
+- Update `cli.py` to add `--telegram` flag to the `start` command that enables polling
+- Write tests in `tests/test_tools.py`:
+  - save_discovery writes correct markdown to the right path
+  - Tool registration includes save_discovery
+- Update backlog: mark F-001 and F-002 as "Complete (Sprint 2)"
 
 Acceptance Criteria
-- Memory stores and retrieves messages correctly with conversation isolation
-- `python3 cli.py start` launches the server
-- `python3 cli.py status` shows status info
-- `python3 -m pytest tests/test_memory.py -v` passes
-- Config loads with sensible defaults even without a config file
+- `from bot.polling import TelegramPoller` imports without error
+- save_discovery tool writes a valid seed doc markdown file
+- `.venv/bin/python3 -m pytest tests/test_tools.py -v` passes
+- `python3 cli.py start --telegram` starts server + polling (exits cleanly if no token configured)
+- Backlog updated

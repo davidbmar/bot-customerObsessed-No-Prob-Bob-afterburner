@@ -103,6 +103,23 @@ TOOL_DEFINITIONS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_sprint_status",
+            "description": "Check the current sprint status for an Afterburner project — how many agents are done, which are still running.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Project slug",
+                    },
+                },
+                "required": ["slug"],
+            },
+        },
+    },
 ]
 
 

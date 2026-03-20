@@ -26,6 +26,7 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         "save_discovery": tool_save_discovery,
         "get_project_summary": tool_get_project_summary,
         "add_to_backlog": tool_add_to_backlog,
+        "get_sprint_status": tool_get_sprint_status,
     }
     fn = dispatch.get(name)
     if not fn:
@@ -218,6 +219,65 @@ def _find_project_root(slug: str) -> Path | None:
     except (json.JSONDecodeError, KeyError):
         pass
     return None
+
+
+def tool_get_sprint_status(slug: str) -> str:
+    """Get sprint status for a project by reading sprint marker files."""
+    project_root = _find_project_root(slug)
+    if not project_root:
+        return f"Project '{slug}' not found in dashboard registry."
+    result = get_sprint_status(project_root)
+    return json.dumps(result)
+
+
+def get_sprint_status(project_root: Path) -> dict[str, Any]:
+    """Read .agent-done-* files and SPRINT_BRIEF.md to determine sprint status.
+
+    Returns a dict with sprint_number, agent_count, agents_done, agents_running.
+    """
+    result: dict[str, Any] = {
+        "sprint_number": 0,
+        "agent_count": 0,
+        "agents_done": [],
+        "agents_running": [],
+    }
+
+    # Try to extract sprint number from SPRINT_BRIEF.md
+    brief_path = project_root / "SPRINT_BRIEF.md"
+    if brief_path.exists():
+        brief_text = brief_path.read_text()
+        sprint_match = re.search(r"[Ss]print\s+(\d+)", brief_text)
+        if sprint_match:
+            result["sprint_number"] = int(sprint_match.group(1))
+
+    # Count agent-done marker files
+    done_files = list(project_root.glob(".agent-done-*"))
+    done_agents = [f.name.replace(".agent-done-", "") for f in done_files]
+    result["agents_done"] = sorted(done_agents)
+
+    # Detect all agents from worktree branches or brief
+    # Look for agent branches in .sprint/ config or AGENT_BRIEF files
+    agent_briefs = list(project_root.glob("AGENT_BRIEF*.md"))
+    all_agents: set[str] = set()
+
+    # Check for .sprint/config.sh to get agent count
+    sprint_config = project_root / ".sprint" / "config.sh"
+    if sprint_config.exists():
+        config_text = sprint_config.read_text()
+        agents_match = re.search(r'AGENTS=\(([^)]+)\)', config_text)
+        if agents_match:
+            agents_str = agents_match.group(1)
+            for agent in re.findall(r'"([^"]+)"', agents_str):
+                all_agents.add(agent)
+
+    # If no agents found from config, infer from done files
+    if not all_agents and done_agents:
+        all_agents = set(done_agents)
+
+    result["agent_count"] = len(all_agents)
+    result["agents_running"] = sorted(all_agents - set(done_agents))
+
+    return result
 
 
 # Public aliases

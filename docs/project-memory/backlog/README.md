@@ -6,10 +6,10 @@ Track bugs and feature requests here.
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| B-001 | gateway.py imports OllamaLLM but llm.py exports OllamaClient — name mismatch | Critical | Open |
-| B-002 | BotConfig has no model_name attribute — field naming inconsistency between config and gateway | Critical | Open |
-| B-003 | server.py fails to import due to cascading gateway import error (B-001) | Critical | Open |
-| B-004 | pytest not installed in venv — tests can't run | High | Open |
+| B-001 | gateway.py imports OllamaLLM but llm.py exports OllamaClient — name mismatch | Critical | Fixed |
+| B-002 | BotConfig has no model_name attribute — field naming inconsistency between config and gateway | Critical | Fixed |
+| B-003 | server.py fails to import due to cascading gateway import error (B-001) | Critical | Fixed |
+| B-004 | pytest not installed in venv — tests can't run | High | Fixed |
 | B-005 | .venv had stale path from project rename (afterburner-customer-bot → bot-customerObsessed...) | Medium | Fixed |
 
 ## Features

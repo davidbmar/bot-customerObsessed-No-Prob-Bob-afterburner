@@ -8,14 +8,34 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaLLM
+from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient
 from .memory import ConversationMemory
-from .personality import Personality
+from .personality import PersonalityLoader
 from .tools import execute_tool
 
 log = logging.getLogger(__name__)
+
+PERSONALITIES_DIR = Path(__file__).resolve().parent.parent / "personalities"
+
+
+@dataclass
+class ChatMemory:
+    """Per-conversation memory wrapper."""
+
+    chat_id: str
+    _store: ConversationMemory
+
+    def add(self, role: str, content: str) -> dict:
+        return self._store.add(self.chat_id, role, content)
+
+    def get_history(self, limit: int = 50) -> list[dict]:
+        return self._store.get_history(self.chat_id, limit)
+
+    def message_count(self) -> int:
+        return self._store.message_count(self.chat_id)
 
 
 @dataclass
@@ -37,14 +57,22 @@ class Gateway:
     def __init__(
         self,
         personality_name: str = "customer-discovery",
-        model: str = "qwen3:4b",
+        model: str = "qwen3.5:latest",
         ollama_url: str = "http://localhost:11434",
     ) -> None:
-        self.personality = Personality(personality_name)
-        self.system_prompt = self.personality.to_system_prompt()
-        self.principles = self.personality.get_principles()
-        self.llm = OllamaLLM(model=model, base_url=ollama_url)
+        loader = PersonalityLoader(PERSONALITIES_DIR)
+        self.personality = loader.load(personality_name)
+        self.system_prompt = self.personality.system_prompt
+        self.principles = self.personality.principles
+        self.llm = OllamaClient(model=model, base_url=ollama_url)
         self.memory = ConversationMemory()
+        self._memories: dict[str, ChatMemory] = {}
+
+    def _get_memory(self, chat_id: str) -> ChatMemory:
+        """Get or create a per-conversation memory wrapper."""
+        if chat_id not in self._memories:
+            self._memories[chat_id] = ChatMemory(chat_id=chat_id, _store=self.memory)
+        return self._memories[chat_id]
 
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.

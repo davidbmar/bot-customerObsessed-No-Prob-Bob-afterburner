@@ -1,9 +1,9 @@
-# Sprint 6 — Agent Notes
+# Sprint 7 — Agent Notes
 
-*Started: 2026-03-20 01:20 UTC*
+*Started: 2026-03-20 01:38 UTC*
 
 Phase 1 Agents: 1
-- agentA-all-features
+- agentA-webchat-polish
 
 Phase 2 Agents: 0
 (none)
@@ -12,31 +12,39 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-all-features
+## agentA-webchat-polish
 
-*Completed: 2026-03-20 01:27 UTC*
+*Completed: 2026-03-20 01:47 UTC*
 
-### Files changed (10 files)
-- **`evaluations/runner.py`** — Rewrote with `EvaluationRunner` class (load_scenarios, evaluate_scenario, run_all)
-- **`evaluations/__init__.py`** — Exports `EvaluationRunner`
-- **`bot/tools.py`** — Added `get_project_summary()` (reads lifecycle docs), `add_to_backlog()` (parses/appends to backlog README)
-- **`bot/llm.py`** — Added `add_to_backlog` tool definition to `TOOL_DEFINITIONS`
-- **`bot/facts.py`** — New file: `FactExtractor` with `extract()` and `summarize()`
-- **`cli.py`** — Added `evaluate` subcommand
-- **`docs/project-memory/backlog/README.md`** — Marked F-003, F-005, F-006, F-012 as Complete (Sprint 6)
-- **`tests/test_evaluations.py`** — New: 10 tests for EvaluationRunner
-- **`tests/test_facts.py`** — New: 13 tests for FactExtractor
-- **`tests/test_tools.py`** — Added 8 tests for get_project_summary and add_to_backlog
+```
+All tasks complete. Here's the summary:
 
-### Commands run
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `bot/server.py` | Added 4 API endpoints: GET /api/personalities, GET/POST /api/config, POST /api/conversations/new. Added `personality` field to /api/chat response. |
+| `bot/tools.py` | Added `get_sprint_status` and `tool_get_sprint_status` functions. Registered in dispatch table. |
+| `bot/llm.py` | Added `get_sprint_status` to `TOOL_DEFINITIONS`. |
+| `bot/chat_ui.html` | Complete rewrite: per-message collapsible debug sections, settings slide-out panel, typing indicator, timestamps, safe DOM-based markdown rendering, responsive layout. |
+| `tests/test_tools.py` | Added 5 tests for `get_sprint_status`. |
+| `tests/test_server_api.py` | New file with 7 tests for API endpoints. |
+| `tests/test_llm_webchat.py` | Updated assertion for renamed button. |
+| `docs/project-memory/backlog/README.md` | Marked F-007, F-010, F-011 as Complete (Sprint 7). |
+| `docs/project-memory/sessions/S-2026-03-20-0146-sprint7-webchat-polish.md` | Session doc. |
+
+## Commands Run
+
 - `git pull origin main` — already up to date
-- `pytest tests/ -v` — **87 tests pass** (target was 65+)
-- `python3 cli.py evaluate` — 3/3 scenarios pass
-- Import verification — all required imports work
-- `git push -u origin HEAD` — pushed to remote
+- `.venv/bin/python3 -m pytest tests/ -v` — 100 tests pass, 0 failures
+- `git commit` + `git push -u origin HEAD`
 
-### Notes / follow-on work
-- The `EvaluationRunner` uses keyword heuristics for criterion matching — a future improvement could use an LLM for semantic matching
-- `get_project_summary` reads files directly from `docs/lifecycle/`; the existing `tool_get_project_summary` still uses the dashboard API (both are available)
-- The venv lives in the main repo at `/Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.venv/`, not in the worktree
+## Notes / Follow-on Work
+
+- The markdown renderer handles bold, italic, inline code, code blocks, and lists using safe DOM methods (no innerHTML with untrusted content)
+- The `get_sprint_status` tool reads `.sprint/config.sh` for agent list and `.agent-done-*` files for completion status
+- Settings panel allows runtime switching of personality, model, and Ollama URL without server restart
+```
 

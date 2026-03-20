@@ -125,7 +125,7 @@ def cmd_chat(args: argparse.Namespace) -> None:
 
 def cmd_evaluate(args: argparse.Namespace) -> None:
     """Run evaluation scenarios and print pass/fail results."""
-    from evaluations.runner import EvaluationRunner
+    from evaluations.runner import EvaluationRunner, print_results
 
     runner = EvaluationRunner()
     scenarios = runner.load_scenarios()
@@ -143,24 +143,9 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
         )
 
     results = runner.run_all(mock_llm)
-
-    passed = 0
-    failed = 0
-    for r in results:
-        status = "PASS" if r.passed else "FAIL"
-        if r.passed:
-            passed += 1
-        else:
-            failed += 1
-        print(f"  [{status}] {r.name}")
-        if not r.passed:
-            if r.fail_hits:
-                for fh in r.fail_hits:
-                    print(f"         fail: {fh}")
-            if not r.pass_hits:
-                print("         no pass criteria matched")
-
-    print(f"\n{passed} passed, {failed} failed out of {len(results)} scenarios")
+    verbose = getattr(args, "verbose", False)
+    print_results(results, verbose=verbose, scenarios=scenarios)
+    failed = sum(1 for r in results if not r.passed)
     sys.exit(0 if failed == 0 else 1)
 
 
@@ -222,7 +207,8 @@ def main() -> None:
     p_export.add_argument("conversation_id", help="Conversation ID to export")
 
     # evaluate
-    sub.add_parser("evaluate", help="Run evaluation scenarios")
+    p_eval = sub.add_parser("evaluate", help="Run evaluation scenarios")
+    p_eval.add_argument("--verbose", "-v", action="store_true", help="Show detailed output per scenario")
 
     args = parser.parse_args()
 

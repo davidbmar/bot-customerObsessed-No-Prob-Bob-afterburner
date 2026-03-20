@@ -78,3 +78,7 @@ Track bugs and feature requests here.
 | F-041 | Conversation title editing — click title in sidebar to rename | Low | Complete (Sprint 18) |
 | F-042 | README with getting-started guide, screenshots, and API reference | High | Complete (Sprint 16) |
 | F-043 | CLI evaluate command improvements — show pass/fail per scenario with colors | Medium | Complete (Sprint 16) |
+| F-044 | Markdown rendering in bot messages — support **bold**, *italic*, `code`, lists, headers | High | Open |
+| F-045 | Message timestamp grouping — group messages by date ("Today", "Yesterday", "Mar 19") | Medium | Open |
+| F-046 | Notification sound on bot response (optional, toggleable) | Low | Open |
+| F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Open |

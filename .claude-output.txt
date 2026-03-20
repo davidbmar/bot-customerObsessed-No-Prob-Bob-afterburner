@@ -1,23 +1,21 @@
+All tasks complete. Here's the summary:
+
 ---
 
-## Summary
+## Files Changed
 
-### Files Changed
-- **`bot/gateway.py`** — Added `process_message_stream()` generator method that yields `{"type": "token", "content": ...}` dicts, with fallback for LLM clients without `chat_stream()`
-- **`bot/server.py`** — Added `POST /api/chat/stream` SSE endpoint and `_classify_llm_error()` helper (503 for unreachable, 401 for bad API key)
-- **`bot/chat_ui.html`** — SSE streaming client with `fetch()` + `ReadableStream` reader, conversation persistence via `localStorage`, error messages with red-tinted bubbles and retry button
-- **`tests/test_streaming.py`** — 26 new tests covering gateway streaming, error classification, SSE endpoint routing, and UI elements
-- **`docs/project-memory/backlog/README.md`** — F-025, F-028, F-029 marked Complete (Sprint 12)
+- **`bot/chat_ui.html`** — Auto-scroll, Save as Seed Doc button, mobile responsive CSS, toast notifications, refactored debug toggle for mobile
+- **`docs/project-memory/backlog/README.md`** — Marked F-027, F-031, F-033 as Complete (Sprint 13)
+- **`docs/project-memory/sessions/S-2026-03-20-0609-sprint13-ui-polish.md`** — Session doc (new)
 
-### Commands Run
-- `git pull origin main` — synced with main
-- `python3 -m pytest tests/ -v` — **209 tests passed, 0 failures**
-- `git commit` — committed all changes
-- `git push -u origin HEAD` — **blocked by GitHub push protection** (pre-existing secret in commit `f2ff413`, not from this branch)
+## Commands Run
 
-### Notes / Follow-on Work
-- **Push blocked**: GitHub Secret Scanning blocks the push due to an Anthropic API key in `.env` at commit `f2ff413` (predates this branch — it's in `main`'s history). The repo owner needs to either:
-  1. Allow the secret via the unblock URL GitHub provided, or
-  2. Rewrite history to remove the secret from commit `f2ff413`
-- **AnthropicClient streaming**: The gateway falls back to non-streaming for `AnthropicClient` since it has no `chat_stream()`. Adding `chat_stream()` to `AnthropicClient` using `client.messages.stream()` would be a good Sprint 13 task.
-- **F-026 (Enter to send)**: Already works — `onkeydown` handler on the textarea handles Enter. The backlog item may be stale.
+- `git pull origin main` — already up to date
+- `python3 -m pytest tests/ -v` — 209 passed
+- `git commit` / `git push -u origin HEAD` — pushed to `agentB-ui-polish`
+
+## Notes / Follow-on Work
+
+- **F-034 (auto-synthesis)** is listed in the brief but requires server-side logic (bot generating summaries after 5+ exchanges) — this is agentA's scope
+- The "Save as Seed Doc" button calls `POST /api/tools/save_discovery` — depends on agentA's endpoint implementation being compatible with the `{conversation_id, project_slug}` payload
+- The `scrollToBottom()` helper function was added but not yet used everywhere — the existing inline `container.scrollTop = container.scrollHeight` calls are sufficient and consistent

@@ -82,6 +82,101 @@
   .status-dot.error { background: var(--error); }
   .status-dot.loading { background: var(--warning); }
 
+  /* Conversation sidebar */
+  .conv-sidebar {
+    width: 250px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width 0.2s, padding 0.2s;
+  }
+
+  .conv-sidebar.collapsed {
+    width: 0;
+    overflow: hidden;
+    border-right: none;
+  }
+
+  .conv-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .conv-sidebar-header h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+
+  .btn-new-chat {
+    background: var(--accent-dim);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .btn-new-chat:hover { background: var(--accent); }
+
+  .conv-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .conv-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: background 0.1s;
+  }
+
+  .conv-item:hover { background: var(--bg-tertiary); }
+
+  .conv-item.active {
+    background: var(--bg-tertiary);
+    border-left-color: var(--accent);
+  }
+
+  .conv-item-preview {
+    font-size: 13px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+  }
+
+  .conv-item-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
   /* Main layout */
   .main {
     flex: 1;
@@ -633,6 +728,29 @@
     .message { max-width: 95%; }
     .msg-debug { max-width: 95%; }
 
+    /* Sidebar: hidden by default, full-screen overlay when open */
+    .conv-sidebar {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 280px;
+      z-index: 160;
+      border-right: 1px solid var(--border);
+    }
+    .conv-sidebar.collapsed { display: none; }
+    .conv-sidebar.mobile-open {
+      display: flex;
+    }
+
+    .conv-sidebar-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 155;
+    }
+    .conv-sidebar-backdrop.visible { display: block; }
+
     /* Debug panel: hidden by default, toggle via button */
     .debug-panel {
       display: none;
@@ -690,7 +808,10 @@
 <body>
 
 <div class="header">
-  <h1>Customer Discovery Agent</h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="btn-small" id="sidebarToggle" onclick="toggleSidebar()" title="Conversations" style="font-size:16px;padding:4px 8px;line-height:1">&#9776;</button>
+    <h1>Customer Discovery Agent</h1>
+  </div>
   <div class="header-actions">
     <button class="btn-small" onclick="newConversation()" title="New Chat">+ New Chat</button>
     <button class="btn-small" onclick="openSettings()" title="Settings" style="font-size:20px;padding:4px 12px;line-height:1">&#9881;</button>
@@ -702,7 +823,17 @@
   </div>
 </div>
 
+<div class="conv-sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
 <div class="main">
+  <div class="conv-sidebar collapsed" id="convSidebar">
+    <div class="conv-sidebar-header">
+      <h3>Conversations</h3>
+      <button class="btn-new-chat" onclick="newConversation()">+ New</button>
+    </div>
+    <div class="conv-list" id="convList"></div>
+  </div>
+
   <div class="chat-area">
     <div class="messages" id="messages"></div>
     <div class="seed-doc-bar" id="seedDocBar">
@@ -738,6 +869,12 @@
 
     <h3>Latency</h3>
     <div class="debug-value" id="debugLatency">&mdash;</div>
+
+    <h3>Cost</h3>
+    <div class="debug-value" id="debugCost">&mdash;</div>
+
+    <h3>Session Cost</h3>
+    <div class="debug-value" id="debugSessionCost">$0.0000</div>
 
     <h3>Conversation</h3>
     <div class="debug-value" id="debugConvId">&mdash;</div>
@@ -817,6 +954,28 @@ var PROVIDER_ICONS = {
   'chatgpt': '\uD83D\uDCAC'
 };
 
+// Token pricing per 1M tokens
+var TOKEN_PRICES = {
+  'claude-haiku':  { input: 0.25,  output: 1.25 },
+  'claude-sonnet': { input: 3.00,  output: 15.00 },
+  'claude-opus':   { input: 15.00, output: 75.00 },
+  'chatgpt':       { input: 2.50,  output: 10.00 }
+};
+
+var sessionCost = 0;
+
+function calculateCost(providerId, inputTokens, outputTokens) {
+  var prices = TOKEN_PRICES[providerId];
+  if (!prices) return null;  // free provider
+  return (inputTokens * prices.input + outputTokens * prices.output) / 1000000;
+}
+
+function formatCost(cost) {
+  if (cost === null) return 'free';
+  if (cost < 0.0001) return '<$0.0001';
+  return '$' + cost.toFixed(4);
+}
+
 function init() {
   document.getElementById('debugConvId').textContent = conversationId;
   document.getElementById('settingsConvId').textContent = conversationId;
@@ -827,7 +986,7 @@ function init() {
       var dot = document.getElementById('statusDot');
       var isOk = data.status === 'ok' || data.ollama === 'ok';
       dot.className = 'status-dot ' + (isOk ? 'ok' : 'error');
-      var provLabel = data.provider || 'ollama';
+      var provLabel = data.provider_label || data.provider || 'ollama';
       document.getElementById('modelInfo').textContent = provLabel + ' \u00b7 ' + data.model + ' \u00b7 ' + data.personality;
       document.getElementById('debugStatus').textContent = 'LLM: ' + (isOk ? 'ok' : 'unavailable');
       document.getElementById('debugPersonality').textContent = data.personality;
@@ -1086,6 +1245,10 @@ function addMessage(role, text, debugData) {
 
     // Memory count
     addDebugRow(dbgBody, 'Memory', (debugData.memory_count || 0) + ' messages');
+
+    // Cost
+    var msgCost = calculateCost(selectedProvider, debugData.input_tokens || 0, debugData.output_tokens || 0);
+    addDebugRow(dbgBody, 'Cost', formatCost(msgCost));
 
     dbg.appendChild(dbgBody);
     group.appendChild(dbg);
@@ -1399,6 +1562,8 @@ function appendDebugToGroup(group, debugData) {
   addDebugRow(dbgBody, 'Tokens', tokenInfo);
   addDebugRow(dbgBody, 'Latency', ((debugData.duration_ms || 0) / 1000).toFixed(1) + 's');
   addDebugRow(dbgBody, 'Memory', (debugData.memory_count || 0) + ' messages');
+  var msgCost = calculateCost(selectedProvider, debugData.input_tokens || 0, debugData.output_tokens || 0);
+  addDebugRow(dbgBody, 'Cost', formatCost(msgCost));
   dbg.appendChild(dbgBody);
 
   group.id = '';
@@ -1433,6 +1598,14 @@ function updateSidebarDebug(data) {
 
   var durMs = data.duration_ms || 0;
   document.getElementById('debugLatency').textContent = (durMs / 1000).toFixed(1) + 's (' + durMs + 'ms)';
+
+  // Cost calculation
+  var msgCost = calculateCost(selectedProvider, inTok, outTok);
+  document.getElementById('debugCost').textContent = formatCost(msgCost);
+  if (msgCost !== null) {
+    sessionCost += msgCost;
+  }
+  document.getElementById('debugSessionCost').textContent = sessionCost > 0 ? '$' + sessionCost.toFixed(4) : (msgCost === null ? 'free' : '$0.0000');
 }
 
 function clearContainer(el) {
@@ -1440,7 +1613,7 @@ function clearContainer(el) {
 }
 
 function newConversation() {
-  clearConversationStorage();
+  saveConversation();  // preserve current conversation in localStorage
   fetch(API + '/api/conversations/new', { method: 'POST' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -1638,9 +1811,10 @@ function applyLLMSettings() {
       el.textContent = 'Error: ' + data.error;
       return;
     }
-    // Update header
+    // Update header — use provider label, not ID
+    var provLabel = (llmProviders[selectedProvider] || {}).label || selectedProvider;
     document.getElementById('modelInfo').textContent =
-      selectedProvider + ' \u00b7 ' + (data.model || model);
+      provLabel + ' \u00b7 ' + (data.model || model);
     document.getElementById('statusDot').className = 'status-dot ok';
 
     // Switch personality if changed
@@ -1652,7 +1826,7 @@ function applyLLMSettings() {
       }).then(function(r) { return r.json(); }).then(function(cfg) {
         document.getElementById('debugPersonality').textContent = cfg.personality || '';
         document.getElementById('modelInfo').textContent =
-          selectedProvider + ' \u00b7 ' + (data.model || model) + ' \u00b7 ' + cfg.personality;
+          provLabel + ' \u00b7 ' + (data.model || model) + ' \u00b7 ' + cfg.personality;
       }).catch(function() {});
     }
 
@@ -1870,6 +2044,138 @@ function toggleDebug() {
   for (var i = 0; i < panels.length; i++) {
     panels[i].classList.toggle('hidden', !debugVisible);
   }
+}
+
+// -- Conversation Sidebar --
+
+var sidebarOpen = false;
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  var sidebar = document.getElementById('convSidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  var btn = document.getElementById('sidebarToggle');
+
+  sidebar.classList.toggle('collapsed', !sidebarOpen);
+  btn.classList.toggle('active', sidebarOpen);
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.toggle('mobile-open', sidebarOpen);
+    backdrop.classList.toggle('visible', sidebarOpen);
+  }
+
+  if (sidebarOpen) {
+    refreshConversationList();
+  }
+}
+
+function refreshConversationList() {
+  var list = document.getElementById('convList');
+  while (list.firstChild) list.removeChild(list.firstChild);
+
+  var convs = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    var key = localStorage.key(i);
+    if (!key || !key.startsWith('conv_')) continue;
+    try {
+      var state = JSON.parse(localStorage.getItem(key));
+      if (!state || !state.messages || state.messages.length === 0) continue;
+      var firstUser = '';
+      var msgCount = 0;
+      for (var j = 0; j < state.messages.length; j++) {
+        if (state.messages[j].role === 'user' && !firstUser) {
+          firstUser = state.messages[j].content;
+        }
+        if (state.messages[j].role !== 'error') msgCount++;
+      }
+      convs.push({
+        id: state.conversationId,
+        preview: firstUser ? firstUser.substring(0, 40) : '(empty)',
+        msgCount: msgCount,
+        timestamp: state.messages[state.messages.length - 1].timestamp || '',
+        key: key
+      });
+    } catch(e) { continue; }
+  }
+
+  // Sort by key (most recent first — conv IDs contain timestamp)
+  convs.sort(function(a, b) { return b.key.localeCompare(a.key); });
+
+  if (convs.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:20px 12px;color:var(--text-muted);font-size:12px;text-align:center';
+    empty.textContent = 'No conversations yet';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (var c = 0; c < convs.length; c++) {
+    var conv = convs[c];
+    var item = document.createElement('button');
+    item.className = 'conv-item' + (conv.id === conversationId ? ' active' : '');
+    item.setAttribute('data-conv-id', conv.id);
+    item.onclick = (function(cid) {
+      return function() { switchToConversation(cid); };
+    })(conv.id);
+
+    var preview = document.createElement('div');
+    preview.className = 'conv-item-preview';
+    preview.textContent = conv.preview;
+    item.appendChild(preview);
+
+    var meta = document.createElement('div');
+    meta.className = 'conv-item-meta';
+    var ts = document.createElement('span');
+    ts.textContent = conv.timestamp;
+    meta.appendChild(ts);
+    var count = document.createElement('span');
+    count.textContent = conv.msgCount + ' msgs';
+    meta.appendChild(count);
+    item.appendChild(meta);
+
+    list.appendChild(item);
+  }
+}
+
+function switchToConversation(cid) {
+  if (cid === conversationId) return;
+
+  // Save current conversation first
+  saveConversation();
+
+  var raw = localStorage.getItem('conv_' + cid);
+  if (!raw) return;
+
+  try {
+    var state = JSON.parse(raw);
+    if (!state.messages) return;
+
+    conversationId = state.conversationId;
+    document.getElementById('debugConvId').textContent = conversationId;
+    document.getElementById('settingsConvId').textContent = conversationId;
+    localStorage.setItem('lastConversationId', conversationId);
+
+    // Clear and reload messages
+    clearContainer(document.getElementById('messages'));
+    for (var i = 0; i < state.messages.length; i++) {
+      var m = state.messages[i];
+      if (m.role === 'error') continue;
+      addMessage(m.role, m.content);
+    }
+
+    // Scroll to bottom
+    var msgContainer = document.getElementById('messages');
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+    updateSeedButtonVisibility();
+
+    // Refresh sidebar highlighting
+    refreshConversationList();
+
+    // Close sidebar on mobile
+    if (window.innerWidth <= 768 && sidebarOpen) {
+      toggleSidebar();
+    }
+  } catch(e) {}
 }
 
 // Auto-resize textarea

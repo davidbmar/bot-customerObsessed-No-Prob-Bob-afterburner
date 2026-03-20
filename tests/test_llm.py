@@ -64,9 +64,10 @@ class TestLLMProviders:
 # -- get_client factory --
 
 class TestGetClient:
-    def test_qwen_returns_openai_compatible(self):
+    def test_qwen_returns_ollama_client(self):
+        """Local Ollama providers use OllamaClient for accurate token counts."""
         client = get_client("qwen-3.5")
-        assert isinstance(client, OpenAICompatibleClient)
+        assert isinstance(client, OllamaClient)
         client.close()
 
     def test_chatgpt_returns_openai_compatible(self):
@@ -99,8 +100,10 @@ class TestGetClient:
         client.close()
 
     def test_custom_base_url_override(self):
+        """For Ollama providers, /v1 suffix is stripped to use native API."""
         client = get_client("qwen-3.5", base_url="http://custom:9999/v1")
-        assert client.base_url == "http://custom:9999/v1"
+        assert isinstance(client, OllamaClient)
+        assert client.base_url == "http://custom:9999"
         client.close()
 
 

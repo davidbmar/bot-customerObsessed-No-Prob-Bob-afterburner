@@ -1,66 +1,79 @@
-agentA-synthesis-and-fixes — Sprint 13
+agentA-conversations-and-tokens — Sprint 14
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 12: SSE streaming, conversation persistence (localStorage), error handling, PROJECT_STATUS docs for Sprints 1-11. 209 tests pass.
-- Streaming works but total latency increased to ~39s (was 22s). Token count may be inflated (1378 out for 20 words).
-- `python3 bot/server.py` broken — relative import error, must use `python3 -m bot.server`
-- Conversation persists across page reloads via localStorage
-- Dashboard shows 11 sprints, 9 sessions, 276 keywords
+- Sprint 13: server direct-run fix, save-as-seed API, auto-synthesis after 5 exchanges, auto-scroll, mobile responsive CSS. 234 tests pass.
+- Conversation persistence works via localStorage but no way to see past conversations
+- Token count shows 1378 out for a 20-word response — likely counting thinking/reasoning tokens
+- Header shows `ollama · qwen3:4b` instead of expected `qwen-3.5 · qwen3.5:latest`
 - Published to CloudFront: https://d3gb25yycyv0d9.cloudfront.net
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix server direct-run regression so `python3 bot/server.py` works again (B-017)
-- Add "Save as Seed Doc" button in web chat that calls save_discovery tool from the UI (F-033)
-- Add auto-synthesis: after 5+ exchanges, bot generates Problem/Users/Use Cases/Success Criteria summary (F-034)
-- Auto-scroll chat to bottom on new messages and streaming (F-031)
-- Mobile-responsive web chat with viewport meta and responsive CSS (F-027)
+- Add conversation sidebar — list past conversations, click to switch (F-032)
+- Fix token count reporting — shows inflated numbers (B-018)
+- Fix provider display in header — shows wrong provider name after Sprint 12 changes (B-019)
+- Add token cost display for paid providers (F-030)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - Web chat UI is self-contained in bot/chat_ui.html (no build step, vanilla JS)
-- agentA owns bot/ and tests/ — agentB MUST NOT touch these directories
-- agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
+- Single agent to avoid merge conflicts — all changes touch interconnected files
 
 
 Objective
-- Fix server direct-run, add save_discovery UI integration, add auto-synthesis
+- Add conversation management sidebar and fix token/provider display issues
 
 Tasks
-1. **Fix `python3 bot/server.py` direct run** (B-017):
-   - The fallback import block in server.py line 23-26 catches ImportError for relative imports and tries absolute imports
-   - But gateway.py also uses relative imports internally, causing a chain failure
-   - Fix: add `__main__.py` to bot/ that does `from bot.server import main; main()` OR fix all imports to work both ways
-   - Simplest fix: ensure `bot/__main__.py` exists and works, and fix server.py to handle both cases
+1. **Conversation sidebar** — Update `bot/chat_ui.html`:
+   - Add a collapsible sidebar (left side, 250px wide) listing past conversations
+   - Each entry shows: first user message (truncated to 40 chars), timestamp, message count
+   - Read conversation list from localStorage keys matching `conv-*` pattern
+   - Click a conversation → load it (swap messages, update conversation ID)
+   - Current conversation highlighted
+   - "+ New Chat" in sidebar header starts a fresh conversation
+   - Sidebar hidden by default on mobile (< 768px), toggle via hamburger icon
+   - Sidebar toggle button in header (list icon or hamburger)
 
-2. **Save as Seed Doc API endpoint** — Add `POST /api/tools/save_discovery` to `bot/server.py`:
-   - Accepts: `{project_slug, conversation_id}`
-   - Reads conversation history for that conversation_id
-   - Calls `save_discovery(slug, content)` tool with a formatted summary of the conversation
-   - Returns: `{ok: true, path: "docs/seed/discovery-YYYY-MM-DD.md"}`
-   - This bridges the web chat UI to the Afterburner pipeline
+2. **Fix token count** — Update `bot/gateway.py` and/or `bot/llm.py`:
+   - Investigate why OllamaClient reports 1378 output tokens for a 20-word response
+   - The Ollama `/api/chat` response includes `eval_count` (actual output tokens) — use this instead of counting characters or using the full response length
+   - For streaming, accumulate the actual token count from the final response metadata
+   - For AnthropicClient, use `response.usage.output_tokens`
+   - Update `LLMResponse` to include accurate `input_tokens` and `output_tokens`
 
-3. **Auto-synthesis after 5+ exchanges** — Update `bot/gateway.py`:
-   - Track exchange count per conversation (count user messages)
-   - After the 5th user message, append to the system prompt: "You have had enough exchanges. In your next response, synthesize the conversation into a structured summary with sections: Problem, Users, Use Cases, Success Criteria. Present this as a formatted summary."
-   - This triggers the bot's discovery synthesis behavior
-   - Add a `synthesis_triggered` flag to prevent re-triggering
+3. **Fix provider display** — Update `bot/chat_ui.html` or `bot/server.py`:
+   - Header should show the active provider label from LLM_PROVIDERS (e.g., "Qwen 3.5" not "ollama")
+   - Check `/api/llm/providers` response — ensure it returns the active provider's label and model
+   - Update header display logic to use `provider.label · provider.model · personality`
 
-4. **Write tests**:
-   - Test server direct-run imports work
-   - Test save_discovery API endpoint
-   - Test synthesis triggers after 5 exchanges
-   - Target: 220+ total tests
+4. **Token cost display** — Update `bot/chat_ui.html`:
+   - After each message, if using a paid provider (Claude or ChatGPT), show estimated cost
+   - Cost calculation: `input_tokens * input_price + output_tokens * output_price`
+   - Approximate prices per 1M tokens:
+     - Claude Haiku: $0.25 in / $1.25 out
+     - Claude Sonnet: $3 in / $15 out
+     - Claude Opus: $15 in / $75 out
+     - ChatGPT gpt-4o: $2.50 in / $10 out
+   - Show in debug panel as "Cost: $0.0023" or "Cost: free" for Ollama
+   - Also show cumulative session cost
 
-5. **Update backlog** — Mark B-017, F-033, F-034 as Complete (Sprint 13)
+5. **Write tests**:
+   - Test accurate token counting from Ollama response metadata
+   - Test provider label resolution
+   - Test cost calculation for different providers
+   - Target: 245+ total tests
+
+6. **Update backlog** — Mark F-032, F-030, B-018, B-019 as Complete (Sprint 14)
 
 Acceptance Criteria
-- `python3 bot/server.py` starts without import errors
-- After 5+ message exchanges, bot produces a structured summary
-- POST /api/tools/save_discovery writes a seed doc to the target project
-- `.venv/bin/python3 -m pytest tests/ -v` — 220+ tests, 0 failures
+- Sidebar shows list of past conversations from localStorage
+- Click a conversation → messages load correctly
+- Token counts match actual output (not inflated)
+- Header shows "Qwen 3.5 · qwen3.5:latest · customer-discovery" format
+- Debug panel shows cost for paid providers, "free" for Ollama
+- `.venv/bin/python3 -m pytest tests/ -v` — 245+ tests, 0 failures

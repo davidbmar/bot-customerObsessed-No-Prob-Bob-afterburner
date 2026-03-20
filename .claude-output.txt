@@ -1,1 +1,27 @@
-Not logged in · Please run /login
+---
+
+## Summary
+
+### Files changed (10 files)
+- **`evaluations/runner.py`** — Rewrote with `EvaluationRunner` class (load_scenarios, evaluate_scenario, run_all)
+- **`evaluations/__init__.py`** — Exports `EvaluationRunner`
+- **`bot/tools.py`** — Added `get_project_summary()` (reads lifecycle docs), `add_to_backlog()` (parses/appends to backlog README)
+- **`bot/llm.py`** — Added `add_to_backlog` tool definition to `TOOL_DEFINITIONS`
+- **`bot/facts.py`** — New file: `FactExtractor` with `extract()` and `summarize()`
+- **`cli.py`** — Added `evaluate` subcommand
+- **`docs/project-memory/backlog/README.md`** — Marked F-003, F-005, F-006, F-012 as Complete (Sprint 6)
+- **`tests/test_evaluations.py`** — New: 10 tests for EvaluationRunner
+- **`tests/test_facts.py`** — New: 13 tests for FactExtractor
+- **`tests/test_tools.py`** — Added 8 tests for get_project_summary and add_to_backlog
+
+### Commands run
+- `git pull origin main` — already up to date
+- `pytest tests/ -v` — **87 tests pass** (target was 65+)
+- `python3 cli.py evaluate` — 3/3 scenarios pass
+- Import verification — all required imports work
+- `git push -u origin HEAD` — pushed to remote
+
+### Notes / follow-on work
+- The `EvaluationRunner` uses keyword heuristics for criterion matching — a future improvement could use an LLM for semantic matching
+- `get_project_summary` reads files directly from `docs/lifecycle/`; the existing `tool_get_project_summary` still uses the dashboard API (both are available)
+- The venv lives in the main repo at `/Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.venv/`, not in the worktree

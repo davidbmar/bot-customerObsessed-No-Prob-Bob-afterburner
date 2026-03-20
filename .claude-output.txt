@@ -1,21 +1,21 @@
-`★ Insight ─────────────────────────────────────`
-The streaming typing dots implementation uses a key pattern: **optimistic UI with graceful cleanup**. The dots are added to the DOM immediately when the streaming bubble is created, then removed via three separate paths: (1) on first token arrival (normal flow), (2) when stream ends without a done event (fallback), and (3) implicitly when the done event clears and re-renders the body with markdown. This defensive approach ensures dots never get "stuck" regardless of how the stream terminates.
-`─────────────────────────────────────────────────`
-
 ---
 
 ## Summary
 
 ### Files changed
-- **`bot/chat_ui.html`** — Added inline typing dots CSS (`@keyframes pulse`, `.typing-dots-inline`) and modified `sendMessageStream()` to show pulsing dots inside the bot message bubble before tokens arrive, removing them on first token
-- **`docs/project-memory/backlog/README.md`** — Marked B-022 and F-040 as Complete (Sprint 17)
+- `bot/chat_ui.html` — CSS + JS changes for all 4 UI tasks
+- `docs/PROJECT_STATUS_2026-03-20-sprint17.md` — new (generated)
+- `docs/project-memory/backlog/README.md` — B-022, B-023, B-024, F-041 marked Complete
+- `tests/test_sprint18_ui_polish.py` — new (24 tests)
+- `tests/test_sprint14_conversations_tokens.py` — updated sidebar test assertion
+- `tests/test_sprint17_provider_and_history.py` — updated doc count (16→17)
 
 ### Commands run
-- `git pull origin main` — already up to date
-- `.venv/bin/python3 -m pytest tests/ -v` — 389 passed, 9 failed (pre-existing, missing optional deps), 1 skipped
-- `git push -u origin HEAD` — pushed to `agentB-ui-fixes`
+- `python3 scripts/generate_sprint_history.py 17` — generated Sprint 17 PROJECT_STATUS
+- `.venv/bin/python3 -m pytest tests/ -v` — **470 passed, 0 failures**
+- `git push -u origin HEAD`
 
 ### Notes / follow-on work
-- **B-022 (debug panel)**: The code already correctly defaults to hidden on first visit (init checks `localStorage.getItem('debugPanelVisible') === 'true'`). This was fixed in a prior sprint. Verified and confirmed working.
-- **F-040 (typing dots)**: Three pulsing dots appear inside the bot message bubble during streaming, removed on first token arrival. Uses CSS-only animation (no JS timers).
-- The 9 test failures are pre-existing — they require `anthropic` and `openai` packages which are optional dependencies not installed in the test venv.
+- The `prefers-color-scheme` CSS uses a `:not(.light):not(.dark)` selector so it only applies when no JS class has been set — this provides a pure CSS fallback for no-JS scenarios
+- Title editing uses single-click (not double-click) per the brief's "click title" wording; if double-click is preferred, change `addEventListener('click', ...)` to `addEventListener('dblclick', ...)`
+- The `.venv` was recreated in the worktree since it doesn't exist in git; the main repo's venv may differ

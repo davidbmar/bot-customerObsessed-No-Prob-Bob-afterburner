@@ -27,9 +27,9 @@ Track bugs and feature requests here.
 | B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — health endpoint returns provider_label: "ollama" not "Qwen 3.5" | Low | Complete (Sprint 17) |
 | B-020 | Sprint 12 agent done markers not written — sprint-launch.sh done detection broken (related to B-008) | Medium | Open |
 | B-021 | Dashboard only shows Sprints 1-11 — Sprints 12-16 need PROJECT_STATUS docs generated | Medium | Complete (Sprint 17) |
-| B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Reopened |
-| B-023 | Sidebar visible by default on desktop — should be collapsed on first visit, user opens when needed | Low | Open |
-| B-024 | Light theme is now the default after clearing localStorage — should detect system preference with prefers-color-scheme | Low | Open |
+| B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Complete (Sprint 18) |
+| B-023 | Sidebar visible by default on desktop — should be collapsed on first visit, user opens when needed | Low | Complete (Sprint 18) |
+| B-024 | Light theme is now the default after clearing localStorage — should detect system preference with prefers-color-scheme | Low | Complete (Sprint 18) |
 
 ## Features
 
@@ -75,6 +75,6 @@ Track bugs and feature requests here.
 | F-038 | Dark/light theme toggle with CSS custom properties | Low | Complete (Sprint 15) |
 | F-039 | End-to-end integration test: discovery conversation → save seed → verify in Afterburner project | High | Complete (Sprint 16) |
 | F-040 | Typing indicator shows bot avatar animation while streaming (pulse or dots) | Low | Complete (Sprint 17) |
-| F-041 | Conversation title editing — click title in sidebar to rename | Low | Open |
+| F-041 | Conversation title editing — click title in sidebar to rename | Low | Complete (Sprint 18) |
 | F-042 | README with getting-started guide, screenshots, and API reference | High | Complete (Sprint 16) |
 | F-043 | CLI evaluate command improvements — show pass/fail per scenario with colors | Medium | Complete (Sprint 16) |

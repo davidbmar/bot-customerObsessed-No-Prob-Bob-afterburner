@@ -37,6 +37,25 @@
     --error: #cf222e;
   }
 
+  /* Detect system light preference when no localStorage override */
+  @media (prefers-color-scheme: light) {
+    html:not(.light):not(.dark) {
+      --bg: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #e9ecef;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #656d76;
+      --accent: #0969da;
+      --accent-dim: #0550ae;
+      --user-bg: #ddf4ff;
+      --bot-bg: #f6f8fa;
+      --success: #1a7f37;
+      --warning: #9a6700;
+      --error: #cf222e;
+    }
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -98,22 +117,20 @@
   .status-dot.error { background: var(--error); }
   .status-dot.loading { background: var(--warning); }
 
-  /* Conversation sidebar */
+  /* Conversation sidebar — hidden by default via CSS, toggled by JS */
   .conv-sidebar {
+    display: none;
     width: 250px;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border);
-    display: flex;
     flex-direction: column;
     flex-shrink: 0;
     overflow: hidden;
     transition: width 0.2s, padding 0.2s;
   }
 
-  .conv-sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
+  .conv-sidebar.open {
+    display: flex;
   }
 
   .conv-sidebar-header {
@@ -235,6 +252,16 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text);
+  }
+
+  .conv-item-preview[contenteditable="true"] {
+    outline: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 4px;
+    background: var(--bg-tertiary);
+    cursor: text;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .conv-item-meta {
@@ -534,8 +561,9 @@
     40% { opacity: 1; }
   }
 
-  /* Debug sidebar panel */
+  /* Debug sidebar panel — hidden by default via CSS, toggled by JS */
   .debug-panel {
+    display: none;
     width: 300px;
     background: var(--bg-secondary);
     border-left: 1px solid var(--border);
@@ -546,11 +574,8 @@
     flex-shrink: 0;
   }
 
-  .debug-panel.collapsed {
-    width: 0;
-    padding: 0;
-    overflow: hidden;
-    border-left: none;
+  .debug-panel.visible {
+    display: block;
   }
 
   .debug-panel h3 {
@@ -822,14 +847,13 @@
 
     /* Sidebar: hidden by default, full-screen overlay when open */
     .conv-sidebar {
-      display: none;
       position: fixed;
       top: 0; left: 0; bottom: 0;
       width: 280px;
       z-index: 160;
       border-right: 1px solid var(--border);
     }
-    .conv-sidebar.collapsed { display: none; }
+    .conv-sidebar.open { display: none; }
     .conv-sidebar.mobile-open {
       display: flex;
     }
@@ -845,14 +869,13 @@
 
     /* Debug panel: hidden by default, toggle via button */
     .debug-panel {
-      display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       width: 100vw;
       z-index: 150;
       border-left: none;
     }
-    .debug-panel.collapsed { display: none; }
+    .debug-panel.visible { display: none; }
     .debug-panel.mobile-open {
       display: block;
       overflow-y: auto;
@@ -919,7 +942,7 @@
 <div class="conv-sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
 <div class="main">
-  <div class="conv-sidebar collapsed" id="convSidebar">
+  <div class="conv-sidebar" id="convSidebar">
     <div class="conv-sidebar-header">
       <h3>Conversations</h3>
       <button class="btn-new-chat" onclick="newConversation()">+ New</button>
@@ -943,7 +966,7 @@
     </div>
   </div>
 
-  <div class="debug-panel collapsed" id="debugPanel">
+  <div class="debug-panel" id="debugPanel">
     <button class="btn-small btn-debug-mobile" onclick="toggleDebug()" style="margin-bottom:12px;width:100%">Close Debug</button>
     <h3>Status</h3>
     <div class="debug-value" id="debugStatus">Connecting...</div>
@@ -1127,11 +1150,16 @@ function init() {
   if (savedDebug === 'true') {
     debugVisible = true;
     document.getElementById('debugToggle').classList.add('active');
-    document.getElementById('debugPanel').classList.remove('collapsed');
-  } else {
-    debugVisible = false;
-    document.getElementById('debugToggle').classList.remove('active');
-    document.getElementById('debugPanel').classList.add('collapsed');
+    document.getElementById('debugPanel').classList.add('visible');
+  }
+
+  // Restore sidebar preference from localStorage (default: collapsed)
+  var savedSidebar = localStorage.getItem('sidebarOpen');
+  if (savedSidebar === 'true') {
+    sidebarOpen = true;
+    document.getElementById('convSidebar').classList.add('open');
+    document.getElementById('sidebarToggle').classList.add('active');
+    refreshConversationList();
   }
 
   // Try to restore conversation from localStorage
@@ -2155,7 +2183,7 @@ function toggleDebug() {
   btn.classList.toggle('active', debugVisible);
 
   var panel = document.getElementById('debugPanel');
-  panel.classList.toggle('collapsed', !debugVisible);
+  panel.classList.toggle('visible', debugVisible);
 
   // Mobile: use mobile-open class for full-screen overlay
   if (window.innerWidth <= 768) {
@@ -2174,11 +2202,12 @@ var sidebarOpen = false;
 
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
+  localStorage.setItem('sidebarOpen', sidebarOpen);
   var sidebar = document.getElementById('convSidebar');
   var backdrop = document.getElementById('sidebarBackdrop');
   var btn = document.getElementById('sidebarToggle');
 
-  sidebar.classList.toggle('collapsed', !sidebarOpen);
+  sidebar.classList.toggle('open', sidebarOpen);
   btn.classList.toggle('active', sidebarOpen);
 
   if (window.innerWidth <= 768) {
@@ -2265,11 +2294,18 @@ function refreshConversationList() {
 
     var preview = document.createElement('div');
     preview.className = 'conv-item-preview';
+    var customTitle = localStorage.getItem('conv_title_' + conv.id);
     if (query && conv.matchSnippet) {
       highlightText(conv.matchSnippet, query, preview);
     } else {
-      preview.textContent = conv.preview;
+      preview.textContent = customTitle || conv.preview;
     }
+    preview.setAttribute('data-conv-id', conv.id);
+    preview.setAttribute('data-default-title', conv.preview);
+    preview.addEventListener('click', function(e) {
+      startTitleEdit(e.currentTarget);
+      e.stopPropagation();
+    });
     content.appendChild(preview);
 
     var meta = document.createElement('div');
@@ -2359,6 +2395,7 @@ function switchToConversation(cid) {
 function toggleTheme() {
   var html = document.documentElement;
   var isLight = html.classList.toggle('light');
+  html.classList.toggle('dark', !isLight);
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
   updateThemeIcon();
 }
@@ -2374,6 +2411,13 @@ function restoreTheme() {
   var saved = localStorage.getItem('theme');
   if (saved === 'light') {
     document.documentElement.classList.add('light');
+  } else if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    // No saved preference — use system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.classList.add('light');
+    }
   }
   updateThemeIcon();
 }
@@ -2407,6 +2451,47 @@ var convSearchQuery = '';
 function filterConversations() {
   convSearchQuery = (document.getElementById('convSearchInput').value || '').trim().toLowerCase();
   refreshConversationList();
+}
+
+// -- Conversation Title Editing --
+
+function startTitleEdit(el) {
+  if (el.contentEditable === 'true') return;
+  el.contentEditable = 'true';
+  el.focus();
+  // Select all text
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  el.addEventListener('keydown', function onKey(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      el.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      var cid = el.getAttribute('data-conv-id');
+      var saved = localStorage.getItem('conv_title_' + cid);
+      el.textContent = saved || el.getAttribute('data-default-title');
+      el.contentEditable = 'false';
+      el.removeEventListener('keydown', onKey);
+    }
+  });
+
+  el.addEventListener('blur', function onBlur() {
+    el.contentEditable = 'false';
+    var cid = el.getAttribute('data-conv-id');
+    var newTitle = el.textContent.trim();
+    if (newTitle && newTitle !== el.getAttribute('data-default-title')) {
+      localStorage.setItem('conv_title_' + cid, newTitle);
+    } else {
+      localStorage.removeItem('conv_title_' + cid);
+      el.textContent = el.getAttribute('data-default-title');
+    }
+    el.removeEventListener('blur', onBlur);
+  }, { once: true });
 }
 
 // Auto-resize textarea

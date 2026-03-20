@@ -1,6 +1,6 @@
 # Sprint 11 — Agent Notes
 
-*Started: 2026-03-20 03:36 UTC*
+*Started: 2026-03-20 03:42 UTC*
 
 Phase 1 Agents: 1
 - agentA-multi-provider
@@ -9,3 +9,28 @@ Phase 2 Agents: 0
 (none)
 
 Automated summaries from each agent are appended below as they complete.
+
+---
+
+## agentA-multi-provider
+
+*Completed: 2026-03-20 03:50 UTC*
+
+### Files changed
+- **`bot/llm.py`** — Added `LLM_PROVIDERS` dict, `OpenAICompatibleClient`, `AnthropicClient`, `get_client()` factory, `_openai_tools_to_anthropic()` converter. Kept `OllamaClient` for backward compatibility.
+- **`bot/llm_config.py`** (new) — Per-provider config persistence with `load_provider_config()`, `save_provider_config()`, `get_active_provider()`, `set_active_provider()`.
+- **`bot/gateway.py`** — Added `switch_provider()` method, `provider_id` tracking, updated `health_check()` to include provider info.
+- **`bot/server.py`** — Added 4 endpoints: `GET /api/llm/providers`, `POST /api/llm/switch`, `GET /api/llm/config`, `POST /api/llm/config`.
+- **`bot/chat_ui.html`** — Provider cards grid, model dropdown, API key field, base URL field, Test Connection button, dynamic header updates.
+- **`tests/test_llm.py`** (new) — 39 new tests covering providers, factory, clients, config persistence, gateway switching, server endpoints, and UI.
+
+### Commands run
+- `.venv/bin/pip install anthropic openai pyyaml` 
+- `.venv/bin/python3 -m pytest tests/ -v` — **183 tests passed** (target: 155+)
+- `git push -u origin HEAD`
+
+### Notes / follow-on work
+- `OllamaClient` (native Ollama `/api/chat` endpoint) is preserved for backward compat. The new `OpenAICompatibleClient` uses Ollama's `/v1` OpenAI-compatible endpoint instead.
+- API keys are stored in `~/.config/afterburner-bots/llm-providers.json` with env var fallback (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
+- The Test Connection button currently uses `/api/health` which tests the *active* provider — a more targeted per-provider test could be added later.
+

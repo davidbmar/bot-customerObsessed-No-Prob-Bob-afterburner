@@ -8,11 +8,13 @@ import os
 import signal
 import subprocess
 import threading
+import uuid
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .gateway import Gateway
+from .personality import PersonalityLoader
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._json_response({
                 "messages": messages,
             })
+        elif path == "/api/personalities":
+            self._handle_get_personalities()
+        elif path == "/api/config":
+            self._handle_get_config()
         else:
             self.send_error(404)
 
@@ -52,6 +58,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/chat":
             self._handle_chat()
+        elif path == "/api/config":
+            self._handle_post_config()
+        elif path == "/api/conversations/new":
+            self._handle_new_conversation()
         else:
             self.send_error(404)
 
@@ -71,6 +81,7 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         response = self.gateway.process_message(conversation_id, text)
         self._json_response({
             "response": response.text,
+            "personality": self.gateway.personality.name,
             "tools_called": response.tools_called,
             "principles_active": response.principles,
             "memory_count": response.memory_count,
@@ -78,6 +89,61 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             "output_tokens": response.output_tokens,
             "duration_ms": response.duration_ms,
         })
+
+    def _handle_get_personalities(self) -> None:
+        """List available personalities from the personalities/ directory."""
+        pdir = Path(__file__).parent.parent / "personalities"
+        try:
+            loader = PersonalityLoader(pdir)
+            names = loader.list_personalities()
+        except FileNotFoundError:
+            names = []
+        self._json_response({"personalities": names})
+
+    def _handle_get_config(self) -> None:
+        """Return current bot config."""
+        self._json_response({
+            "personality": self.gateway.personality.name,
+            "model": self.gateway.llm.model,
+            "ollama_url": self.gateway.llm.base_url,
+        })
+
+    def _handle_post_config(self) -> None:
+        """Update bot config at runtime."""
+        body = self._read_body()
+        if body is None:
+            return
+
+        pdir = Path(__file__).parent.parent / "personalities"
+
+        if "personality" in body:
+            try:
+                loader = PersonalityLoader(pdir)
+                self.gateway.personality = loader.load(body["personality"])
+                self.gateway.system_prompt = self.gateway.personality.system_prompt
+                self.gateway.principles = self.gateway.personality.principles
+            except FileNotFoundError:
+                self._json_response(
+                    {"error": f"Personality '{body['personality']}' not found"},
+                    status=400,
+                )
+                return
+
+        if "model" in body:
+            self.gateway.llm.model = body["model"]
+        if "ollama_url" in body:
+            self.gateway.llm.base_url = body["ollama_url"].rstrip("/")
+
+        self._json_response({
+            "personality": self.gateway.personality.name,
+            "model": self.gateway.llm.model,
+            "ollama_url": self.gateway.llm.base_url,
+        })
+
+    def _handle_new_conversation(self) -> None:
+        """Create a new conversation and return its ID."""
+        conversation_id = f"web-{uuid.uuid4().hex[:12]}"
+        self._json_response({"conversation_id": conversation_id})
 
     def _serve_chat_ui(self) -> None:
         """Serve the self-contained chat UI HTML."""

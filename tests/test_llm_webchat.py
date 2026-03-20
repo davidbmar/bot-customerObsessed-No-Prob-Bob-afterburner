@@ -104,7 +104,7 @@ class TestChatUI:
     def test_chat_ui_has_new_conversation_button(self):
         content = CHAT_UI_PATH.read_text()
         assert "newConversation" in content
-        assert "New Chat" in content
+        assert "New Conversation" in content
 
     def test_chat_ui_uses_conversation_id(self):
         content = CHAT_UI_PATH.read_text()

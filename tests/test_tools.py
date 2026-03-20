@@ -1,4 +1,4 @@
-"""Tests for bot/tools.py — save_discovery, get_project_summary, add_to_backlog."""
+"""Tests for bot/tools.py — save_discovery, get_project_summary, add_to_backlog, get_sprint_status."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from bot.tools import (
     add_to_backlog,
     execute_tool,
     get_project_summary,
+    get_sprint_status,
     tool_save_discovery,
 )
 
@@ -233,3 +234,64 @@ def test_tool_registration_includes_get_project_summary() -> None:
 
     tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
     assert "get_project_summary" in tool_names
+
+
+# -- get_sprint_status tests --
+
+
+@pytest.fixture
+def sprint_project(tmp_path: Path) -> Path:
+    """Create a project with sprint marker files."""
+    (tmp_path / "SPRINT_BRIEF.md").write_text("# Sprint 7\n\nSome tasks here.\n")
+    (tmp_path / ".agent-done-agentA").write_text("")
+    (tmp_path / ".agent-done-agentB").write_text("")
+    sprint_dir = tmp_path / ".sprint"
+    sprint_dir.mkdir()
+    (sprint_dir / "config.sh").write_text(
+        'AGENTS=("agentA" "agentB" "agentC")\n'
+    )
+    return tmp_path
+
+
+def test_get_sprint_status_reads_agents(sprint_project: Path) -> None:
+    """get_sprint_status reports correct done/running agents."""
+    result = get_sprint_status(sprint_project)
+    assert result["sprint_number"] == 7
+    assert result["agent_count"] == 3
+    assert sorted(result["agents_done"]) == ["agentA", "agentB"]
+    assert result["agents_running"] == ["agentC"]
+
+
+def test_get_sprint_status_no_brief(tmp_path: Path) -> None:
+    """get_sprint_status returns sprint_number 0 when no brief exists."""
+    result = get_sprint_status(tmp_path)
+    assert result["sprint_number"] == 0
+    assert result["agents_done"] == []
+    assert result["agents_running"] == []
+
+
+def test_get_sprint_status_no_config(tmp_path: Path) -> None:
+    """get_sprint_status infers agents from done files when no config exists."""
+    (tmp_path / "SPRINT_BRIEF.md").write_text("Sprint 3 brief\n")
+    (tmp_path / ".agent-done-worker1").write_text("")
+    result = get_sprint_status(tmp_path)
+    assert result["sprint_number"] == 3
+    assert result["agents_done"] == ["worker1"]
+    assert result["agent_count"] == 1
+
+
+def test_execute_tool_dispatches_get_sprint_status(sprint_project: Path) -> None:
+    """execute_tool routes 'get_sprint_status' correctly."""
+    with patch("bot.tools._find_project_root", return_value=sprint_project):
+        result = execute_tool("get_sprint_status", {"slug": "test"})
+    data = json.loads(result)
+    assert data["sprint_number"] == 7
+    assert "agentA" in data["agents_done"]
+
+
+def test_tool_registration_includes_get_sprint_status() -> None:
+    """TOOL_DEFINITIONS in llm.py includes get_sprint_status."""
+    from bot.llm import TOOL_DEFINITIONS
+
+    tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
+    assert "get_sprint_status" in tool_names

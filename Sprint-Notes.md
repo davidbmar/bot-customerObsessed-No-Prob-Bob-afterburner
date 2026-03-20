@@ -1,10 +1,10 @@
-# Sprint 15 — Agent Notes
+# Sprint 16 — Agent Notes
 
-*Started: 2026-03-20 06:37 UTC*
+*Started: 2026-03-20 06:49 UTC*
 
 Phase 1 Agents: 2
-- agentA-eval-expansion
-- agentB-chat-ux
+- agentA-e2e-integration
+- agentB-docs-and-polish
 
 Phase 2 Agents: 0
 (none)
@@ -13,51 +13,49 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-chat-ux
+## agentB-docs-and-polish
 
-*Completed: 2026-03-20 06:41 UTC*
+*Completed: 2026-03-20 06:54 UTC*
 
-**Files changed:**
-- `bot/chat_ui.html` — Added all three features (delete, search, theme toggle)
-- `docs/project-memory/backlog/README.md` — Marked F-036, F-037, F-038 as Complete (Sprint 15)
-- `docs/project-memory/sessions/S-2026-03-20-0640-sprint15-chat-ux.md` — Session doc
+### Files changed
+- **README.md** (new) — comprehensive docs with Quick Start, Architecture diagram, API Reference (all 20 endpoints), Configuration, Evaluation guide, CLI commands, Tech Stack, Contributing
+- **bot/chat_ui.html** — added explicit `else` branch in debug panel localStorage restore to force collapsed state for new users (B-013 fix)
+- **evaluations/runner.py** — added ANSI color helpers with `isatty()` detection, `print_results()` function with summary and verbose modes, principles summary
+- **cli.py** — added `--verbose/-v` flag to evaluate subparser, switched to `print_results()`
+- **docs/project-memory/backlog/README.md** — marked B-013, F-042, F-043 as Complete (Sprint 16)
+- **docs/project-memory/sessions/S-2026-03-20-0654-sprint16-docs-and-polish.md** (new) — session doc
 
-**Commands run:**
-- `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — 271 passed
-- `git commit` + `git push -u origin HEAD`
+### Commands run
+- `pytest tests/ -v` — 363 passed
+- `cli.py evaluate --verbose` — 9/9 scenarios passed with colored output
 
-**Notes / follow-on work:**
-- The brief mentioned "long-press on mobile" for delete — the current implementation uses a confirm dialog which works universally including mobile. A dedicated long-press gesture could be added later if desired.
-- Light theme colors are GitHub-inspired. Could be fine-tuned based on user feedback.
+### Notes / follow-on work
+- The debug panel fix (B-013) is minimal — the existing code was nearly correct; the explicit `else` branch makes the default-hidden behavior bulletproof for first-time users
+- The README references screenshots but none exist yet; a follow-on task could capture actual screenshots of the web chat UI
 
 
 ---
 
-## agentA-eval-expansion
+## agentA-e2e-integration
 
-*Completed: 2026-03-20 06:42 UTC*
+*Completed: 2026-03-20 06:56 UTC*
 
-### Files changed
-- `evaluations/scenarios/technical-customer.yaml` — new
-- `evaluations/scenarios/emotional-customer.yaml` — new
-- `evaluations/scenarios/multi-problem.yaml` — new
-- `evaluations/scenarios/solution-fixated.yaml` — new
-- `evaluations/scenarios/returning-customer.yaml` — new
-- `evaluations/scenarios/enterprise-customer.yaml` — new
-- `evaluations/runner.py` — extended `_criterion_matches` with 5 new pattern handlers
-- `tests/test_evaluations.py` — added 92 new tests (file existence, structure, criteria matching, pass/fail with mock LLMs)
-- `docs/project-memory/backlog/README.md` — F-035 marked Complete (Sprint 15)
-- `docs/project-memory/sessions/S-2026-03-20-0641-sprint15-eval-expansion.md` — new session doc
+## Files changed
 
-### Commands run
-- `git pull origin main` — already up to date
-- `python3 -m venv .venv` + `pip install` — created venv with deps
-- `.venv/bin/python3 -m pytest tests/ -q` — **353 passed**, 9 failed (pre-existing missing optional deps), 1 skipped
-- `git commit` + `git push -u origin HEAD`
+| File | Change |
+|------|--------|
+| `tests/test_e2e_pipeline.py` | **Created** — 36 new tests across 8 test classes proving the full discovery-to-seed-doc pipeline |
+| `bot/tools.py` | **Modified** — Added `try/except OSError` around file operations in `tool_save_discovery` for graceful error handling |
+| `docs/project-memory/backlog/README.md` | **Modified** — Marked F-039 as Complete (Sprint 16) |
+| `docs/project-memory/sessions/S-2026-03-20-0655-sprint16-e2e-pipeline.md` | **Created** — Session doc |
 
-### Notes / follow-on work
-- 9 pre-existing test failures due to missing `anthropic`/`openai` optional packages — not related to this work
-- Scenario count: **9 YAML files** (3 original + 6 new), exceeding the 8+ target
-- Test count: **353 passing**, exceeding the 285+ target
+## Commands run
+
+- `python3 -m pytest tests/ -v` — **399 tests pass, 0 failures** (was 363)
+- `git push -u origin HEAD` — pushed to `agentA-e2e-integration`
+
+## Notes / follow-on work
+
+- The `test_multiple_saves_create_separate_files` test uses a 1.1s `time.sleep()` to ensure different timestamps — if test speed becomes a concern, this could be refactored to mock `datetime.now`
+- The HTTP endpoint tests validate the tool logic directly rather than making actual HTTP requests (the server test infra uses `port=0` but doesn't bind). A future improvement could add actual HTTP client tests using `urllib.request` against the running server.
 

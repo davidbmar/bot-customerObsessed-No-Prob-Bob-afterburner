@@ -33,7 +33,41 @@
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">12 development sessions logged</p>
+<p class="section-intro">14 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0641-sprint15-eval-expansion</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0641-sprint15-eval-expansion Title: Sprint 15 — Expand evaluation scenarios from 3 to 9 Date: 2026-03-20 Author: agentA</p>
+<h2>Goal</h2>
+<p>Add 6 new evaluation scenarios to test diverse customer types (F-035), bringing total from 3 to 9.</p>
+<h2>Context</h2>
+<p>Sprint 14 left the evaluation framework with 3 scenarios (surface-request, vague-requirements, pushback). Sprint 15 brief calls for 8+ scenarios covering technical customers, emotional customers, multi-problem, solution-fixated, returning customers, and enterprise customers.</p>
+<h2>Plan</h2>
+<ol><li>Create 6 new YAML scenario files</li><li>Extend _criterion_matches in runner.py for new patterns (acknowledges, captures, priority, does-not-ignore)</li><li>Add comprehensive tests: file existence, structure validation, pass/fail with mock LLMs</li><li>Mark F-035 complete in backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li>Created 6 new scenario files in evaluations/scenarios/</li><li>technical-customer.yaml, emotional-customer.yaml, multi-problem.yaml</li><li>solution-fixated.yaml, returning-customer.yaml, enterprise-customer.yaml</li><li>Extended _criterion_matches() with patterns: acknowledges, captures, does-not-ignore, priority, solve-all</li><li>Added 92 new tests in test_evaluations.py (353 total passing, up from 261)</li><li>Updated backlog: F-035 marked Complete (Sprint 15)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Criteria phrasing follows the heuristic matcher&#x27;s keyword patterns — used &quot;asks about&quot;, &quot;does NOT&quot;, &quot;acknowledges&quot;, &quot;captures&quot; which map to specific keyword lists</li><li>Added empathy-detection keywords (understand, frustrating, sorry, etc.) for the emotional-customer scenario</li><li>Each scenario has 2-3 pass criteria and 1-2 fail criteria for balanced evaluation</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending commit)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0640-sprint15-chat-ux</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0640-sprint15-chat-ux Title: Sprint 15 - Chat UX: Delete, Search, Theme Toggle Date: 2026-03-20 Author: agentB</p>
+<h2>Goal</h2>
+<p>Add conversation deletion, search filtering, and dark/light theme toggle to the web chat UI.</p>
+<h2>Context</h2>
+<p>Sprint 14 shipped conversation sidebar, token count fix, provider label fix, and cost display (271 tests pass). Sprint 15 brief requests delete conversation (F-036), search conversations (F-037), and dark/light theme toggle (F-038).</p>
+<h2>Plan</h2>
+<ol><li>Add light theme CSS custom properties via <code>html.light</code> class</li><li>Add theme toggle button (sun/moon) in header</li><li>Add delete button on each sidebar conversation entry</li><li>Add search input at top of sidebar to filter conversations by keyword</li><li>Update backlog to mark F-036, F-037, F-038 as Complete</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/chat_ui.html</code>: Added <code>html.light</code> CSS class with light theme color variables</li><li><code>bot/chat_ui.html</code>: Added theme toggle button in header (sun/moon icon)</li><li><code>bot/chat_ui.html</code>: Added delete button on each conversation sidebar entry with confirm dialog</li><li><code>bot/chat_ui.html</code>: Added search input at top of sidebar, filters conversations by keyword match across all message content</li><li><code>bot/chat_ui.html</code>: Search results show highlighted matching text snippet</li><li><code>bot/chat_ui.html</code>: Theme preference persists in localStorage</li><li><code>docs/project-memory/backlog/README.md</code>: Marked F-036, F-037, F-038 as Complete (Sprint 15)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Light theme uses GitHub-inspired colors for familiarity</li><li>Delete button uses hover-reveal pattern to keep sidebar clean</li><li>Search matches against all message content, not just preview text</li><li>Theme toggle uses unicode sun/moon characters (no icon library needed)</li></ul>
+<h2>Open Questions</h2>
+<ul><li>Mobile long-press delete: brief mentioned it but confirm dialog works on all platforms</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0631-sprint14-conversations-tokens</h3><h1>Session</h1>
 <p>Session-ID: S-2026-03-20-0631-sprint14-conversations-tokens Title: Sprint 14 — Conversation sidebar, token fix, cost display Date: 2026-03-20 Author: Claude (agentA)</p>
 <h2>Goal</h2>

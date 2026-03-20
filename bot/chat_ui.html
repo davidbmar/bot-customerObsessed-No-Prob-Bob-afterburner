@@ -359,7 +359,21 @@
     letter-spacing: 0;
   }
 
-  .message .body { white-space: pre-wrap; }
+  .message.user .body { white-space: pre-wrap; }
+  .message.assistant .body h1,
+  .message.assistant .body h2,
+  .message.assistant .body h3,
+  .message.assistant .body h4,
+  .message.assistant .body h5,
+  .message.assistant .body h6 {
+    margin: 12px 0 6px 0;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .message.assistant .body h1 { font-size: 1.3em; }
+  .message.assistant .body h2 { font-size: 1.15em; }
+  .message.assistant .body h3 { font-size: 1.05em; }
   .message .body p { margin-bottom: 8px; }
   .message .body p:last-child { margin-bottom: 0; }
   .message .body strong { font-weight: 600; color: var(--text); }
@@ -391,6 +405,25 @@
     padding-left: 20px;
   }
   .message .body li { margin-bottom: 4px; }
+
+  /* Date separator between message groups */
+  .date-separator {
+    text-align: center;
+    color: #888;
+    font-size: 0.8em;
+    margin: 1em 0;
+    position: relative;
+  }
+  .date-separator::before,
+  .date-separator::after {
+    content: '';
+    display: inline-block;
+    width: 60px;
+    height: 1px;
+    background: var(--border);
+    vertical-align: middle;
+    margin: 0 10px;
+  }
 
   /* Per-message debug section */
   .msg-debug {
@@ -1185,61 +1218,119 @@ function formatTime(date) {
   return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
 }
 
-/* Safe markdown rendering using DOM methods only — no innerHTML */
-function renderMarkdownToDOM(text, container) {
-  // Split into blocks by double newlines
-  var blocks = text.split(/\n\n+/);
-  for (var i = 0; i < blocks.length; i++) {
-    var block = blocks[i].trim();
-    if (!block) continue;
+/* Date grouping helpers */
+var lastMessageDateStr = null;
 
-    // Code block: ```...```
-    var codeMatch = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
-    if (codeMatch) {
+function formatDateLabel(date) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var msgDay = new Date(date);
+  msgDay.setHours(0, 0, 0, 0);
+
+  var diff = today.getTime() - msgDay.getTime();
+  var dayMs = 86400000;
+
+  if (diff === 0) return 'Today';
+  if (diff === dayMs) return 'Yesterday';
+
+  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return days[msgDay.getDay()] + ', ' + months[msgDay.getMonth()] + ' ' + msgDay.getDate();
+}
+
+function maybeAddDateSeparator(date, container) {
+  var dateStr = date.toDateString();
+  if (lastMessageDateStr === dateStr) return;
+  lastMessageDateStr = dateStr;
+
+  var sep = document.createElement('div');
+  sep.className = 'date-separator';
+  sep.textContent = formatDateLabel(date);
+  container.appendChild(sep);
+}
+
+/* Safe markdown rendering using DOM methods only — no innerHTML.
+   Extracts fenced code blocks first so blank lines inside them
+   don't break the block-level split. */
+function renderMarkdownToDOM(text, container) {
+  var segments = [];
+  var codeBlockRe = /```(\w*)\n?([\s\S]*?)```/g;
+  var lastIdx = 0;
+  var m;
+  while ((m = codeBlockRe.exec(text)) !== null) {
+    if (m.index > lastIdx) {
+      segments.push({ type: 'text', content: text.substring(lastIdx, m.index) });
+    }
+    segments.push({ type: 'code', content: m[2] });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) {
+    segments.push({ type: 'text', content: text.substring(lastIdx) });
+  }
+
+  for (var s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    if (seg.type === 'code') {
       var pre = document.createElement('pre');
-      var code = document.createElement('code');
-      code.textContent = codeMatch[2].trim();
-      pre.appendChild(code);
+      var codeEl = document.createElement('code');
+      codeEl.textContent = seg.content.trim();
+      pre.appendChild(codeEl);
       container.appendChild(pre);
       continue;
     }
 
-    // Unordered list
-    if (/^[-*]\s/.test(block)) {
-      var ul = document.createElement('ul');
-      var items = block.split(/\n/);
-      for (var j = 0; j < items.length; j++) {
-        var itemText = items[j].replace(/^[-*]\s+/, '').trim();
-        if (itemText) {
-          var li = document.createElement('li');
-          renderInlineToDOM(itemText, li);
-          ul.appendChild(li);
-        }
-      }
-      container.appendChild(ul);
-      continue;
-    }
+    var blocks = seg.content.split(/\n\n+/);
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i].trim();
+      if (!block) continue;
 
-    // Ordered list
-    if (/^\d+\.\s/.test(block)) {
-      var ol = document.createElement('ol');
-      var oitems = block.split(/\n/);
-      for (var k = 0; k < oitems.length; k++) {
-        var oitemText = oitems[k].replace(/^\d+\.\s+/, '').trim();
-        if (oitemText) {
-          var oli = document.createElement('li');
-          renderInlineToDOM(oitemText, oli);
-          ol.appendChild(oli);
-        }
+      // Headers: # through ######
+      var headerMatch = block.match(/^(#{1,6})\s+(.+)$/);
+      if (headerMatch && block.indexOf('\n') === -1) {
+        var level = Math.min(headerMatch[1].length, 6);
+        var h = document.createElement('h' + level);
+        renderInlineToDOM(headerMatch[2], h);
+        container.appendChild(h);
+        continue;
       }
-      container.appendChild(ol);
-      continue;
-    }
 
-    // Regular paragraph
-    var p = document.createElement('p');
-    renderInlineToDOM(block, p);
-    container.appendChild(p);
+      // Unordered list
+      if (/^[-*]\s/.test(block)) {
+        var ul = document.createElement('ul');
+        var items = block.split(/\n/);
+        for (var j = 0; j < items.length; j++) {
+          var itemText = items[j].replace(/^[-*]\s+/, '').trim();
+          if (itemText) {
+            var li = document.createElement('li');
+            renderInlineToDOM(itemText, li);
+            ul.appendChild(li);
+          }
+        }
+        container.appendChild(ul);
+        continue;
+      }
+
+      // Ordered list
+      if (/^\d+\.\s/.test(block)) {
+        var ol = document.createElement('ol');
+        var oitems = block.split(/\n/);
+        for (var k = 0; k < oitems.length; k++) {
+          var oitemText = oitems[k].replace(/^\d+\.\s+/, '').trim();
+          if (oitemText) {
+            var oli = document.createElement('li');
+            renderInlineToDOM(oitemText, oli);
+            ol.appendChild(oli);
+          }
+        }
+        container.appendChild(ol);
+        continue;
+      }
+
+      // Regular paragraph
+      var p = document.createElement('p');
+      renderInlineToDOM(block, p);
+      container.appendChild(p);
+    }
   }
 }
 
@@ -1268,12 +1359,17 @@ function renderInlineToDOM(text, parent) {
   }
 }
 
-function addMessage(role, text, debugData) {
+function addMessage(role, text, debugData, msgDate) {
+  var now = msgDate ? new Date(msgDate) : new Date();
+  var container = document.getElementById('messages');
+  maybeAddDateSeparator(now, container);
+
   var group = document.createElement('div');
   group.className = 'message-group';
 
   var el = document.createElement('div');
   el.className = 'message ' + role;
+  el.setAttribute('data-date', now.toISOString());
 
   var label = document.createElement('div');
   label.className = 'label';
@@ -1284,7 +1380,7 @@ function addMessage(role, text, debugData) {
 
   var ts = document.createElement('span');
   ts.className = 'timestamp';
-  ts.textContent = formatTime(new Date());
+  ts.textContent = formatTime(now);
   label.appendChild(ts);
 
   el.appendChild(label);
@@ -1382,7 +1478,6 @@ function addMessage(role, text, debugData) {
     group.appendChild(dbg);
   }
 
-  var container = document.getElementById('messages');
   container.appendChild(group);
   container.scrollTop = container.scrollHeight;
   updateSeedButtonVisibility();
@@ -1768,6 +1863,7 @@ function newConversation() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       conversationId = data.conversation_id;
+      lastMessageDateStr = null;
       clearContainer(document.getElementById('messages'));
       document.getElementById('debugConvId').textContent = conversationId;
       document.getElementById('settingsConvId').textContent = conversationId;
@@ -1781,6 +1877,7 @@ function newConversation() {
     })
     .catch(function() {
       conversationId = 'web-' + Date.now().toString(36);
+      lastMessageDateStr = null;
       clearContainer(document.getElementById('messages'));
       document.getElementById('debugConvId').textContent = conversationId;
       document.getElementById('settingsConvId').textContent = conversationId;
@@ -1791,6 +1888,7 @@ function newConversation() {
 }
 
 function clearHistory() {
+  lastMessageDateStr = null;
   clearContainer(document.getElementById('messages'));
   closeSettings();
   document.getElementById('input').focus();
@@ -2053,7 +2151,8 @@ function saveConversation() {
     messages.push({
       role: role,
       content: content,
-      timestamp: tsEl ? tsEl.textContent : ''
+      timestamp: tsEl ? tsEl.textContent : '',
+      dateISO: msgEl.getAttribute('data-date') || new Date().toISOString()
     });
   }
   var state = {
@@ -2083,13 +2182,14 @@ function restoreConversation() {
     document.getElementById('debugConvId').textContent = conversationId;
     document.getElementById('settingsConvId').textContent = conversationId;
 
+    lastMessageDateStr = null;
     for (var i = 0; i < state.messages.length; i++) {
       var m = state.messages[i];
       if (m.role === 'error') {
         // Skip error messages on restore
         continue;
       }
-      addMessage(m.role, m.content);
+      addMessage(m.role, m.content, null, m.dateISO || null);
     }
     return true;
   } catch(e) {
@@ -2369,10 +2469,11 @@ function switchToConversation(cid) {
 
     // Clear and reload messages
     clearContainer(document.getElementById('messages'));
+    lastMessageDateStr = null;
     for (var i = 0; i < state.messages.length; i++) {
       var m = state.messages[i];
       if (m.role === 'error') continue;
-      addMessage(m.role, m.content);
+      addMessage(m.role, m.content, null, m.dateISO || null);
     }
 
     // Scroll to bottom
@@ -2434,6 +2535,7 @@ function deleteConversation(cid, evt) {
 
   if (cid === conversationId) {
     conversationId = 'web-' + Date.now().toString(36);
+    lastMessageDateStr = null;
     clearContainer(document.getElementById('messages'));
     document.getElementById('debugConvId').textContent = conversationId;
     document.getElementById('settingsConvId').textContent = conversationId;

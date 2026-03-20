@@ -14,7 +14,7 @@ Track bugs and feature requests here.
 | B-006 | save_discovery not exported from bot/tools.py | High | Fixed (Sprint 3) |
 | B-007 | test uses chat_id but server uses conversation_id | Medium | Fixed (Sprint 3) |
 | B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Open |
-| B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Open |
+| B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Fixed (Sprint 12) |
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
 | B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Fixed (Sprint 9) |
 | B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Fixed (Sprint 9) |
@@ -22,6 +22,10 @@ Track bugs and feature requests here.
 | B-014 | No PROJECT_STATUS docs exist — sprint-merge.sh never ran (all 11 sprints merged manually or via sprint-run.sh that crashed) | High | Complete (Sprint 12) |
 | B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Open |
 | B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
+| B-017 | `python3 bot/server.py` fails with relative import error — must use `python3 -m bot.server` (F-022 regression) | Medium | Open |
+| B-018 | Token count inflated — shows 1378 out tokens for a 20-word response, likely counting thinking tokens or misreporting | Low | Open |
+| B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — Sprint 12 may have changed provider naming | Low | Open |
+| B-020 | Sprint 12 agent done markers not written — sprint-launch.sh done detection broken (related to B-008) | Medium | Open |
 
 ## Features
 
@@ -52,8 +56,12 @@ Track bugs and feature requests here.
 | F-023 | Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus) + ChatGPT, runtime switching | High | Complete (Sprint 11) |
 | F-024 | Generate PROJECT_STATUS docs retroactively for Sprints 1-11 so dashboard shows sprint history | High | Complete (Sprint 12) |
 | F-025 | Streaming responses — show bot text as it generates instead of waiting for full response | High | Complete (Sprint 12) |
-| F-026 | Keyboard shortcut: Enter to send message (currently requires clicking Send button) | Medium | Open |
+| F-026 | Keyboard shortcut: Enter to send message (currently requires clicking Send button) | Medium | Already exists (line 586) |
 | F-027 | Mobile-responsive web chat — UI is desktop-only, needs viewport meta + responsive CSS | Medium | Open |
 | F-028 | Conversation persistence across page reloads — currently loses chat on refresh | Medium | Complete (Sprint 12) |
 | F-029 | Error handling in web chat — show user-friendly message when LLM is unreachable | Medium | Complete (Sprint 12) |
 | F-030 | Token cost display — show estimated cost per message when using paid providers (Claude/ChatGPT) | Low | Open |
+| F-031 | Auto-scroll to bottom when new messages arrive or text streams in | Medium | Open |
+| F-032 | Conversation list sidebar — see past conversations and switch between them | Medium | Open |
+| F-033 | Export conversation as seed doc — "Save as seed" button that calls save_discovery from the UI | High | Open |
+| F-034 | Bot synthesis step — after 5-7 exchanges, bot auto-generates Problem/Users/Use Cases/Success Criteria summary | High | Open |

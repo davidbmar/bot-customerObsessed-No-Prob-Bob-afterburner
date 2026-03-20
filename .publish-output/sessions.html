@@ -34,7 +34,24 @@
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">16 development sessions logged</p>
+<p class="section-intro">17 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0708-sprint17-provider-and-history</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0708-sprint17-provider-and-history Title: Sprint 17 - Provider label fix and PROJECT_STATUS history Date: 2026-03-20 Author: agentA</p>
+<h2>Goal</h2>
+<p>Generate PROJECT_STATUS docs for Sprints 12-16 (B-021) and fix provider label in health endpoint (B-019).</p>
+<h2>Context</h2>
+<p>Dashboard only shows Sprints 1-11. Health endpoint returns &quot;ollama&quot; instead of &quot;Qwen 3.5&quot; as provider label.</p>
+<h2>Plan</h2>
+<ol><li>Extend generate_sprint_history.py to handle sprints 12-16</li><li>Fix default _provider_id in Gateway to &quot;qwen-3.5&quot;</li><li>Add active_label to /api/llm/providers response</li><li>Write tests, update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li>Extended <code>scripts/generate_sprint_history.py</code> to accept CLI args and auto-discover sprint range</li><li>Generated 5 new PROJECT_STATUS docs (sprints 12-16), total now 16</li><li>Fixed <code>Gateway.__init__</code> to default <code>_provider_id</code> to <code>&quot;qwen-3.5&quot;</code> instead of <code>None</code></li><li>Fixed <code>health_check()</code> fallback from <code>&quot;ollama&quot;</code> to <code>&quot;qwen-3.5&quot;</code></li><li>Added <code>active_label</code> field to <code>/api/llm/providers</code> response</li><li>Updated existing test that asserted buggy behavior</li><li>Added 46 new tests (445 total, up from 399)</li><li>Updated backlog: B-019 and B-021 marked Complete (Sprint 17)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Defaulting <code>_provider_id</code> to <code>&quot;qwen-3.5&quot;</code> rather than trying to infer from model name — simpler and correct for the default Ollama+Qwen setup.</li><li>Made generate_sprint_history.py accept optional start/end CLI args for flexibility.</li></ul>
+<h2>Open Questions</h2>
+<ul><li>None</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>See git log for this session</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0655-sprint16-e2e-pipeline</h3><h1>Session</h1>
 <p>Session-ID: S-2026-03-20-0655-sprint16-e2e-pipeline Title: Sprint 16 — E2E integration pipeline tests Date: 2026-03-20 Author: agentA</p>
 <h2>Goal</h2>

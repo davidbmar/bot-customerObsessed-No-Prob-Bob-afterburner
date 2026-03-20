@@ -425,3 +425,61 @@ Invalidating CloudFront distribution E1YX41GAI6KJG5
     }
 }
 Deploy complete. Files synced: 11
+
+--- Generate started at 2026-03-20T07:21:58.589525+00:00 ---
+Generated 9 pages to /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output
+
+--- Deploy started at 2026-03-20T07:21:58.604836+00:00 ---
+Infrastructure ready: bucket=bot-customer-obsessed-no-prob-bob-afterburner-s3-website, cloudfront=d3gb25yycyv0d9.cloudfront.net
+Syncing /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/
+Completed 1.7 KiB/168.6 KiB (13.8 KiB/s) with 11 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/auth.js to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/auth.js
+Completed 1.7 KiB/168.6 KiB (13.8 KiB/s) with 10 file(s) remaining
+Completed 11.6 KiB/168.6 KiB (46.3 KiB/s) with 10 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/vision.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/vision.html
+Completed 11.6 KiB/168.6 KiB (46.3 KiB/s) with 9 file(s) remaining
+Completed 20.9 KiB/168.6 KiB (79.7 KiB/s) with 9 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/css/style.css to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/css/style.css
+Completed 20.9 KiB/168.6 KiB (79.7 KiB/s) with 8 file(s) remaining
+Completed 33.8 KiB/168.6 KiB (128.6 KiB/s) with 8 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/roadmap.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/roadmap.html
+Completed 33.8 KiB/168.6 KiB (128.6 KiB/s) with 7 file(s) remaining
+Completed 37.1 KiB/168.6 KiB (134.2 KiB/s) with 7 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/index.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/index.html
+Completed 37.1 KiB/168.6 KiB (134.2 KiB/s) with 6 file(s) remaining
+Completed 48.1 KiB/168.6 KiB (171.5 KiB/s) with 6 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/backlog.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/backlog.html
+Completed 48.1 KiB/168.6 KiB (171.5 KiB/s) with 5 file(s) remaining
+Completed 87.2 KiB/168.6 KiB (277.7 KiB/s) with 5 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/sessions.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/sessions.html
+Completed 87.2 KiB/168.6 KiB (277.7 KiB/s) with 4 file(s) remaining
+Completed 116.9 KiB/168.6 KiB (363.9 KiB/s) with 4 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/use-cases.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/use-cases.html
+Completed 116.9 KiB/168.6 KiB (363.9 KiB/s) with 3 file(s) remaining
+Completed 145.4 KiB/168.6 KiB (445.3 KiB/s) with 3 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/sprints.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/sprints.html
+Completed 145.4 KiB/168.6 KiB (445.3 KiB/s) with 2 file(s) remaining
+Completed 158.7 KiB/168.6 KiB (466.3 KiB/s) with 2 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/getting-started.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/getting-started.html
+Completed 158.7 KiB/168.6 KiB (466.3 KiB/s) with 1 file(s) remaining
+Completed 168.6 KiB/168.6 KiB (471.7 KiB/s) with 1 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/plan.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/plan.html
+Invalidating CloudFront distribution E1YX41GAI6KJG5
+{
+    "Location": "https://cloudfront.amazonaws.com/2020-05-31/distribution/E1YX41GAI6KJG5/invalidation/IBNBHOEX3AY3ZG9OZH3LABLQ1S",
+    "Invalidation": {
+        "Id": "IBNBHOEX3AY3ZG9OZH3LABLQ1S",
+        "Status": "InProgress",
+        "CreateTime": "2026-03-20T07:22:02.293000+00:00",
+        "InvalidationBatch": {
+            "Paths": {
+                "Quantity": 1,
+                "Items": [
+                    "/*"
+                ]
+            },
+            "CallerReference": "cli-1773991322-795490"
+        }
+    }
+}
+Deploy complete. Files synced: 11

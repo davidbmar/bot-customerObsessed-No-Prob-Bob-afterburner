@@ -155,11 +155,11 @@ class TestGateway:
 # -- Server API field naming --
 
 class TestServerAPI:
-    def test_api_chat_uses_chat_id(self):
-        """The /api/chat endpoint accepts chat_id parameter."""
+    def test_api_chat_uses_conversation_id(self):
+        """The /api/chat endpoint accepts conversation_id parameter."""
         import inspect
         source = inspect.getsource(BotHTTPHandler._handle_chat)
-        assert "chat_id" in source
+        assert "conversation_id" in source
 
     def test_api_response_includes_principles(self):
         """The /api/chat response uses principles key."""

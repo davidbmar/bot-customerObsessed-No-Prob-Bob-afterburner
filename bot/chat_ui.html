@@ -128,6 +128,27 @@
     border: 1px solid var(--border);
   }
 
+  .message.error {
+    margin-right: auto;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+  }
+
+  .btn-retry {
+    background: var(--bg-tertiary);
+    color: var(--error);
+    border: 1px solid var(--error);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: inherit;
+  }
+
+  .btn-retry:hover { background: rgba(248, 81, 73, 0.15); }
+
   .message .label {
     font-size: 11px;
     color: var(--text-muted);
@@ -744,7 +765,10 @@ function init() {
     document.getElementById('debugPanel').classList.remove('collapsed');
   }
 
-  showWelcomeMessage();
+  // Try to restore conversation from localStorage
+  if (!restoreConversation()) {
+    showWelcomeMessage();
+  }
   document.getElementById('input').focus();
 }
 
@@ -992,7 +1016,8 @@ function toggleDebug() {
 var typingTimer = null;
 var typingStartTime = null;
 
-function showTyping() {
+function showTyping(label) {
+  var typingLabel = label || 'Thinking...';
   var existing = document.getElementById('typingIndicator');
   if (existing) existing.remove();
 
@@ -1011,7 +1036,7 @@ function showTyping() {
 
   var txt = document.createElement('span');
   txt.id = 'typingText';
-  txt.textContent = 'Thinking...';
+  txt.textContent = typingLabel;
   el.appendChild(txt);
 
   var container = document.getElementById('messages');
@@ -1026,7 +1051,7 @@ function showTyping() {
     if (elapsed > 30) {
       textEl.textContent = 'Still thinking \u2014 local models can take a moment... (' + elapsed + 's)';
     } else {
-      textEl.textContent = 'Thinking... (' + elapsed + 's)';
+      textEl.textContent = typingLabel + ' (' + elapsed + 's)';
     }
   }, 1000);
 }
@@ -1038,69 +1063,278 @@ function hideTyping() {
   if (el) el.remove();
 }
 
+var lastSentText = '';
+
 function sendMessage() {
   var input = document.getElementById('input');
   var text = input.value.trim();
   if (!text) return;
 
+  lastSentText = text;
   input.value = '';
   input.style.height = 'auto';
   addMessage('user', text);
+  saveConversation();
 
   var btn = document.getElementById('sendBtn');
   btn.disabled = true;
 
-  showTyping();
+  showTyping('Streaming...');
 
-  fetch(API + '/api/chat', {
+  sendMessageStream(text).catch(function() {
+    // SSE failed, fall back to non-streaming
+    return sendMessageNonStream(text);
+  }).finally(function() {
+    btn.disabled = false;
+    input.focus();
+  });
+}
+
+function sendMessageStream(text) {
+  return fetch(API + '/api/chat/stream', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: text, conversation_id: conversationId})
+  }).then(function(resp) {
+    if (!resp.ok || !resp.body) {
+      // If status is 401/503, parse the JSON error
+      return resp.json().then(function(errData) {
+        hideTyping();
+        addErrorMessage(errData.error || 'Request failed', errData.detail || '');
+        saveConversation();
+        return Promise.resolve();
+      });
+    }
+
+    hideTyping();
+    // Create bot message bubble to stream into
+    var group = document.createElement('div');
+    group.className = 'message-group';
+    group.id = 'streaming-group';
+
+    var el = document.createElement('div');
+    el.className = 'message assistant';
+
+    var label = document.createElement('div');
+    label.className = 'label';
+    var labelText = document.createElement('span');
+    labelText.textContent = 'Bot';
+    label.appendChild(labelText);
+    var ts = document.createElement('span');
+    ts.className = 'timestamp';
+    ts.textContent = formatTime(new Date());
+    label.appendChild(ts);
+    el.appendChild(label);
+
+    var body = document.createElement('div');
+    body.className = 'body';
+    el.appendChild(body);
+    group.appendChild(el);
+
+    var container = document.getElementById('messages');
+    container.appendChild(group);
+
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var fullText = '';
+    var buffer = '';
+
+    function processStream() {
+      return reader.read().then(function(result) {
+        if (result.done) {
+          // Stream ended without done event — finalize
+          if (fullText) {
+            while (body.firstChild) body.removeChild(body.firstChild);
+            renderMarkdownToDOM(fullText, body);
+            saveConversation();
+          }
+          return;
+        }
+
+        buffer += decoder.decode(result.value, {stream: true});
+        var lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line.startsWith('data: ')) continue;
+          var jsonStr = line.substring(6);
+          try {
+            var evt = JSON.parse(jsonStr);
+          } catch(e) { continue; }
+
+          if (evt.type === 'token') {
+            fullText += evt.content;
+            body.textContent = fullText;
+            container.scrollTop = container.scrollHeight;
+          } else if (evt.type === 'done') {
+            // Re-render with markdown
+            while (body.firstChild) body.removeChild(body.firstChild);
+            renderMarkdownToDOM(fullText, body);
+
+            // Add debug data
+            var debugData = {
+              personality: evt.personality,
+              principles_active: evt.principles_active,
+              tools_called: evt.tools_called,
+              input_tokens: evt.tokens ? evt.tokens.input : 0,
+              output_tokens: evt.tokens ? evt.tokens.output : 0,
+              duration_ms: evt.duration_ms || 0,
+              memory_count: evt.memory_count || 0
+            };
+            appendDebugToGroup(group, debugData);
+            updateSidebarDebug(debugData);
+            saveConversation();
+          } else if (evt.type === 'error') {
+            var streamGroup = document.getElementById('streaming-group');
+            if (streamGroup) streamGroup.remove();
+            addErrorMessage(evt.error || 'Stream error', '');
+            saveConversation();
+            return;
+          }
+        }
+
+        return processStream();
+      });
+    }
+
+    return processStream();
+  });
+}
+
+function sendMessageNonStream(text) {
+  showTyping('Thinking...');
+  return fetch(API + '/api/chat', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({message: text, conversation_id: conversationId})
   })
-  .then(function(resp) { return resp.json(); })
-  .then(function(data) {
-    hideTyping();
-
-    if (data.error) {
-      addMessage('assistant', 'Error: ' + data.error);
-    } else {
-      addMessage('assistant', data.response, data);
-
-      // Update sidebar debug panel
-      document.getElementById('debugPersonality').textContent = data.personality || '\u2014';
-
-      var princEl = document.getElementById('debugPrinciples');
-      while (princEl.firstChild) princEl.removeChild(princEl.firstChild);
-      if (data.principles_active && data.principles_active.length > 0) {
-        data.principles_active.forEach(function(p) {
-          var tag = document.createElement('span');
-          tag.className = 'debug-tag';
-          tag.textContent = p;
-          princEl.appendChild(tag);
-        });
-      } else {
-        princEl.textContent = '\u2014';
-      }
-
-      document.getElementById('debugTools').textContent =
-        data.tools_called && data.tools_called.length > 0
-          ? data.tools_called.map(function(t) { return t.name; }).join(', ')
-          : 'none called';
-      document.getElementById('debugMemory').textContent = data.memory_count + ' messages';
-      document.getElementById('debugTokens').textContent =
-        data.input_tokens + ' in / ' + data.output_tokens + ' out';
-      document.getElementById('debugLatency').textContent =
-        (data.duration_ms / 1000).toFixed(1) + 's (' + data.duration_ms + 'ms)';
+  .then(function(resp) {
+    if (resp.status === 503 || resp.status === 401) {
+      return resp.json().then(function(errData) {
+        hideTyping();
+        addErrorMessage(errData.error || 'Request failed', errData.detail || '');
+        saveConversation();
+      });
     }
+    return resp.json().then(function(data) {
+      hideTyping();
+      if (data.error) {
+        addErrorMessage(data.error, data.detail || '');
+      } else {
+        addMessage('assistant', data.response, data);
+        updateSidebarDebug(data);
+      }
+      saveConversation();
+    });
   })
   .catch(function(e) {
     hideTyping();
-    addMessage('assistant', 'Connection error: ' + e.message);
-  })
-  .finally(function() {
-    btn.disabled = false;
-    input.focus();
+    addErrorMessage('Connection error', e.message);
+    saveConversation();
   });
+}
+
+function addErrorMessage(error, detail) {
+  var providerLabel = selectedProvider || 'LLM';
+  var msg = 'Could not reach ' + providerLabel + '. ' + error;
+  if (detail) msg += '\n' + detail;
+
+  var group = document.createElement('div');
+  group.className = 'message-group';
+
+  var el = document.createElement('div');
+  el.className = 'message error';
+
+  var label = document.createElement('div');
+  label.className = 'label';
+  var labelText = document.createElement('span');
+  labelText.textContent = 'Error';
+  label.appendChild(labelText);
+  var ts = document.createElement('span');
+  ts.className = 'timestamp';
+  ts.textContent = formatTime(new Date());
+  label.appendChild(ts);
+  el.appendChild(label);
+
+  var body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = msg;
+  el.appendChild(body);
+
+  var retryBtn = document.createElement('button');
+  retryBtn.className = 'btn-retry';
+  retryBtn.textContent = 'Retry';
+  retryBtn.onclick = function() {
+    group.remove();
+    document.getElementById('input').value = lastSentText;
+    sendMessage();
+  };
+  el.appendChild(retryBtn);
+
+  group.appendChild(el);
+  var container = document.getElementById('messages');
+  container.appendChild(group);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendDebugToGroup(group, debugData) {
+  var dbg = document.createElement('div');
+  dbg.className = 'msg-debug' + (debugVisible ? '' : ' hidden');
+
+  var toggle = document.createElement('button');
+  toggle.className = 'msg-debug-toggle';
+  var tokenInfo = (debugData.input_tokens || 0) + ' in / ' + (debugData.output_tokens || 0) + ' out';
+  var latency = (debugData.duration_ms || 0) + 'ms';
+  toggle.textContent = '\u25B6 debug \u00b7 ' + tokenInfo + ' \u00b7 ' + latency;
+  toggle.onclick = function() {
+    var b = dbg.querySelector('.msg-debug-body');
+    b.classList.toggle('open');
+    toggle.textContent = (b.classList.contains('open') ? '\u25BC' : '\u25B6') +
+      ' debug \u00b7 ' + tokenInfo + ' \u00b7 ' + latency;
+  };
+  dbg.appendChild(toggle);
+
+  var dbgBody = document.createElement('div');
+  dbgBody.className = 'msg-debug-body';
+  addDebugRow(dbgBody, 'Personality', debugData.personality || '\u2014');
+  addDebugRow(dbgBody, 'Tokens', tokenInfo);
+  addDebugRow(dbgBody, 'Latency', ((debugData.duration_ms || 0) / 1000).toFixed(1) + 's');
+  addDebugRow(dbgBody, 'Memory', (debugData.memory_count || 0) + ' messages');
+  dbg.appendChild(dbgBody);
+
+  group.id = '';
+  group.appendChild(dbg);
+}
+
+function updateSidebarDebug(data) {
+  document.getElementById('debugPersonality').textContent = data.personality || '\u2014';
+
+  var princEl = document.getElementById('debugPrinciples');
+  while (princEl.firstChild) princEl.removeChild(princEl.firstChild);
+  var principles = data.principles_active || [];
+  if (principles.length > 0) {
+    principles.forEach(function(p) {
+      var tag = document.createElement('span');
+      tag.className = 'debug-tag';
+      tag.textContent = p;
+      princEl.appendChild(tag);
+    });
+  } else {
+    princEl.textContent = '\u2014';
+  }
+
+  var toolsCalled = data.tools_called || [];
+  document.getElementById('debugTools').textContent =
+    toolsCalled.length > 0 ? toolsCalled.map(function(t) { return t.name; }).join(', ') : 'none called';
+  document.getElementById('debugMemory').textContent = (data.memory_count || 0) + ' messages';
+
+  var inTok = data.input_tokens || (data.tokens ? data.tokens.input : 0) || 0;
+  var outTok = data.output_tokens || (data.tokens ? data.tokens.output : 0) || 0;
+  document.getElementById('debugTokens').textContent = inTok + ' in / ' + outTok + ' out';
+
+  var durMs = data.duration_ms || 0;
+  document.getElementById('debugLatency').textContent = (durMs / 1000).toFixed(1) + 's (' + durMs + 'ms)';
 }
 
 function clearContainer(el) {
@@ -1108,6 +1342,7 @@ function clearContainer(el) {
 }
 
 function newConversation() {
+  clearConversationStorage();
   fetch(API + '/api/conversations/new', { method: 'POST' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -1378,6 +1613,73 @@ function testConnection() {
     el.className = 'test-result fail';
     el.textContent = '\u2718 Connection failed: ' + e.message;
   });
+}
+
+// -- Conversation Persistence --
+
+function saveConversation() {
+  var msgs = document.querySelectorAll('.message-group');
+  var messages = [];
+  for (var i = 0; i < msgs.length; i++) {
+    var msgEl = msgs[i].querySelector('.message');
+    if (!msgEl) continue;
+    var role = msgEl.classList.contains('user') ? 'user' :
+               msgEl.classList.contains('error') ? 'error' : 'assistant';
+    var bodyEl = msgEl.querySelector('.body');
+    var content = bodyEl ? bodyEl.textContent : '';
+    var tsEl = msgEl.querySelector('.timestamp');
+    messages.push({
+      role: role,
+      content: content,
+      timestamp: tsEl ? tsEl.textContent : ''
+    });
+  }
+  var state = {
+    conversationId: conversationId,
+    messages: messages,
+    provider: selectedProvider,
+    model: document.getElementById('modelInfo') ? document.getElementById('modelInfo').textContent : ''
+  };
+  try {
+    localStorage.setItem('conv_' + conversationId, JSON.stringify(state));
+    localStorage.setItem('lastConversationId', conversationId);
+  } catch(e) {}
+}
+
+function restoreConversation() {
+  var savedId = localStorage.getItem('lastConversationId');
+  if (!savedId) return false;
+
+  var raw = localStorage.getItem('conv_' + savedId);
+  if (!raw) return false;
+
+  try {
+    var state = JSON.parse(raw);
+    if (!state.messages || state.messages.length === 0) return false;
+
+    conversationId = state.conversationId;
+    document.getElementById('debugConvId').textContent = conversationId;
+    document.getElementById('settingsConvId').textContent = conversationId;
+
+    for (var i = 0; i < state.messages.length; i++) {
+      var m = state.messages[i];
+      if (m.role === 'error') {
+        // Skip error messages on restore
+        continue;
+      }
+      addMessage(m.role, m.content);
+    }
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+function clearConversationStorage() {
+  try {
+    localStorage.removeItem('conv_' + conversationId);
+    localStorage.removeItem('lastConversationId');
+  } catch(e) {}
 }
 
 // Auto-resize textarea

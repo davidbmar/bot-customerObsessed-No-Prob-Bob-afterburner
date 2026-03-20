@@ -7,8 +7,9 @@ Handles personality loading, memory management, and tool execution.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Generator
 
 from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient, get_client, LLM_PROVIDERS
 from .memory import ConversationMemory
@@ -130,6 +131,77 @@ class Gateway:
             input_tokens=llm_resp.input_tokens,
             output_tokens=llm_resp.output_tokens,
             duration_ms=llm_resp.duration_ms,
+        )
+
+    def process_message_stream(
+        self, chat_id: str, text: str
+    ) -> Generator[dict, None, GatewayResponse]:
+        """Process a user message, streaming token chunks back.
+
+        Yields dicts like {"type": "token", "content": "word"}.
+        Returns the final GatewayResponse (accessible via StopIteration.value).
+        Falls back to non-streaming for clients without chat_stream().
+        """
+        self.memory.add(chat_id, "user", text)
+
+        history = self.memory.get_history(chat_id, limit=20)
+        messages = [{"role": m["role"], "content": m["content"]} for m in history]
+
+        start = time.monotonic()
+
+        # Check if the LLM client supports streaming
+        if not hasattr(self.llm, "chat_stream"):
+            # Fallback: non-streaming, yield full response as one chunk
+            llm_resp = self.llm.chat(
+                messages=messages,
+                system_prompt=self.system_prompt,
+                tools=TOOL_DEFINITIONS,
+            )
+            tools_called: list[dict[str, Any]] = []
+            if llm_resp.tool_calls:
+                tools_called = self._handle_tool_calls(llm_resp, messages)
+
+            response_text = llm_resp.content or "I'm thinking about that..."
+            yield {"type": "token", "content": response_text}
+        else:
+            # Streaming path
+            gen = self.llm.chat_stream(
+                messages=messages,
+                system_prompt=self.system_prompt,
+                tools=TOOL_DEFINITIONS,
+            )
+            full_content = ""
+            llm_resp = None
+            try:
+                while True:
+                    chunk = next(gen)
+                    full_content += chunk
+                    yield {"type": "token", "content": chunk}
+            except StopIteration as e:
+                llm_resp = e.value
+
+            if llm_resp is None:
+                from .llm import LLMResponse as _LR
+                llm_resp = _LR(content=full_content, duration_ms=int((time.monotonic() - start) * 1000))
+
+            tools_called = []
+            if llm_resp.tool_calls:
+                tools_called = self._handle_tool_calls(llm_resp, messages)
+
+            response_text = llm_resp.content or full_content or "I'm thinking about that..."
+
+        duration_ms = llm_resp.duration_ms if llm_resp else int((time.monotonic() - start) * 1000)
+
+        self.memory.add(chat_id, "assistant", response_text)
+
+        return GatewayResponse(
+            text=response_text,
+            tools_called=tools_called,
+            principles=self.principles,
+            memory_count=self.memory.message_count(chat_id),
+            input_tokens=llm_resp.input_tokens if llm_resp else 0,
+            output_tokens=llm_resp.output_tokens if llm_resp else 0,
+            duration_ms=duration_ms,
         )
 
     def _handle_tool_calls(

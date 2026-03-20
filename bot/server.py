@@ -29,6 +29,38 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 PORT = 1203
+
+
+def _classify_llm_error(exc: Exception) -> tuple[int, dict]:
+    """Classify an LLM-related exception into an HTTP status and error body."""
+    import httpx
+
+    exc_type = type(exc).__name__
+    detail = str(exc)
+
+    # Anthropic auth error
+    try:
+        import anthropic
+        if isinstance(exc, anthropic.AuthenticationError):
+            return 401, {"error": "Invalid API key", "detail": detail}
+    except ImportError:
+        pass
+
+    # Connection errors → 503
+    if isinstance(exc, (ConnectionError, httpx.ConnectError, httpx.TimeoutException)):
+        return 503, {"error": "LLM unreachable", "detail": detail}
+
+    # OpenAI auth errors
+    try:
+        import openai
+        if isinstance(exc, openai.AuthenticationError):
+            return 401, {"error": "Invalid API key", "detail": detail}
+    except ImportError:
+        pass
+
+    import traceback
+    traceback.print_exc()
+    return 500, {"error": str(exc)}
 HOST = "127.0.0.1"
 CHAT_UI_PATH = Path(__file__).parent / "chat_ui.html"
 
@@ -76,6 +108,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/chat":
             self._handle_chat()
+        elif path == "/api/chat/stream":
+            self._handle_chat_stream()
         elif path == "/api/config":
             self._handle_post_config()
         elif path == "/api/conversations/new":
@@ -117,9 +151,75 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
                 "duration_ms": response.duration_ms,
             })
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            self._json_response({"error": str(e)}, status=500)
+            status, error_data = _classify_llm_error(e)
+            self._json_response(error_data, status=status)
+
+    def _handle_chat_stream(self) -> None:
+        """Stream a chat response as SSE events."""
+        body = self._read_body()
+        if body is None:
+            return
+
+        text = body.get("message", "").strip()
+        conversation_id = body.get("conversation_id", "web-default")
+
+        if not text:
+            self._json_response({"error": "Empty message"}, status=400)
+            return
+
+        try:
+            gen = self.gateway.process_message_stream(conversation_id, text)
+        except Exception as e:
+            status, error_data = _classify_llm_error(e)
+            self._json_response(error_data, status=status)
+            return
+
+        # Send SSE headers
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        gateway_response = None
+        try:
+            while True:
+                chunk = next(gen)
+                event = json.dumps(chunk)
+                self.wfile.write(f"data: {event}\n\n".encode())
+                self.wfile.flush()
+        except StopIteration as e:
+            gateway_response = e.value
+        except Exception as e:
+            error_event = json.dumps({"type": "error", "error": str(e)})
+            try:
+                self.wfile.write(f"data: {error_event}\n\n".encode())
+                self.wfile.flush()
+            except Exception:
+                pass
+            return
+
+        # Send done event with metadata
+        if gateway_response:
+            done_event = json.dumps({
+                "type": "done",
+                "response": gateway_response.text,
+                "tools_called": gateway_response.tools_called,
+                "principles_active": gateway_response.principles,
+                "personality": self.gateway.personality.name,
+                "memory_count": gateway_response.memory_count,
+                "tokens": {
+                    "input": gateway_response.input_tokens,
+                    "output": gateway_response.output_tokens,
+                },
+                "duration_ms": gateway_response.duration_ms,
+            })
+            try:
+                self.wfile.write(f"data: {done_event}\n\n".encode())
+                self.wfile.flush()
+            except Exception:
+                pass
 
     def _handle_get_personalities(self) -> None:
         """List available personalities from the personalities/ directory."""

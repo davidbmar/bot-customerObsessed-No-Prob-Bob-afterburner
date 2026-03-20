@@ -357,12 +357,14 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         from .llm_config import get_active_provider
 
         active = getattr(self.gateway, "_provider_id", None) or get_active_provider()
+        active_label = LLM_PROVIDERS.get(active, {}).get("label", active)
         result = {}
         for pid, pinfo in LLM_PROVIDERS.items():
             result[pid] = dict(pinfo, active=(pid == active))
         self._json_response({
             "providers": result,
             "active_provider": active,
+            "active_label": active_label,
         })
 
     def _handle_llm_switch(self) -> None:

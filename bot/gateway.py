@@ -63,7 +63,8 @@ class Gateway:
             self._provider_id = provider_id
             self.llm = get_client(provider_id, model=model)
         else:
-            self._provider_id = None
+            # Default to "qwen-3.5" so health_check returns the correct label
+            self._provider_id = "qwen-3.5"
             self.llm = OllamaClient(model=model, base_url=ollama_url)
 
         self.memory = ConversationMemory()
@@ -283,8 +284,8 @@ class Gateway:
     def health_check(self) -> dict:
         """Check system health."""
         llm_ok = self.llm.health_check()
-        provider = self._provider_id or "ollama"
-        provider_label = LLM_PROVIDERS.get(provider, {}).get("label", provider) if provider else "ollama"
+        provider = self._provider_id or "qwen-3.5"
+        provider_label = LLM_PROVIDERS.get(provider, {}).get("label", provider)
         status = "ok" if llm_ok else "unavailable"
         return {
             "status": status,

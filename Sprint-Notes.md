@@ -1,10 +1,10 @@
-# Sprint 2 — Agent Notes
+# Sprint 3 — Agent Notes
 
-*Started: 2026-03-20 00:02 UTC*
+*Started: 2026-03-20 00:22 UTC*
 
 Phase 1 Agents: 2
-- agentA-fix-imports
-- agentB-telegram-tools
+- agentA-fix-tools-tests
+- agentB-cli-e2e
 
 Phase 2 Agents: 0
 (none)
@@ -13,59 +13,55 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-telegram-tools
+## agentA-fix-tools-tests
 
-*Completed: 2026-03-20 00:07 UTC*
+*Completed: 2026-03-20 00:25 UTC*
 
-## Files changed
+```
+All tasks complete. Here's the summary:
+
+---
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `bot/gateway.py` | Fixed imports: `OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader` |
-| `bot/polling.py` | Added `/start` command with welcome message |
-| `bot/tools.py` | `save_discovery` now writes `discovery-{timestamp}.md` instead of fixed filename |
-| `cli.py` | Added `--telegram` flag, wires up `TelegramPoller` in `cmd_start` |
-| `tests/test_tools.py` | **New** — 7 tests for save_discovery and tool registration |
-| `tests/test_llm_webchat.py` | Fixed 5 broken tests from Sprint 1 merge (model name, API field names) |
-| `docs/project-memory/backlog/README.md` | Marked B-001 Fixed, F-001/F-002 Complete |
-| `docs/project-memory/sessions/S-2026-03-20-0006-telegram-tools.md` | Session doc |
+| `bot/tools.py` | Added `save_discovery = tool_save_discovery` alias at module level |
+| `tests/test_llm_webchat.py` | Renamed test to `test_api_chat_uses_conversation_id`, fixed assertion |
+| `docs/project-memory/backlog/README.md` | B-006, B-007 → Fixed (Sprint 3); F-002 → Complete |
+| `docs/project-memory/sessions/S-2026-03-20-0024-fix-tools-tests.md` | New session doc |
 
-## Commands run
+## Commands Run
 
-- `python3 -m venv .venv` + `pip install httpx pytest pyyaml`
-- `.venv/bin/python3 -m pytest tests/ -v` — **51 passed, 0 failed**
-- `git push -u origin HEAD`
+- `python3.12 -m venv .venv` + `pip install -e ".[dev]"` — created working venv
+- `.venv/bin/python3 -c "from bot.tools import save_discovery; print(...)"` — verified import works
+- `.venv/bin/python3 -m pytest tests/ -v` — **51 passed, 0 failures**
+- `git push -u origin HEAD` — pushed branch
 
-## Notes / follow-on work
+## Notes / Follow-on Work
 
-- **B-002** (config field naming) may still need attention — the default model in `BotConfig` is `qwen3:4b` while `llm.py` defaults to `qwen3.5:latest`. Currently gateway uses config defaults.
-- **B-003** (server.py cascading import error) is now fixed by the gateway import fix.
-- **B-004** (pytest not in venv) — recreated venv with pytest installed. The `.venv` is gitignored so other agents may need to recreate it.
-- Telegram polling requires a valid `telegram.botToken` in config — without it, `--telegram` prints a warning and continues with web-only mode.
+- The `.venv` was recreated with Python 3.12 (system python3 is 3.9.6, too old for `requires-python = ">=3.11"`). The `.venv` directory is gitignored so this doesn't affect the commit.
+- B-008 (sprint-run.sh zsh `local -A` error) remains open — outside this sprint's scope.
+```
 
 
 ---
 
-## agentA-fix-imports
+## agentB-cli-e2e
 
-*Completed: 2026-03-20 00:07 UTC*
+*Completed: 2026-03-20 00:25 UTC*
 
 ## Files changed
-- `bot/gateway.py` — Fixed imports (`OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader`), added `ChatMemory` wrapper + `_get_memory()`, default model `qwen3.5:latest`
-- `bot/config.py` — Added `model_name` and `personality_name` properties
-- `bot/server.py` — `chat_id` → `conversation_id`, `principles` → `principles_active`, added `create_app()` factory
-- `bot/__main__.py` — New entry point for `python3 -m bot`
-- `docs/project-memory/backlog/README.md` — Marked B-001–B-004 as Fixed
-- `docs/project-memory/sessions/S-2026-03-20-0007-fix-imports.md` — Session doc
+- **`tests/test_e2e.py`** (new) — 5 end-to-end tests covering the conversation → seed doc pipeline
+- **`tests/test_llm_webchat.py`** — Fixed B-007: renamed `test_api_chat_uses_chat_id` → `test_api_chat_uses_conversation_id` to match the server's actual field name
+- **`docs/project-memory/backlog/README.md`** — Marked B-007 as Fixed, F-004/F-008/F-009 as Complete
 
 ## Commands run
-- `.venv/bin/pip install pytest httpx pyyaml` (created venv first)
-- `.venv/bin/python3 -m pytest tests/ -v` — **44 passed**
-- Import smoke tests: `from bot.gateway import Gateway`, `from bot.server import create_app` — both OK
-- Server start test on port 1203: GET / → 200, POST /api/chat → returns JSON, GET /api/health → OK
+- `.venv/bin/python3 -m pytest tests/ -v` — **56 tests pass** (was 50/51)
 - `git push -u origin HEAD`
 
 ## Notes / follow-on work
-- The `create_app()` function was added since the acceptance criteria required `from bot.server import create_app` to work, but server.py only had `start_server()`
-- `bot/__main__.py` was created so `python3 -m bot` can start the server (the old `python3 bot/server.py` doesn't work with relative imports)
+- **CLI `chat` and `status` commands were already implemented** in `cli.py` from a prior sprint — no code changes needed there
+- **B-006** (save_discovery not exported) — `execute_tool` dispatches correctly via its internal dict; the function is importable from `bot.tools`. This bug may be stale or refer to a different export mechanism. Worth re-evaluating.
+- **B-008** (sprint-run.sh zsh `local -A` error) remains open — out of scope for this agent
 

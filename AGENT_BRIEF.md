@@ -1,4 +1,4 @@
-agentA-fix-tools-tests — Sprint 3
+agentB-cli-e2e — Sprint 3
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -22,16 +22,23 @@ Constraints
 
 
 Objective
-- Fix save_discovery export and the failing test so all 51 tests pass
+- Add CLI chat/status commands and an end-to-end integration test
 
 Tasks
-- Fix `bot/tools.py`: ensure `save_discovery` is a properly importable function. Check the current file — it may define the function under a different name or inside a class. Make `from bot.tools import save_discovery` work
-- Fix `tests/test_llm_webchat.py` test `test_api_chat_uses_chat_id`: the server uses `conversation_id` not `chat_id`. Either update the test to check for `conversation_id`, or update the server to also accept `chat_id` as an alias
-- Run full test suite: `.venv/bin/python3 -m pytest tests/ -v` — all tests must pass
-- If any other test failures are found, fix them
-- Update backlog: mark B-006 and B-007 as Fixed
+- Add `chat` subcommand to `cli.py`: interactive terminal loop that reads user input, sends to Gateway, prints bot response. Uses readline for input. Type `exit` or Ctrl+D to quit. Shows personality name on startup
+- Add `status` subcommand to `cli.py`: prints bot status — is server running (check port 1203)? which personality is loaded? how many conversations exist? Ollama reachable?
+- Write `tests/test_e2e.py` — end-to-end test that:
+  - Creates a temporary project directory with `docs/seed/`
+  - Initializes Gateway with customer-discovery personality
+  - Sends a sequence of discovery messages (simulating a customer conversation)
+  - Verifies the gateway returns responses (doesn't need Ollama — mock the LLM response)
+  - Calls save_discovery with structured output
+  - Verifies a seed doc markdown file was written to the temp project's `docs/seed/`
+  - Verifies the seed doc contains expected sections (Problem, Users, Use Cases, Success Criteria)
+- Update backlog: mark F-004, F-008, F-009 as Complete
 
 Acceptance Criteria
-- `from bot.tools import save_discovery` works
-- `.venv/bin/python3 -m pytest tests/ -v` — all tests pass, 0 failures
+- `python3 cli.py chat` starts interactive loop (exits on EOF)
+- `python3 cli.py status` prints status info without crashing
+- `.venv/bin/python3 -m pytest tests/test_e2e.py -v` passes
 - Backlog updated

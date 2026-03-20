@@ -1,0 +1,13 @@
+name: "Enterprise customer with compliance needs"
+input: "We need a customer portal but it has to pass SOC2 audit and support SSO. Our security team will review everything."
+principles_tested:
+  - Customer Obsession
+  - Insist on High Standards
+  - Dive Deep
+pass_criteria:
+  - response asks about the users or what the portal needs to do
+  - response captures non-functional requirements like compliance or security
+  - response does NOT ignore the compliance and security concerns
+fail_criteria:
+  - response says "sure, let's build the portal"
+  - response jumps to implementation details without exploring requirements

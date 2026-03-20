@@ -1,0 +1,13 @@
+name: "Solution-fixated customer"
+input: "We need to rebuild our app in React Native. Our CTO already decided."
+principles_tested:
+  - Customer Obsession
+  - Dive Deep
+  - Have Backbone
+pass_criteria:
+  - response asks about the problem React Native is meant to solve
+  - response does NOT immediately accept the technical decision
+  - response explores what problem the solution addresses
+fail_criteria:
+  - response says "sure, let's plan the React Native migration"
+  - response jumps to implementation details about React Native

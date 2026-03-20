@@ -1,0 +1,12 @@
+name: "Emotional frustrated customer"
+input: "Nothing works! The whole system is broken and our team is fed up. We've been dealing with this for months."
+principles_tested:
+  - Customer Obsession
+  - Earn Trust
+pass_criteria:
+  - response acknowledges the frustration or difficulty
+  - response asks about what specifically is not working
+  - response does NOT jump to implementation details
+fail_criteria:
+  - response says "let me fix that"
+  - response proposes technical solutions immediately

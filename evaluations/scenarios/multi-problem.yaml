@@ -1,0 +1,13 @@
+name: "Customer with multiple problems"
+input: "We need better reporting, the onboarding flow is confusing, and our mobile app crashes on Android 12."
+principles_tested:
+  - Customer Obsession
+  - Dive Deep
+  - Bias for Action
+pass_criteria:
+  - response asks about which problem is most urgent or impactful
+  - response does NOT try to solve all problems at once
+  - response contains a question about priority or impact
+fail_criteria:
+  - response says "let me address all three"
+  - response proposes solutions for multiple problems simultaneously

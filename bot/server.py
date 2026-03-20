@@ -62,17 +62,17 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             return
 
         text = body.get("message", "").strip()
-        chat_id = body.get("chat_id", "web-default")
+        conversation_id = body.get("conversation_id", "web-default")
 
         if not text:
             self._json_response({"error": "Empty message"}, status=400)
             return
 
-        response = self.gateway.process_message(chat_id, text)
+        response = self.gateway.process_message(conversation_id, text)
         self._json_response({
             "response": response.text,
             "tools_called": response.tools_called,
-            "principles": response.principles,
+            "principles_active": response.principles,
             "memory_count": response.memory_count,
             "input_tokens": response.input_tokens,
             "output_tokens": response.output_tokens,
@@ -155,12 +155,22 @@ class ThreadedHTTPServer(HTTPServer):
             self.shutdown_request(request)
 
 
+def create_app(gateway: Gateway | None = None, port: int = PORT) -> ThreadedHTTPServer:
+    """Create the HTTP server (without starting it).
+
+    If no gateway is provided, a default one is created.
+    """
+    if gateway is None:
+        gateway = Gateway()
+    BotHTTPHandler.gateway = gateway
+    return ThreadedHTTPServer((HOST, port), BotHTTPHandler)
+
+
 def start_server(gateway: Gateway, port: int = PORT) -> ThreadedHTTPServer:
     """Start the HTTP server with the given gateway."""
     _kill_stale_server(port)
 
-    BotHTTPHandler.gateway = gateway
-    server = ThreadedHTTPServer((HOST, port), BotHTTPHandler)
+    server = create_app(gateway, port)
 
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

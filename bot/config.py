@@ -26,6 +26,14 @@ class BotConfig:
             self.data_dir = str(DEFAULT_DATA_DIR)
 
     @property
+    def model_name(self) -> str:
+        return self.model
+
+    @property
+    def personality_name(self) -> str:
+        return self.personality
+
+    @property
     def conversations_dir(self) -> Path:
         return Path(self.data_dir) / "conversations"
 

@@ -1,27 +1,20 @@
-All tasks complete. Here's the summary:
-
 ---
 
-## Files Changed
+## Files changed
+- `bot/gateway.py` — Fixed imports (`OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader`), added `ChatMemory` wrapper + `_get_memory()`, default model `qwen3.5:latest`
+- `bot/config.py` — Added `model_name` and `personality_name` properties
+- `bot/server.py` — `chat_id` → `conversation_id`, `principles` → `principles_active`, added `create_app()` factory
+- `bot/__main__.py` — New entry point for `python3 -m bot`
+- `docs/project-memory/backlog/README.md` — Marked B-001–B-004 as Fixed
+- `docs/project-memory/sessions/S-2026-03-20-0007-fix-imports.md` — Session doc
 
-| File | Change |
-|------|--------|
-| `bot/config.py` | Added `data_dir` field, `conversations_dir` property, `DEFAULT_DATA_DIR` constant |
-| `bot/memory.py` | Replaced `ChatMemory` with `ConversationMemory` class (JSONL-per-conversation) |
-| `bot/gateway.py` | Updated to use single `ConversationMemory` instance |
-| `bot/server.py` | Updated `/api/history` endpoint for new memory API |
-| `cli.py` | Rewritten with `start`/`chat`/`status` commands; status checks server via HTTP |
-| `tests/__init__.py` | New (empty) |
-| `tests/test_memory.py` | New — 14 tests all passing |
-| `docs/project-memory/sessions/S-2026-03-19-2350-memory-cli.md` | Session doc |
+## Commands run
+- `.venv/bin/pip install pytest httpx pyyaml` (created venv first)
+- `.venv/bin/python3 -m pytest tests/ -v` — **44 passed**
+- Import smoke tests: `from bot.gateway import Gateway`, `from bot.server import create_app` — both OK
+- Server start test on port 1203: GET / → 200, POST /api/chat → returns JSON, GET /api/health → OK
+- `git push -u origin HEAD`
 
-## Commands Run
-
-- `python3 -m pytest tests/test_memory.py -v` — 14/14 passed
-- `git push -u origin HEAD` — pushed to `agentC-memory-cli`
-
-## Notes / Follow-on Work
-
-- The `ConversationMemory` stores at `~/.local/share/afterburner-bot/conversations/` (XDG data dir) rather than the old `~/.config/` location
-- `cli.py status` uses `httpx` to probe the server — requires httpx (already a dependency)
-- Gateway imports are deferred in `cmd_start`/`cmd_chat` so `cli.py status` doesn't need Ollama running
+## Notes / follow-on work
+- The `create_app()` function was added since the acceptance criteria required `from bot.server import create_app` to work, but server.py only had `start_server()`
+- `bot/__main__.py` was created so `python3 -m bot` can start the server (the old `python3 bot/server.py` doesn't work with relative imports)

@@ -484,6 +484,64 @@
   .btn-settings.danger { color: var(--error); }
   .btn-settings.danger:hover { border-color: var(--error); }
 
+  .settings-group input[type="password"] {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .settings-group input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .provider-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .provider-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s;
+  }
+
+  .provider-card:hover { border-color: var(--accent-dim); }
+  .provider-card.selected { border-color: var(--accent); background: var(--user-bg); }
+
+  .provider-card .provider-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .provider-card .provider-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .provider-key-row { display: none; }
+  .provider-key-row.visible { display: flex; }
+
+  .test-result {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  .test-result.ok { color: var(--success); background: rgba(63,185,80,0.1); }
+  .test-result.fail { color: var(--error); background: rgba(248,81,73,0.1); }
+
   .conv-id-display {
     font-family: 'SF Mono', Menlo, monospace;
     font-size: 12px;
@@ -566,6 +624,28 @@
     </h2>
 
     <div class="settings-group">
+      <label>LLM Provider</label>
+      <div class="provider-cards" id="providerCards">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label>Model</label>
+      <select id="settingsModel"><option>Loading...</option></select>
+    </div>
+
+    <div class="settings-group provider-key-row" id="apiKeyRow">
+      <label>API Key</label>
+      <input type="password" id="settingsApiKey" placeholder="sk-...">
+    </div>
+
+    <div class="settings-group">
+      <label>Base URL</label>
+      <input type="text" id="settingsBaseUrl" placeholder="http://localhost:11434/v1">
+    </div>
+
+    <div class="settings-group">
       <label>Active Project</label>
       <select id="settingsProject"><option>Loading...</option></select>
     </div>
@@ -576,25 +656,17 @@
     </div>
 
     <div class="settings-group">
-      <label>Model</label>
-      <input type="text" id="settingsModel" placeholder="qwen3:4b">
-    </div>
-
-    <div class="settings-group">
-      <label>Ollama URL</label>
-      <input type="text" id="settingsOllamaUrl" placeholder="http://localhost:11434">
-    </div>
-
-    <div class="settings-group">
       <label>Conversation ID</label>
       <div class="conv-id-display" id="settingsConvId"></div>
     </div>
 
     <div class="settings-actions">
-      <button class="btn-settings primary" onclick="applySettings()">Apply Settings</button>
+      <button class="btn-settings primary" onclick="applyLLMSettings()">Save &amp; Switch</button>
+      <button class="btn-settings" onclick="testConnection()">Test Connection</button>
       <button class="btn-settings" onclick="newConversation()">New Conversation</button>
       <button class="btn-settings danger" onclick="clearHistory()">Clear History</button>
     </div>
+    <div id="testResult"></div>
   </div>
 </div>
 
@@ -602,6 +674,17 @@
 var API = '';
 var conversationId = 'web-' + Date.now().toString(36);
 var debugVisible = false;
+var llmProviders = {};
+var selectedProvider = '';
+
+var PROVIDER_ICONS = {
+  'qwen-3.5': '\uD83E\uDD16',
+  'ollama-other': '\uD83E\uDD99',
+  'claude-haiku': '\u26A1',
+  'claude-sonnet': '\uD83C\uDFB5',
+  'claude-opus': '\uD83C\uDFAD',
+  'chatgpt': '\uD83D\uDCAC'
+};
 
 function init() {
   document.getElementById('debugConvId').textContent = conversationId;
@@ -612,8 +695,9 @@ function init() {
     .then(function(data) {
       var dot = document.getElementById('statusDot');
       dot.className = 'status-dot ' + (data.ollama === 'ok' ? 'ok' : 'error');
-      document.getElementById('modelInfo').textContent = data.model + ' \u00b7 ' + data.personality;
-      document.getElementById('debugStatus').textContent = 'Ollama: ' + data.ollama;
+      var provLabel = data.provider || 'ollama';
+      document.getElementById('modelInfo').textContent = provLabel + ' \u00b7 ' + data.model + ' \u00b7 ' + data.personality;
+      document.getElementById('debugStatus').textContent = 'LLM: ' + data.ollama;
       document.getElementById('debugPersonality').textContent = data.personality;
     })
     .catch(function(e) {
@@ -622,12 +706,12 @@ function init() {
       document.getElementById('debugStatus').textContent = 'Error: ' + e.message;
     });
 
-  // Load config into settings
-  fetch(API + '/api/config')
+  // Load LLM providers
+  fetch(API + '/api/llm/providers')
     .then(function(r) { return r.json(); })
-    .then(function(cfg) {
-      document.getElementById('settingsModel').value = cfg.model || '';
-      document.getElementById('settingsOllamaUrl').value = cfg.ollama_url || '';
+    .then(function(data) {
+      llmProviders = data.providers || {};
+      selectedProvider = data.active_provider || '';
     })
     .catch(function() {});
 
@@ -1058,6 +1142,18 @@ function clearHistory() {
 function openSettings() {
   document.getElementById('settingsConvId').textContent = conversationId;
   document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('testResult').textContent = '';
+
+  // Load LLM providers and render cards
+  fetch(API + '/api/llm/providers')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      llmProviders = data.providers || {};
+      selectedProvider = data.active_provider || Object.keys(llmProviders)[0] || '';
+      renderProviderCards();
+      selectProvider(selectedProvider);
+    })
+    .catch(function() {});
 
   // Refresh personalities list
   fetch(API + '/api/personalities')
@@ -1076,8 +1172,6 @@ function openSettings() {
     .then(function(r) { return r.json(); })
     .then(function(cfg) {
       document.getElementById('settingsPersonality').value = cfg.personality || '';
-      document.getElementById('settingsModel').value = cfg.model || '';
-      document.getElementById('settingsOllamaUrl').value = cfg.ollama_url || '';
     })
     .catch(function() {});
 
@@ -1100,47 +1194,188 @@ function openSettings() {
     .catch(function() {});
 }
 
+function renderProviderCards() {
+  var container = document.getElementById('providerCards');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  Object.keys(llmProviders).forEach(function(pid) {
+    var prov = llmProviders[pid];
+    var card = document.createElement('div');
+    card.className = 'provider-card' + (pid === selectedProvider ? ' selected' : '');
+    card.setAttribute('data-provider', pid);
+    card.onclick = function() { selectProvider(pid); };
+
+    var icon = document.createElement('div');
+    icon.className = 'provider-icon';
+    icon.textContent = PROVIDER_ICONS[pid] || '\uD83E\uDD16';
+    card.appendChild(icon);
+
+    var label = document.createElement('div');
+    label.className = 'provider-label';
+    label.textContent = prov.label || pid;
+    card.appendChild(label);
+
+    container.appendChild(card);
+  });
+}
+
+function selectProvider(pid) {
+  selectedProvider = pid;
+  var prov = llmProviders[pid];
+  if (!prov) return;
+
+  // Highlight selected card
+  var cards = document.querySelectorAll('.provider-card');
+  for (var i = 0; i < cards.length; i++) {
+    cards[i].classList.toggle('selected', cards[i].getAttribute('data-provider') === pid);
+  }
+
+  // Populate model dropdown
+  var modelSel = document.getElementById('settingsModel');
+  while (modelSel.firstChild) modelSel.removeChild(modelSel.firstChild);
+  (prov.model_choices || []).forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m;
+    modelSel.appendChild(opt);
+  });
+  modelSel.value = prov.default_model || '';
+
+  // Set base URL
+  document.getElementById('settingsBaseUrl').value = prov.default_base_url || '';
+
+  // Show/hide API key field
+  var keyRow = document.getElementById('apiKeyRow');
+  if (prov.needs_key) {
+    keyRow.classList.add('visible');
+  } else {
+    keyRow.classList.remove('visible');
+  }
+  document.getElementById('settingsApiKey').value = '';
+
+  // Load saved config for this provider
+  fetch(API + '/api/llm/config?provider_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) {
+      if (cfg.base_url) document.getElementById('settingsBaseUrl').value = cfg.base_url;
+      if (cfg.model) modelSel.value = cfg.model;
+      if (cfg.has_key) document.getElementById('settingsApiKey').placeholder = '\u2022\u2022\u2022\u2022 (saved)';
+      else document.getElementById('settingsApiKey').placeholder = 'sk-...';
+    })
+    .catch(function() {});
+
+  document.getElementById('testResult').textContent = '';
+}
+
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('open');
 }
 
-function applySettings() {
+function applyLLMSettings() {
+  var model = document.getElementById('settingsModel').value;
+  var baseUrl = document.getElementById('settingsBaseUrl').value.trim();
+  var apiKey = document.getElementById('settingsApiKey').value.trim();
   var personality = document.getElementById('settingsPersonality').value;
-  var model = document.getElementById('settingsModel').value.trim();
-  var ollamaUrl = document.getElementById('settingsOllamaUrl').value.trim();
   var project = document.getElementById('settingsProject').value;
 
-  // Switch project if changed
-  if (project) {
-    fetch(API + '/api/projects/switch', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({slug: project})
-    }).catch(function() {});
-  }
+  // Save provider config if key or url changed
+  var configPayload = { provider_id: selectedProvider };
+  if (baseUrl) configPayload.base_url = baseUrl;
+  if (model) configPayload.model = model;
+  if (apiKey) configPayload.api_key = apiKey;
 
-  var payload = {};
-  if (personality) payload.personality = personality;
-  if (model) payload.model = model;
-  if (ollamaUrl) payload.ollama_url = ollamaUrl;
-
-  fetch(API + '/api/config', {
+  // Save config then switch provider
+  fetch(API + '/api/llm/config', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload)
+    body: JSON.stringify(configPayload)
+  })
+  .then(function() {
+    return fetch(API + '/api/llm/switch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ provider_id: selectedProvider, model: model })
+    });
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.error) {
-      alert('Error: ' + data.error);
+      var el = document.getElementById('testResult');
+      el.className = 'test-result fail';
+      el.textContent = 'Error: ' + data.error;
+      return;
+    }
+    // Update header
+    document.getElementById('modelInfo').textContent =
+      selectedProvider + ' \u00b7 ' + (data.model || model);
+    document.getElementById('statusDot').className = 'status-dot ok';
+
+    // Switch personality if changed
+    if (personality) {
+      fetch(API + '/api/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ personality: personality })
+      }).then(function(r) { return r.json(); }).then(function(cfg) {
+        document.getElementById('debugPersonality').textContent = cfg.personality || '';
+        document.getElementById('modelInfo').textContent =
+          selectedProvider + ' \u00b7 ' + (data.model || model) + ' \u00b7 ' + cfg.personality;
+      }).catch(function() {});
+    }
+
+    // Switch project if changed
+    if (project) {
+      fetch(API + '/api/projects/switch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({slug: project})
+      }).catch(function() {});
+    }
+
+    closeSettings();
+  })
+  .catch(function(e) {
+    var el = document.getElementById('testResult');
+    el.className = 'test-result fail';
+    el.textContent = 'Failed: ' + e.message;
+  });
+}
+
+function testConnection() {
+  var el = document.getElementById('testResult');
+  el.className = 'test-result';
+  el.textContent = 'Testing...';
+
+  // Save config first (in case key/url changed), then check health
+  var model = document.getElementById('settingsModel').value;
+  var baseUrl = document.getElementById('settingsBaseUrl').value.trim();
+  var apiKey = document.getElementById('settingsApiKey').value.trim();
+
+  var configPayload = { provider_id: selectedProvider };
+  if (baseUrl) configPayload.base_url = baseUrl;
+  if (model) configPayload.model = model;
+  if (apiKey) configPayload.api_key = apiKey;
+
+  fetch(API + '/api/llm/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(configPayload)
+  })
+  .then(function() {
+    return fetch(API + '/api/health');
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ollama === 'ok') {
+      el.className = 'test-result ok';
+      el.textContent = '\u2714 Connected to ' + (data.model || 'LLM');
     } else {
-      document.getElementById('modelInfo').textContent = data.model + ' \u00b7 ' + data.personality;
-      document.getElementById('debugPersonality').textContent = data.personality;
-      closeSettings();
+      el.className = 'test-result fail';
+      el.textContent = '\u2718 LLM unavailable';
     }
   })
   .catch(function(e) {
-    alert('Failed to update settings: ' + e.message);
+    el.className = 'test-result fail';
+    el.textContent = '\u2718 Connection failed: ' + e.message;
   });
 }
 

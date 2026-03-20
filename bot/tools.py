@@ -92,3 +92,7 @@ def _find_project_root(slug: str) -> Path | None:
     except (json.JSONDecodeError, KeyError):
         pass
     return None
+
+
+# Public alias so `from bot.tools import save_discovery` works.
+save_discovery = tool_save_discovery

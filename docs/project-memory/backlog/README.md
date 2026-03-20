@@ -11,8 +11,8 @@ Track bugs and feature requests here.
 | B-003 | server.py cascading import failure | Critical | Fixed (Sprint 2) |
 | B-004 | pytest not installed in venv | High | Fixed (Sprint 2) |
 | B-005 | .venv stale path from project rename | Medium | Fixed |
-| B-006 | save_discovery function not exported from bot/tools.py — merge conflict dropped it | High | Open |
-| B-007 | test_api_chat_uses_chat_id fails — server uses conversation_id not chat_id | Medium | Open |
+| B-006 | save_discovery function not exported from bot/tools.py — merge conflict dropped it | High | Fixed (Sprint 3) |
+| B-007 | test_api_chat_uses_chat_id fails — server uses conversation_id not chat_id | Medium | Fixed (Sprint 3) |
 | B-008 | sprint-run.sh crashes with `local -A` error on zsh — agents run but merge/polling dies | High | Open |
 
 ## Features
@@ -20,7 +20,7 @@ Track bugs and feature requests here.
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | F-001 | Telegram polling transport | High | Complete (Sprint 2) |
-| F-002 | save_discovery tool — write seed docs | High | Partial (function exists but not exported) |
+| F-002 | save_discovery tool — write seed docs | High | Complete (Sprint 3) |
 | F-003 | get_project_summary tool | Medium | Planned |
 | F-004 | End-to-end test: conversation → seed doc | High | Planned |
 | F-005 | Evaluation framework with YAML scenario tests | Medium | Planned |

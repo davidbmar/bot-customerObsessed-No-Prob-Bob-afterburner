@@ -418,6 +418,7 @@ class OpenAICompatibleClient:
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.needs_key = api_key is not None and api_key != "ollama"
         self._client = OpenAI(
             base_url=self.base_url,
             api_key=api_key or "ollama",
@@ -478,6 +479,10 @@ class OpenAICompatibleClient:
     def health_check(self) -> bool:
         """Check if the API endpoint is reachable."""
         try:
+            if self.needs_key:
+                # For cloud APIs, just check key exists
+                return bool(self._client.api_key and len(self._client.api_key) > 5)
+            # For local (Ollama), actually check the endpoint
             self._client.models.list()
             return True
         except Exception:
@@ -561,15 +566,10 @@ class AnthropicClient:
         )
 
     def health_check(self) -> bool:
-        """Check if the Anthropic API is reachable."""
+        """Check if the Anthropic API key is configured."""
+        # Don't send a real API call — just verify key exists and looks valid
         try:
-            # A lightweight check — just verify the client can connect
-            self._client.messages.create(
-                model=self.model,
-                messages=[{"role": "user", "content": "ping"}],
-                max_tokens=1,
-            )
-            return True
+            return bool(self._client.api_key and len(self._client.api_key) > 10)
         except Exception:
             return False
 

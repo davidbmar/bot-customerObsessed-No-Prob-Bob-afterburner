@@ -1,4 +1,4 @@
-agentA-export-and-history — Sprint 19
+agentB-markdown-and-dates — Sprint 19
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -26,48 +26,30 @@ Constraints
 
 
 Objective
-- Improve seed doc export with structured sections, generate Sprint 18 PROJECT_STATUS
+- Render markdown in bot messages, add date grouping to timestamps
 
 Tasks
-1. **Structured seed doc export** (F-047):
-   - Update `bot/tools.py` `save_discovery()` to accept an optional `structured=True` parameter
-   - When structured=True, format the output as:
-     ```markdown
-     # Discovery: [first user message truncated]
-     Date: YYYY-MM-DD
-     Provider: [active provider]
-     Messages: [count]
+1. **Markdown rendering** (F-044):
+   - Bot messages should render markdown: **bold**, *italic*, `inline code`, ```code blocks```, - lists, ## headers
+   - Use a lightweight markdown-to-HTML converter — either:
+     - A simple regex-based converter (no dependency) for basic markdown
+     - Or include a small inline markdown library (marked.js minified is ~30KB)
+   - Apply to bot message content before inserting into DOM
+   - User messages remain plain text (they're the user's input, not markdown)
+   - Code blocks should have a dark background and monospace font
+   - Sanitize HTML output to prevent XSS (no raw HTML passthrough)
 
-     ## Problem
-     [extracted from conversation]
+2. **Date grouping** (F-045):
+   - Before each message group from a different date, show a date separator
+   - Format: "Today", "Yesterday", or "Mon, Mar 19" for older dates
+   - Separator is a centered line with the date text (like chat apps)
+   - Apply to both restored conversations (from localStorage) and new messages
+   - CSS: `text-align: center; color: #888; font-size: 0.8em; margin: 1em 0;`
 
-     ## Users
-     [extracted from conversation]
-
-     ## Use Cases
-     [extracted from conversation]
-
-     ## Success Criteria
-     [extracted from conversation]
-
-     ## Raw Conversation
-     [full message history]
-     ```
-   - Use the gateway's synthesis logic to extract sections (reuse the auto-synthesis prompt)
-   - Update `/api/tools/save_discovery` endpoint to pass `structured=True`
-
-2. **Generate PROJECT_STATUS for Sprint 18**:
-   - Run or extend `scripts/generate_sprint_history.py`
-   - Verify: `ls docs/PROJECT_STATUS_*.md | wc -l` → 18
-
-3. **Write tests**:
-   - Test structured seed doc format
-   - Test save_discovery with structured=True creates proper sections
-   - Target: 485+ total tests
-
-4. **Update backlog** — Mark F-047 as Complete (Sprint 19)
+3. **Update backlog** — Mark F-044, F-045 as Complete (Sprint 19)
 
 Acceptance Criteria
-- save_discovery with structured=True produces a doc with Problem/Users/Use Cases/Success Criteria sections
-- `ls docs/PROJECT_STATUS_*.md | wc -l` returns 18
-- `.venv/bin/python3 -m pytest tests/ -v` — 485+ tests, 0 failures
+- Bot message with "**bold** and `code`" renders with bold text and inline code styling
+- Code blocks render with dark background and monospace font
+- Messages from different dates show date separators
+- User messages remain plain text (no markdown rendering)

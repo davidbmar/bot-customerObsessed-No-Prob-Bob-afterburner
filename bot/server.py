@@ -448,14 +448,16 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._json_response({"error": "No conversation history found"}, status=404)
             return
 
-        # Format conversation into a discovery document
-        lines = ["# Discovery Notes\n"]
-        for msg in history:
-            role = msg["role"].title()
-            lines.append(f"**{role}:** {msg['content']}\n")
+        # Get active provider for metadata
+        provider = getattr(self.gateway, "_provider_id", "unknown")
 
-        content = "\n".join(lines)
-        result = tool_save_discovery(slug=project_slug, content=content)
+        # Format as structured seed doc with Problem/Users/Use Cases sections
+        result = tool_save_discovery(
+            slug=project_slug,
+            structured=True,
+            messages=[{"role": m["role"], "content": m["content"]} for m in history],
+            provider=provider,
+        )
 
         if "not found" in result.lower():
             self._json_response({"error": result}, status=404)

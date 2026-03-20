@@ -187,9 +187,9 @@ class TestProjectStatusDocs:
         assert len(docs) == 1, f"Expected 1 sprint17 doc, found {len(docs)}"
 
     def test_total_status_docs_count(self):
-        """Must have exactly 17 PROJECT_STATUS docs."""
+        """Must have exactly 18 PROJECT_STATUS docs (Sprints 1-18)."""
         docs = list(DOCS_DIR.glob("PROJECT_STATUS_*.md"))
-        assert len(docs) == 17, f"Expected 17 docs, found {len(docs)}"
+        assert len(docs) == 18, f"Expected 18 docs, found {len(docs)}"
 
     def test_sprint17_doc_has_content(self):
         """Sprint 17 doc must have meaningful content."""

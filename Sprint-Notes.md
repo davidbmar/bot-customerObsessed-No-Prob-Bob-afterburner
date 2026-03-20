@@ -1,11 +1,10 @@
-# Sprint 1 — Agent Notes
+# Sprint 2 — Agent Notes
 
-*Started: 2026-03-19 23:46 UTC*
+*Started: 2026-03-20 00:02 UTC*
 
-Phase 1 Agents: 3
-- agentA-personality
-- agentB-llm-webchat
-- agentC-memory-cli
+Phase 1 Agents: 2
+- agentA-fix-imports
+- agentB-telegram-tools
 
 Phase 2 Agents: 0
 (none)
@@ -14,82 +13,59 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-personality
+## agentB-telegram-tools
 
-*Completed: 2026-03-19 23:49 UTC*
+*Completed: 2026-03-20 00:07 UTC*
 
-```
-All done. Here's the summary:
-
-## Files Changed
-
-| File | Action |
-|------|--------|
-| `bot/personality.py` | Rewritten — `PersonalityLoader` + `PersonalityDoc` with YAML frontmatter, inheritance, principle extraction |
-| `personalities/base.md` | Rewritten — YAML frontmatter, `## Principles` with Polite/Honest/Helpful/Curious |
-| `personalities/customer-discovery.md` | Rewritten — `extends: base` frontmatter, 5 discovery principles |
-| `tests/__init__.py` | Created |
-| `tests/test_personality.py` | Created — 10 tests, all passing |
-| `docs/project-memory/sessions/S-2026-03-19-2349-sprint1-personality-framework.md` | Created — session doc |
-
-## Commands Run
-
-- `git pull origin main` — synced with main
-- `python3 -m pytest tests/test_personality.py -v` — **10 passed**
-- `git push -u origin HEAD` — pushed to `agentA-personality`
-
-## Notes / Follow-on Work
-
-- The old `Personality` class and `list_personalities()` function were replaced. Any code importing the old API (e.g., `server.py`, `cli.py`) will need updating to use `PersonalityLoader`.
-- `customer-discovery` loads with **9 merged principles** (4 base + 5 discovery), exceeding the 5+ acceptance criterion.
-- The `pyyaml` dependency was already in `pyproject.toml` — no new deps needed.
-```
-
-
----
-
-## agentC-memory-cli
-
-*Completed: 2026-03-19 23:51 UTC*
-
-```
-All tasks complete. Here's the summary:
-
----
-
-## Files Changed
+## Files changed
 
 | File | Change |
 |------|--------|
-| `bot/config.py` | Added `data_dir` field, `conversations_dir` property, `DEFAULT_DATA_DIR` constant |
-| `bot/memory.py` | Replaced `ChatMemory` with `ConversationMemory` class (JSONL-per-conversation) |
-| `bot/gateway.py` | Updated to use single `ConversationMemory` instance |
-| `bot/server.py` | Updated `/api/history` endpoint for new memory API |
-| `cli.py` | Rewritten with `start`/`chat`/`status` commands; status checks server via HTTP |
-| `tests/__init__.py` | New (empty) |
-| `tests/test_memory.py` | New — 14 tests all passing |
-| `docs/project-memory/sessions/S-2026-03-19-2350-memory-cli.md` | Session doc |
+| `bot/gateway.py` | Fixed imports: `OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader` |
+| `bot/polling.py` | Added `/start` command with welcome message |
+| `bot/tools.py` | `save_discovery` now writes `discovery-{timestamp}.md` instead of fixed filename |
+| `cli.py` | Added `--telegram` flag, wires up `TelegramPoller` in `cmd_start` |
+| `tests/test_tools.py` | **New** — 7 tests for save_discovery and tool registration |
+| `tests/test_llm_webchat.py` | Fixed 5 broken tests from Sprint 1 merge (model name, API field names) |
+| `docs/project-memory/backlog/README.md` | Marked B-001 Fixed, F-001/F-002 Complete |
+| `docs/project-memory/sessions/S-2026-03-20-0006-telegram-tools.md` | Session doc |
 
-## Commands Run
+## Commands run
 
-- `python3 -m pytest tests/test_memory.py -v` — 14/14 passed
-- `git push -u origin HEAD` — pushed to `agentC-memory-cli`
+- `python3 -m venv .venv` + `pip install httpx pytest pyyaml`
+- `.venv/bin/python3 -m pytest tests/ -v` — **51 passed, 0 failed**
+- `git push -u origin HEAD`
 
-## Notes / Follow-on Work
+## Notes / follow-on work
 
-- The `ConversationMemory` stores at `~/.local/share/afterburner-bot/conversations/` (XDG data dir) rather than the old `~/.config/` location
-- `cli.py status` uses `httpx` to probe the server — requires httpx (already a dependency)
-- Gateway imports are deferred in `cmd_start`/`cmd_chat` so `cli.py status` doesn't need Ollama running
-```
+- **B-002** (config field naming) may still need attention — the default model in `BotConfig` is `qwen3:4b` while `llm.py` defaults to `qwen3.5:latest`. Currently gateway uses config defaults.
+- **B-003** (server.py cascading import error) is now fixed by the gateway import fix.
+- **B-004** (pytest not in venv) — recreated venv with pytest installed. The `.venv` is gitignored so other agents may need to recreate it.
+- Telegram polling requires a valid `telegram.botToken` in config — without it, `--telegram` prints a warning and continues with web-only mode.
 
 
 ---
 
-## agentB-llm-webchat
+## agentA-fix-imports
 
-*Completed: 2026-03-19 23:53 UTC*
+*Completed: 2026-03-20 00:07 UTC*
 
-```
-The background task already completed — I read its output earlier and all acceptance criteria passed. The work is done and pushed to `agentB-llm-webchat`.
-```
+## Files changed
+- `bot/gateway.py` — Fixed imports (`OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader`), added `ChatMemory` wrapper + `_get_memory()`, default model `qwen3.5:latest`
+- `bot/config.py` — Added `model_name` and `personality_name` properties
+- `bot/server.py` — `chat_id` → `conversation_id`, `principles` → `principles_active`, added `create_app()` factory
+- `bot/__main__.py` — New entry point for `python3 -m bot`
+- `docs/project-memory/backlog/README.md` — Marked B-001–B-004 as Fixed
+- `docs/project-memory/sessions/S-2026-03-20-0007-fix-imports.md` — Session doc
+
+## Commands run
+- `.venv/bin/pip install pytest httpx pyyaml` (created venv first)
+- `.venv/bin/python3 -m pytest tests/ -v` — **44 passed**
+- Import smoke tests: `from bot.gateway import Gateway`, `from bot.server import create_app` — both OK
+- Server start test on port 1203: GET / → 200, POST /api/chat → returns JSON, GET /api/health → OK
+- `git push -u origin HEAD`
+
+## Notes / follow-on work
+- The `create_app()` function was added since the acceptance criteria required `from bot.server import create_app` to work, but server.py only had `start_server()`
+- `bot/__main__.py` was created so `python3 -m bot` can start the server (the old `python3 bot/server.py` doesn't work with relative imports)
 

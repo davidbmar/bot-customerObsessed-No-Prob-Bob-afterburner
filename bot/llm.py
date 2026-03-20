@@ -113,10 +113,68 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "slug": {
                         "type": "string",
-                        "description": "Project slug",
+                        "description": "Project slug (optional — defaults to active project)",
                     },
                 },
-                "required": ["slug"],
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_vision",
+            "description": "Generate an Afterburner Vision document from structured discovery data. Call this after gathering problem, users, use cases, differentiators, and success criteria from the customer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_name": {
+                        "type": "string",
+                        "description": "Product name for the Vision doc heading",
+                    },
+                    "problem": {
+                        "type": "string",
+                        "description": "Problem statement",
+                    },
+                    "users": {
+                        "type": "string",
+                        "description": "Target audience / user personas",
+                    },
+                    "use_cases": {
+                        "type": "string",
+                        "description": "Key use cases, one per line",
+                    },
+                    "differentiators": {
+                        "type": "string",
+                        "description": "What makes this product unique",
+                    },
+                    "success_criteria": {
+                        "type": "string",
+                        "description": "Measurable success criteria, one per line",
+                    },
+                    "slug": {
+                        "type": "string",
+                        "description": "Project slug (optional — defaults to active project)",
+                    },
+                },
+                "required": ["problem", "users"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "feedback_on_sprint",
+            "description": "Read the latest PROJECT_STATUS document and summarize what was shipped in the most recent sprint. Use this to give the customer a summary and ask if it matches their expectations.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Project slug (optional — defaults to active project)",
+                    },
+                },
+                "required": [],
             },
         },
     },

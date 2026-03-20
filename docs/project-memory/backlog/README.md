@@ -33,8 +33,8 @@ Track bugs and feature requests here.
 | F-010 | Web chat debug panel — tools called, principles, tokens, latency | High | Complete (Sprint 7) |
 | F-011 | get_sprint_status tool | Medium | Complete (Sprint 7) |
 | F-012 | add_to_backlog tool | Medium | Complete (Sprint 6) |
-| F-013 | Multi-project support — bot can switch between Afterburner projects | High | Planned |
-| F-014 | Post-sprint feedback loop — "here's what shipped, does it match?" | Medium | Planned |
-| F-015 | generate_vision tool — bot generates Vision doc from discovery conversation | High | Planned |
+| F-013 | Multi-project support — bot can switch between Afterburner projects | High | Complete (Sprint 8) |
+| F-014 | Post-sprint feedback loop — "here's what shipped, does it match?" | Medium | Complete (Sprint 8) |
+| F-015 | generate_vision tool — bot generates Vision doc from discovery conversation | High | Complete (Sprint 8) |
 | F-016 | Conversation export — download chat as markdown | Low | Planned |
 | F-017 | Bot personality hot-reload — change personality without restarting server | Medium | Planned |

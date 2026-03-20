@@ -13,7 +13,7 @@ from typing import Any
 from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient
 from .memory import ConversationMemory
 from .personality import PersonalityLoader
-from .tools import execute_tool
+from .tools import execute_tool, set_config
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class Gateway:
         model: str = "qwen3:4b",
         ollama_url: str = "http://localhost:11434",
         personalities_dir: str | Path | None = None,
+        config: Any = None,
     ) -> None:
         from pathlib import Path as _Path
         pdir = _Path(personalities_dir) if personalities_dir else _Path(__file__).parent.parent / "personalities"
@@ -49,6 +50,9 @@ class Gateway:
         self.principles = self.personality.principles
         self.llm = OllamaClient(model=model, base_url=ollama_url)
         self.memory = ConversationMemory()
+        self.config = config
+        if config:
+            set_config(config)
 
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.

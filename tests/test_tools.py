@@ -1,4 +1,4 @@
-"""Tests for bot/tools.py — save_discovery, get_project_summary, add_to_backlog, get_sprint_status."""
+"""Tests for bot/tools.py — save_discovery, get_project_summary, add_to_backlog, get_sprint_status, generate_vision, feedback_on_sprint."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ import pytest
 from bot.tools import (
     add_to_backlog,
     execute_tool,
+    generate_vision,
+    feedback_on_sprint,
     get_project_summary,
     get_sprint_status,
     tool_save_discovery,
@@ -295,3 +297,168 @@ def test_tool_registration_includes_get_sprint_status() -> None:
 
     tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
     assert "get_sprint_status" in tool_names
+
+
+# -- generate_vision tests --
+
+
+def test_generate_vision_writes_vision_md(tmp_path: Path) -> None:
+    """generate_vision writes a Vision.md with correct sections."""
+    result = generate_vision(
+        tmp_path,
+        problem="Users can't track inventory",
+        users="Small business owners",
+        use_cases="Manual stock counts\nAutomatic reorder alerts",
+        differentiators="AI-powered predictions",
+        success_criteria="50% time reduction\n95% accuracy",
+        product_name="InventoryBot",
+    )
+    assert "generated" in result.lower() or "Vision" in result
+
+    vision_path = tmp_path / "docs" / "lifecycle" / "VISION.md"
+    assert vision_path.exists()
+
+    content = vision_path.read_text()
+    assert "# InventoryBot" in content
+    assert "## Problem" in content
+    assert "Users can't track inventory" in content
+    assert "## Target Audience" in content
+    assert "Small business owners" in content
+    assert "## Key Differentiators" in content
+    assert "AI-powered predictions" in content
+    assert "## Solution Overview" in content
+    assert "- Manual stock counts" in content
+    assert "- Automatic reorder alerts" in content
+    assert "## Success Criteria" in content
+    assert "- 50% time reduction" in content
+    assert "## FAQ" in content
+
+
+def test_generate_vision_defaults_product_name(tmp_path: Path) -> None:
+    """generate_vision uses project dir name when no product_name given."""
+    project = tmp_path / "my-cool-app"
+    project.mkdir()
+    generate_vision(project, problem="Something", users="Someone")
+    content = (project / "docs" / "lifecycle" / "VISION.md").read_text()
+    assert "# My Cool App" in content
+
+
+def test_generate_vision_creates_lifecycle_dir(tmp_path: Path) -> None:
+    """generate_vision creates docs/lifecycle/ if it doesn't exist."""
+    generate_vision(tmp_path, problem="P", users="U")
+    assert (tmp_path / "docs" / "lifecycle").is_dir()
+
+
+def test_generate_vision_tbd_for_empty_fields(tmp_path: Path) -> None:
+    """generate_vision writes TBD for missing optional fields."""
+    generate_vision(tmp_path, problem="Something", users="Someone")
+    content = (tmp_path / "docs" / "lifecycle" / "VISION.md").read_text()
+    assert "TBD" in content
+
+
+def test_execute_tool_dispatches_generate_vision(tmp_path: Path) -> None:
+    """execute_tool routes 'generate_vision' correctly."""
+    from bot.tools import set_config
+    from unittest.mock import MagicMock
+
+    mock_config = MagicMock()
+    mock_config.active_project_root = tmp_path
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    result = execute_tool("generate_vision", {
+        "problem": "Test problem",
+        "users": "Test users",
+    })
+    assert "Vision" in result or "generated" in result.lower()
+    assert (tmp_path / "docs" / "lifecycle" / "VISION.md").exists()
+
+    set_config(None)
+
+
+def test_tool_registration_includes_generate_vision() -> None:
+    """TOOL_DEFINITIONS in llm.py includes generate_vision."""
+    from bot.llm import TOOL_DEFINITIONS
+
+    tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
+    assert "generate_vision" in tool_names
+
+
+def test_tool_registration_generate_vision_params() -> None:
+    """generate_vision tool definition has required problem and users parameters."""
+    from bot.llm import TOOL_DEFINITIONS
+
+    gen_vis = next(
+        t for t in TOOL_DEFINITIONS if t["function"]["name"] == "generate_vision"
+    )
+    params = gen_vis["function"]["parameters"]
+    assert "problem" in params["properties"]
+    assert "users" in params["properties"]
+    assert "problem" in params["required"]
+    assert "users" in params["required"]
+
+
+# -- feedback_on_sprint tests --
+
+
+@pytest.fixture
+def project_with_status(tmp_path: Path) -> Path:
+    """Create a project with a PROJECT_STATUS doc."""
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "PROJECT_STATUS_sprint7.md").write_text(
+        "# Sprint 7 Status\n\n"
+        "## Completed\n"
+        "- Web chat debug panel with real data\n"
+        "- Settings panel for personality and model\n"
+        "- Typing indicator with bouncing dots\n"
+        "\n## Notes\nAll tests pass.\n"
+    )
+    return tmp_path
+
+
+def test_feedback_on_sprint_reads_status(project_with_status: Path) -> None:
+    """feedback_on_sprint extracts deliverables from PROJECT_STATUS."""
+    result = feedback_on_sprint(project_with_status)
+    assert "Sprint 7" in result
+    assert "debug panel" in result.lower() or "Web chat" in result
+    assert "match what you expected" in result.lower()
+
+
+def test_feedback_on_sprint_no_status_docs(tmp_path: Path) -> None:
+    """feedback_on_sprint returns error when no status docs exist."""
+    result = feedback_on_sprint(tmp_path)
+    assert "no project_status" in result.lower() or "not found" in result.lower()
+
+
+def test_feedback_on_sprint_root_level_status(tmp_path: Path) -> None:
+    """feedback_on_sprint finds PROJECT_STATUS at project root too."""
+    (tmp_path / "PROJECT_STATUS_sprint5.md").write_text(
+        "# Sprint 5\n\n## Summary\n- Added authentication\n- Fixed login bug\n"
+    )
+    result = feedback_on_sprint(tmp_path)
+    assert "Sprint 5" in result
+
+
+def test_execute_tool_dispatches_feedback_on_sprint(project_with_status: Path) -> None:
+    """execute_tool routes 'feedback_on_sprint' correctly."""
+    from bot.tools import set_config
+    from unittest.mock import MagicMock
+
+    mock_config = MagicMock()
+    mock_config.active_project_root = project_with_status
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    result = execute_tool("feedback_on_sprint", {})
+    assert "Sprint 7" in result
+
+    set_config(None)
+
+
+def test_tool_registration_includes_feedback_on_sprint() -> None:
+    """TOOL_DEFINITIONS in llm.py includes feedback_on_sprint."""
+    from bot.llm import TOOL_DEFINITIONS
+
+    tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
+    assert "feedback_on_sprint" in tool_names

@@ -19,6 +19,30 @@ log = logging.getLogger(__name__)
 
 DASHBOARD_URL = "http://127.0.0.1:1201"
 
+# Global config reference — set by Gateway or server at startup
+_config: Any = None
+
+
+def set_config(config: Any) -> None:
+    """Set the global config reference for project-aware tools."""
+    global _config
+    _config = config
+
+
+def _resolve_project_root(slug: str | None = None) -> Path | None:
+    """Resolve project root: use slug if given, else fall back to active project."""
+    if slug:
+        # Check config.projects first
+        if _config and slug in getattr(_config, "projects", {}):
+            return Path(_config.projects[slug])
+        return _find_project_root(slug)
+    # Fall back to active project
+    if _config:
+        root = getattr(_config, "active_project_root", None)
+        if root:
+            return root
+    return None
+
 
 def execute_tool(name: str, arguments: dict[str, Any]) -> str:
     """Dispatch a tool call by name, return result as text."""
@@ -27,6 +51,8 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         "get_project_summary": tool_get_project_summary,
         "add_to_backlog": tool_add_to_backlog,
         "get_sprint_status": tool_get_sprint_status,
+        "generate_vision": tool_generate_vision,
+        "feedback_on_sprint": tool_feedback_on_sprint,
     }
     fn = dispatch.get(name)
     if not fn:
@@ -38,9 +64,9 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         return f"Tool error: {exc}"
 
 
-def tool_save_discovery(slug: str, content: str) -> str:
+def tool_save_discovery(slug: str = "", content: str = "") -> str:
     """Write a seed document into a project's docs/seed/ directory."""
-    project_root = _find_project_root(slug)
+    project_root = _resolve_project_root(slug or None)
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
 
@@ -55,12 +81,13 @@ def tool_save_discovery(slug: str, content: str) -> str:
     return f"Discovery notes saved to {filepath}"
 
 
-def tool_get_project_summary(slug: str) -> str:
+def tool_get_project_summary(slug: str = "") -> str:
     """Get project summary from the Afterburner dashboard API."""
+    project_root = _resolve_project_root(slug or None)
     try:
         resp = httpx.post(
             f"{DASHBOARD_URL}/api/lifecycle/load-all",
-            json={"projectRoot": str(_find_project_root(slug) or "")},
+            json={"projectRoot": str(project_root or "")},
             timeout=10.0,
         )
         if resp.status_code == 200:
@@ -132,10 +159,10 @@ def get_project_summary(project_root: Path) -> dict[str, Any]:
 
 
 def tool_add_to_backlog(
-    slug: str, kind: str, title: str, priority: str = "Medium"
+    slug: str = "", kind: str = "", title: str = "", priority: str = "Medium"
 ) -> str:
     """Add a bug or feature to the project's backlog README.md."""
-    project_root = _find_project_root(slug)
+    project_root = _resolve_project_root(slug or None)
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
 
@@ -221,9 +248,9 @@ def _find_project_root(slug: str) -> Path | None:
     return None
 
 
-def tool_get_sprint_status(slug: str) -> str:
+def tool_get_sprint_status(slug: str = "") -> str:
     """Get sprint status for a project by reading sprint marker files."""
-    project_root = _find_project_root(slug)
+    project_root = _resolve_project_root(slug or None)
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
     result = get_sprint_status(project_root)
@@ -278,6 +305,160 @@ def get_sprint_status(project_root: Path) -> dict[str, Any]:
     result["agents_running"] = sorted(all_agents - set(done_agents))
 
     return result
+
+
+def tool_generate_vision(
+    problem: str = "",
+    users: str = "",
+    use_cases: str = "",
+    differentiators: str = "",
+    success_criteria: str = "",
+    product_name: str = "",
+    slug: str = "",
+) -> str:
+    """Generate a Vision markdown document from structured discovery data."""
+    project_root = _resolve_project_root(slug or None)
+    if not project_root:
+        return "No active project set. Switch to a project first."
+
+    return generate_vision(
+        project_root,
+        problem=problem,
+        users=users,
+        use_cases=use_cases,
+        differentiators=differentiators,
+        success_criteria=success_criteria,
+        product_name=product_name,
+    )
+
+
+def generate_vision(
+    project_root: Path,
+    problem: str = "",
+    users: str = "",
+    use_cases: str = "",
+    differentiators: str = "",
+    success_criteria: str = "",
+    product_name: str = "",
+) -> str:
+    """Generate a Vision.md in Afterburner format and write it to the project.
+
+    Returns a status message.
+    """
+    name = product_name or project_root.name.replace("-", " ").title()
+
+    sections = [
+        f"# {name}",
+        "",
+        "## Problem",
+        problem or "TBD",
+        "",
+        "## Target Audience",
+        users or "TBD",
+        "",
+        "## Key Differentiators",
+        differentiators or "TBD",
+        "",
+        "## Solution Overview",
+    ]
+    if use_cases:
+        for uc in use_cases.split("\n"):
+            uc = uc.strip()
+            if uc:
+                if not uc.startswith("- "):
+                    uc = f"- {uc}"
+                sections.append(uc)
+    else:
+        sections.append("TBD")
+
+    sections.extend([
+        "",
+        "## Success Criteria",
+    ])
+    if success_criteria:
+        for sc in success_criteria.split("\n"):
+            sc = sc.strip()
+            if sc:
+                if not sc.startswith("- "):
+                    sc = f"- {sc}"
+                sections.append(sc)
+    else:
+        sections.append("TBD")
+
+    sections.extend(["", "## FAQ", "", "TBD", ""])
+
+    vision_content = "\n".join(sections)
+
+    lifecycle_dir = project_root / "docs" / "lifecycle"
+    lifecycle_dir.mkdir(parents=True, exist_ok=True)
+    vision_path = lifecycle_dir / "VISION.md"
+    vision_path.write_text(vision_content)
+
+    log.info("Generated Vision doc at %s", vision_path)
+    return f"Vision document generated at {vision_path}"
+
+
+def tool_feedback_on_sprint(slug: str = "") -> str:
+    """Read latest PROJECT_STATUS doc and summarize what was shipped."""
+    project_root = _resolve_project_root(slug or None)
+    if not project_root:
+        return "No active project set. Switch to a project first."
+
+    return feedback_on_sprint(project_root)
+
+
+def feedback_on_sprint(project_root: Path) -> str:
+    """Read the latest PROJECT_STATUS doc and return a structured summary.
+
+    Returns a summary string the bot can present to the user.
+    """
+    # Find PROJECT_STATUS docs (sprint-merge.sh generates these)
+    status_files = sorted(project_root.glob("docs/PROJECT_STATUS*.md"), reverse=True)
+    if not status_files:
+        # Also check root-level status files
+        status_files = sorted(project_root.glob("PROJECT_STATUS*.md"), reverse=True)
+    if not status_files:
+        return "No PROJECT_STATUS documents found. Has a sprint been completed and merged?"
+
+    latest = status_files[0]
+    content = latest.read_text()
+
+    # Extract sprint number
+    sprint_match = re.search(r"[Ss]print\s+(\d+)", content)
+    sprint_num = sprint_match.group(1) if sprint_match else "?"
+
+    # Extract deliverables (look for list items under common headings)
+    deliverables: list[str] = []
+    in_deliverables = False
+    for line in content.splitlines():
+        lower = line.lower().strip()
+        if any(h in lower for h in ["## delivered", "## completed", "## changes", "## what shipped", "## summary"]):
+            in_deliverables = True
+            continue
+        if in_deliverables and line.startswith("##"):
+            in_deliverables = False
+            continue
+        if in_deliverables and line.strip().startswith(("- ", "* ", "1.", "2.", "3.")):
+            deliverables.append(line.strip().lstrip("-*0123456789. "))
+
+    # If no structured deliverables found, extract all list items
+    if not deliverables:
+        deliverables = [
+            line.strip().lstrip("-* ")
+            for line in content.splitlines()
+            if line.strip().startswith(("- ", "* "))
+        ][:10]
+
+    summary_parts = [f"Sprint {sprint_num} summary from {latest.name}:"]
+    if deliverables:
+        summary_parts.append("\nDeliverables:")
+        for d in deliverables:
+            summary_parts.append(f"  - {d}")
+    else:
+        summary_parts.append("\n(No structured deliverables extracted. Review the full status doc.)")
+
+    summary_parts.append(f"\nDoes this match what you expected from Sprint {sprint_num}?")
+    return "\n".join(summary_parts)
 
 
 # Public aliases

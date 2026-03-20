@@ -1,10 +1,9 @@
-# Sprint 13 — Agent Notes
+# Sprint 14 — Agent Notes
 
-*Started: 2026-03-20 06:09 UTC*
+*Started: 2026-03-20 06:24 UTC*
 
-Phase 1 Agents: 2
-- agentA-synthesis-and-fixes
-- agentB-ui-polish
+Phase 1 Agents: 1
+- agentA-conversations-and-tokens
 
 Phase 2 Agents: 0
 (none)
@@ -13,54 +12,26 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-ui-polish
+## agentA-conversations-and-tokens
 
-*Completed: 2026-03-20 06:13 UTC*
-
-```
-All tasks complete. Here's the summary:
-
----
-
-## Files Changed
-
-- **`bot/chat_ui.html`** — Auto-scroll, Save as Seed Doc button, mobile responsive CSS, toast notifications, refactored debug toggle for mobile
-- **`docs/project-memory/backlog/README.md`** — Marked F-027, F-031, F-033 as Complete (Sprint 13)
-- **`docs/project-memory/sessions/S-2026-03-20-0609-sprint13-ui-polish.md`** — Session doc (new)
-
-## Commands Run
-
-- `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — 209 passed
-- `git commit` / `git push -u origin HEAD` — pushed to `agentB-ui-polish`
-
-## Notes / Follow-on Work
-
-- **F-034 (auto-synthesis)** is listed in the brief but requires server-side logic (bot generating summaries after 5+ exchanges) — this is agentA's scope
-- The "Save as Seed Doc" button calls `POST /api/tools/save_discovery` — depends on agentA's endpoint implementation being compatible with the `{conversation_id, project_slug}` payload
-- The `scrollToBottom()` helper function was added but not yet used everywhere — the existing inline `container.scrollTop = container.scrollHeight` calls are sufficient and consistent
-```
-
-
----
-
-## agentA-synthesis-and-fixes
-
-*Completed: 2026-03-20 06:15 UTC*
+*Completed: 2026-03-20 06:32 UTC*
 
 ### Files changed
-- `bot/server.py` — Bootstrap guard for direct-run, removed try/except import fallback, added `main()` function, added `POST /api/tools/save_discovery` handler
-- `bot/gateway.py` — Added `SYNTHESIS_THRESHOLD`, `SYNTHESIS_PROMPT_SUFFIX`, exchange counting, `_get_system_prompt()` helper, synthesis tracking per conversation
-- `tests/test_synthesis_and_fixes.py` — 25 new tests covering all three features
-- `docs/project-memory/backlog/README.md` — Marked B-017, F-033, F-034 as Complete (Sprint 13)
-- `docs/project-memory/sessions/S-2026-03-20-0614-sprint13-synthesis-and-fixes.md` — Session doc
+- **bot/chat_ui.html** — Conversation sidebar (CSS/HTML/JS), provider label display, TOKEN_PRICES cost calculation, per-message + session cost in debug panel
+- **bot/llm.py** — `get_client()` routes local Ollama providers through `OllamaClient` (native `/api/chat`) instead of `OpenAICompatibleClient` (`/v1`)
+- **bot/gateway.py** — Added `provider_label` to `health_check()` response
+- **tests/test_llm.py** — Updated 2 tests to expect `OllamaClient` for Ollama providers
+- **tests/test_sprint14_conversations_tokens.py** — 37 new tests (271 total, 0 failures)
+- **docs/project-memory/backlog/README.md** — Marked B-018, B-019, F-030, F-032 as Complete
+- **docs/project-memory/sessions/S-2026-03-20-0631-sprint14-conversations-tokens.md** — Session doc
 
 ### Commands run
-- `.venv/bin/python3 -m pytest tests/ -v` — **234 passed, 0 failures**
-- `git push -u origin HEAD` — pushed to `agentA-synthesis-and-fixes`
+- `git pull origin main` — sync with main
+- `python3 -m pytest tests/ -v --tb=short` — 271 passed, 0 failures
+- `git push -u origin HEAD` — pushed to remote
 
 ### Notes / follow-on work
-- **F-027 (mobile-responsive CSS)** and **F-031 (auto-scroll)** are in the brief but assigned to agentB (chat_ui.html owner) — not touched here
-- The `save_discovery` endpoint creates seed docs but the "Save as Seed Doc" **button** in the UI would need to be added to `chat_ui.html` by agentB
-- Auto-synthesis uses system prompt modification — if a different trigger mechanism is preferred (e.g., a separate API call), that could be a follow-up
+- Token cost prices are hardcoded in JS — if pricing changes, update `TOKEN_PRICES` in `chat_ui.html`
+- Sidebar sorts conversations by localStorage key (which embeds timestamp) — works for `conv_web-<timestamp>` format
+- The `clearConversationStorage()` function still exists but is no longer called from `newConversation()` — could be used for a future "delete conversation" feature
 

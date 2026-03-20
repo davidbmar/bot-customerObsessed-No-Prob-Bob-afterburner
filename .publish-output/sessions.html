@@ -33,7 +33,32 @@
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">9 development sessions logged</p>
+<p class="section-intro">11 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0614-sprint13-synthesis-and-fixes</h3><h1>Sprint 13 — Synthesis and Fixes</h1>
+<ul><li><strong>Session ID:</strong> S-2026-03-20-0614-sprint13-synthesis-and-fixes</li><li><strong>Date:</strong> 2026-03-20</li><li><strong>Goal:</strong> Fix server direct-run, add save_discovery API endpoint, add auto-synthesis</li></ul>
+<h2>Context</h2>
+<p>Sprint 13 agentA tasks: fix B-017 (server direct-run regression), implement F-033 (save_discovery API), implement F-034 (auto-synthesis after 5+ exchanges).</p>
+<h2>Changes Made</h2>
+<ol><li><strong>Fixed <code>python3 bot/server.py</code> direct run (B-017):</strong> Added bootstrap guard at top of server.py that sets <code>__package__ = &quot;bot&quot;</code> and adds parent dir to <code>sys.path</code> when run directly. Removed try/except import fallback in favor of clean relative imports.</li><li><strong>Added <code>POST /api/tools/save_discovery</code> endpoint (F-033):</strong> New endpoint accepts <code>{project_slug, conversation_id}</code>, reads conversation history, formats as discovery doc, calls existing <code>tool_save_discovery()</code>.</li><li><strong>Added auto-synthesis after 5+ exchanges (F-034):</strong> Gateway tracks exchange counts per conversation. After 5th user message, appends synthesis instruction to system prompt. <code>synthesis_triggered</code> flag prevents re-triggering.</li><li><strong>25 new tests:</strong> Covering all three features. Total test count: 234 (was 209).</li><li><strong>Updated backlog:</strong> B-017, F-033, F-034 marked Complete (Sprint 13).</li></ol>
+<h2>Decisions Made</h2>
+<ul><li>Used <code>__package__</code> bootstrap approach for server direct-run rather than modifying all imports across the chain — minimal change, maximum compatibility.</li><li>Auto-synthesis modifies system prompt rather than injecting a user message — preserves conversation flow and works with all LLM providers.</li><li>Synthesis triggers once per conversation to avoid repeated summaries.</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0609-sprint13-ui-polish</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0609-sprint13-ui-polish Title: Sprint 13 UI polish — auto-scroll, seed doc button, mobile responsive Date: 2026-03-20 Author: agentB</p>
+<h2>Goal</h2>
+<p>Implement UI polish features for web chat: auto-scroll on new messages, &quot;Save as Seed Doc&quot; button, and mobile-responsive CSS.</p>
+<h2>Context</h2>
+<p>Sprint 13 agentB tasks. Chat UI is self-contained in bot/chat_ui.html (vanilla JS, no build step). Auto-scroll partially existed in addMessage but was missing after localStorage restore. No seed doc export from UI. Mobile CSS was minimal.</p>
+<h2>Plan</h2>
+<ol><li>Add auto-scroll after restoreConversation and ensure existing scroll points are complete</li><li>Add &quot;Save as Seed Doc&quot; button bar that appears after 3+ user exchanges</li><li>Expand mobile responsive CSS: 95% message width, stacked provider cards, larger touch targets, debug panel as full-screen overlay on mobile</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/chat_ui.html</code>: Added scrollToBottom after restoreConversation in init()</li><li><code>bot/chat_ui.html</code>: Added seed-doc-bar with button that appears after 3+ exchanges, calls /api/tools/save_discovery</li><li><code>bot/chat_ui.html</code>: Added toast notification system for save feedback</li><li><code>bot/chat_ui.html</code>: Expanded @media (max-width: 768px) with 95% message width, stacked provider cards, larger touch targets (48px min), debug panel as full-screen overlay with close button</li><li><code>bot/chat_ui.html</code>: Refactored toggleDebug to support mobile-open class</li><li><code>docs/project-memory/backlog/README.md</code>: Marked F-027, F-031, F-033 as Complete (Sprint 13)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used exchange count (user messages &gt;= 3) for seed doc button visibility, matching the brief&#x27;s &quot;3+ exchanges&quot; requirement</li><li>Debug panel on mobile uses full-screen overlay rather than slide-out to maximize usable space</li><li>Toast notifications auto-dismiss after 3s</li><li>Set 16px font on mobile inputs to prevent iOS zoom behavior</li></ul>
+<h2>Open Questions</h2>
+<ul><li>The /api/tools/save_discovery endpoint behavior depends on agentA&#x27;s implementation</li><li>F-034 (auto-synthesis after 5+ exchanges) is in the brief but assigned to server-side logic, not UI</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0557-sprint12-history-docs</h3><h1>Session</h1>
 <p>Session-ID: S-2026-03-20-0557-sprint12-history-docs Title: Generate PROJECT_STATUS docs for Sprints 1-11 Date: 2026-03-20 Author: agentB</p>
 <h2>Goal</h2>

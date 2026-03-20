@@ -1,4 +1,4 @@
-agentA-fix-eval-tools — Sprint 5
+agentB-fact-extraction — Sprint 5
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -24,20 +24,25 @@ Constraints
 
 
 Objective
-- Fix all Sprint 4 features that failed to merge: evaluation framework, tools, CLI evaluate
+- Add fact extraction from conversations (F-006) — the LLM summarizes key facts from chat history
 
 Tasks
-- Fix `evaluations/runner.py`: check what class/function names exist and either rename to `EvaluationRunner` or update imports. The file exists but exports the wrong name. Make `from evaluations.runner import EvaluationRunner` work
-- Add or fix `get_project_summary` in `bot/tools.py`: reads Vision, Plan, Roadmap from a project's `docs/lifecycle/` directory and returns a summary dict. Register as LLM tool in the tool definitions
-- Add or fix `add_to_backlog` in `bot/tools.py`: appends a bug or feature to a project's `docs/project-memory/backlog/README.md`. Auto-assigns next ID. Register as LLM tool
-- Add `evaluate` subcommand to `cli.py`: loads scenarios from `evaluations/scenarios/`, runs them through EvaluationRunner, prints pass/fail results
-- Write tests in `tests/test_evaluations.py` for the evaluation runner
-- Write tests in `tests/test_tools.py` for get_project_summary and add_to_backlog
-- Update backlog: mark F-003, F-005, F-010, F-012 status correctly
+- Add `bot/facts.py` with a `FactExtractor` class:
+  - Method: `extract(conversation_history) -> list[dict]` — takes message list, returns facts
+  - Each fact: `{"category": "problem|user|use_case|constraint", "content": "...", "confidence": 0.0-1.0}`
+  - Uses simple keyword/pattern matching for now (no LLM call needed) — look for phrases like "the problem is", "our users", "we need", "must not"
+  - Method: `summarize(facts) -> str` — produces a markdown summary of extracted facts
+- Integrate fact extraction into Gateway: after each assistant response, run fact extraction on the full conversation and store facts alongside conversation memory
+- Add `facts` field to the /api/chat response so the debug panel can display extracted facts
+- Update `bot/chat_ui.html` debug panel to show extracted facts section
+- Write tests in `tests/test_facts.py`:
+  - Extract facts from sample conversation
+  - Categorization works (problem, user, use_case)
+  - Empty conversation returns empty facts
+- Update backlog: mark F-006 as Complete
 
 Acceptance Criteria
-- `from evaluations.runner import EvaluationRunner` works
-- `from bot.tools import get_project_summary, add_to_backlog` works
-- `python3 cli.py evaluate` runs and prints results
-- `.venv/bin/python3 -m pytest tests/ -v` — 60+ tests, 0 failures
-- Backlog reflects actual state of all features
+- `from bot.facts import FactExtractor` works
+- Facts are returned in /api/chat response
+- `.venv/bin/python3 -m pytest tests/test_facts.py -v` passes
+- Backlog updated

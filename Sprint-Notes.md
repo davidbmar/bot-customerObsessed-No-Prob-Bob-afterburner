@@ -1,9 +1,10 @@
-# Sprint 14 — Agent Notes
+# Sprint 15 — Agent Notes
 
-*Started: 2026-03-20 06:24 UTC*
+*Started: 2026-03-20 06:37 UTC*
 
-Phase 1 Agents: 1
-- agentA-conversations-and-tokens
+Phase 1 Agents: 2
+- agentA-eval-expansion
+- agentB-chat-ux
 
 Phase 2 Agents: 0
 (none)
@@ -12,26 +13,51 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-conversations-and-tokens
+## agentB-chat-ux
 
-*Completed: 2026-03-20 06:32 UTC*
+*Completed: 2026-03-20 06:41 UTC*
+
+**Files changed:**
+- `bot/chat_ui.html` — Added all three features (delete, search, theme toggle)
+- `docs/project-memory/backlog/README.md` — Marked F-036, F-037, F-038 as Complete (Sprint 15)
+- `docs/project-memory/sessions/S-2026-03-20-0640-sprint15-chat-ux.md` — Session doc
+
+**Commands run:**
+- `git pull origin main` — already up to date
+- `python3 -m pytest tests/ -v` — 271 passed
+- `git commit` + `git push -u origin HEAD`
+
+**Notes / follow-on work:**
+- The brief mentioned "long-press on mobile" for delete — the current implementation uses a confirm dialog which works universally including mobile. A dedicated long-press gesture could be added later if desired.
+- Light theme colors are GitHub-inspired. Could be fine-tuned based on user feedback.
+
+
+---
+
+## agentA-eval-expansion
+
+*Completed: 2026-03-20 06:42 UTC*
 
 ### Files changed
-- **bot/chat_ui.html** — Conversation sidebar (CSS/HTML/JS), provider label display, TOKEN_PRICES cost calculation, per-message + session cost in debug panel
-- **bot/llm.py** — `get_client()` routes local Ollama providers through `OllamaClient` (native `/api/chat`) instead of `OpenAICompatibleClient` (`/v1`)
-- **bot/gateway.py** — Added `provider_label` to `health_check()` response
-- **tests/test_llm.py** — Updated 2 tests to expect `OllamaClient` for Ollama providers
-- **tests/test_sprint14_conversations_tokens.py** — 37 new tests (271 total, 0 failures)
-- **docs/project-memory/backlog/README.md** — Marked B-018, B-019, F-030, F-032 as Complete
-- **docs/project-memory/sessions/S-2026-03-20-0631-sprint14-conversations-tokens.md** — Session doc
+- `evaluations/scenarios/technical-customer.yaml` — new
+- `evaluations/scenarios/emotional-customer.yaml` — new
+- `evaluations/scenarios/multi-problem.yaml` — new
+- `evaluations/scenarios/solution-fixated.yaml` — new
+- `evaluations/scenarios/returning-customer.yaml` — new
+- `evaluations/scenarios/enterprise-customer.yaml` — new
+- `evaluations/runner.py` — extended `_criterion_matches` with 5 new pattern handlers
+- `tests/test_evaluations.py` — added 92 new tests (file existence, structure, criteria matching, pass/fail with mock LLMs)
+- `docs/project-memory/backlog/README.md` — F-035 marked Complete (Sprint 15)
+- `docs/project-memory/sessions/S-2026-03-20-0641-sprint15-eval-expansion.md` — new session doc
 
 ### Commands run
-- `git pull origin main` — sync with main
-- `python3 -m pytest tests/ -v --tb=short` — 271 passed, 0 failures
-- `git push -u origin HEAD` — pushed to remote
+- `git pull origin main` — already up to date
+- `python3 -m venv .venv` + `pip install` — created venv with deps
+- `.venv/bin/python3 -m pytest tests/ -q` — **353 passed**, 9 failed (pre-existing missing optional deps), 1 skipped
+- `git commit` + `git push -u origin HEAD`
 
 ### Notes / follow-on work
-- Token cost prices are hardcoded in JS — if pricing changes, update `TOKEN_PRICES` in `chat_ui.html`
-- Sidebar sorts conversations by localStorage key (which embeds timestamp) — works for `conv_web-<timestamp>` format
-- The `clearConversationStorage()` function still exists but is no longer called from `newConversation()` — could be used for a future "delete conversation" feature
+- 9 pre-existing test failures due to missing `anthropic`/`openai` optional packages — not related to this work
+- Scenario count: **9 YAML files** (3 original + 6 new), exceeding the 8+ target
+- Test count: **353 passing**, exceeding the 285+ target
 

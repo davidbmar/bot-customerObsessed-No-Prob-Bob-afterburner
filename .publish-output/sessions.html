@@ -33,7 +33,24 @@
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">11 development sessions logged</p>
+<p class="section-intro">12 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0631-sprint14-conversations-tokens</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0631-sprint14-conversations-tokens Title: Sprint 14 — Conversation sidebar, token fix, cost display Date: 2026-03-20 Author: Claude (agentA)</p>
+<h2>Goal</h2>
+<p>Implement conversation sidebar (F-032), fix token counting (B-018), fix provider display (B-019), and add cost display (F-030).</p>
+<h2>Context</h2>
+<p>Sprint 13 shipped conversation persistence, mobile responsive, auto-synthesis. Token counts showed inflated numbers (1378 out for 20-word response), header showed wrong provider name, no way to see past conversations, no cost tracking.</p>
+<h2>Plan</h2>
+<ol><li>Fix token count: route Ollama providers through OllamaClient (native /api/chat) instead of OpenAICompatibleClient (/v1) to get eval_count</li><li>Fix provider display: add provider_label to health check response, use in header</li><li>Add conversation sidebar: collapsible left panel reading conv_* from localStorage</li><li>Add token cost display: TOKEN_PRICES map, per-message + session cost in debug panel</li><li>Write tests for all features</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/llm.py</code>: Modified <code>get_client()</code> — local Ollama providers (needs_key=False) now return OllamaClient with /v1 stripped from URL, ensuring eval_count is used for accurate token counts</li><li><code>bot/gateway.py</code>: Added <code>provider_label</code> to <code>health_check()</code> response using LLM_PROVIDERS lookup</li><li><code>bot/chat_ui.html</code>: Added conversation sidebar (CSS + HTML + JS), provider label display, TOKEN_PRICES cost calculation, per-message and session cost in debug panel</li><li><code>tests/test_llm.py</code>: Updated 2 tests to match new OllamaClient routing</li><li><code>tests/test_sprint14_conversations_tokens.py</code>: 37 new tests covering token accuracy, provider labels, cost calculation, sidebar HTML, cost display HTML</li><li><code>docs/project-memory/backlog/README.md</code>: Marked B-018, B-019, F-030, F-032 as Complete (Sprint 14)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used OllamaClient for all local (needs_key=False) providers rather than adding a separate flag. This is clean because the only non-key providers are Ollama-backed.</li><li>Sidebar collapsed by default (including desktop) — toggled via hamburger icon in header. Mobile gets full-screen overlay with backdrop.</li><li>Preserved existing conversations in localStorage when starting new chat (changed clearConversationStorage to saveConversation in newConversation).</li><li>Cost prices hardcoded in JS (not fetched from server) — simplifies architecture, prices change infrequently.</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending commit)</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0614-sprint13-synthesis-and-fixes</h3><h1>Sprint 13 — Synthesis and Fixes</h1>
 <ul><li><strong>Session ID:</strong> S-2026-03-20-0614-sprint13-synthesis-and-fixes</li><li><strong>Date:</strong> 2026-03-20</li><li><strong>Goal:</strong> Fix server direct-run, add save_discovery API endpoint, add auto-synthesis</li></ul>
 <h2>Context</h2>

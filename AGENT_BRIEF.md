@@ -1,4 +1,4 @@
-agentA-eval-expansion — Sprint 15
+agentB-chat-ux — Sprint 15
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -26,31 +26,32 @@ Constraints
 
 
 Objective
-- Expand evaluation scenarios to test more customer types and edge cases
+- Add conversation deletion, search, and theme toggle to web chat
 
 Tasks
-1. **Add 5+ new evaluation scenarios** in `evaluations/scenarios/`:
-   - `technical-customer.yaml` — customer who speaks in technical jargon ("we need a REST API with OAuth2")
-     - Pass: bot asks about the users of the API, not just the tech specs
-   - `emotional-customer.yaml` — frustrated customer ("nothing works, this is terrible")
-     - Pass: bot acknowledges frustration before diving into discovery
-   - `multi-problem.yaml` — customer describes 3 problems at once
-     - Pass: bot helps prioritize, doesn't try to solve all at once
-   - `solution-fixated.yaml` — customer insists on a specific solution ("we need React Native")
-     - Pass: bot asks what problem the solution is meant to solve
-   - `returning-customer.yaml` — customer references a previous conversation
-     - Pass: bot acknowledges continuity and builds on prior context
-   - `enterprise-customer.yaml` — customer mentions compliance, security, audit requirements
-     - Pass: bot captures non-functional requirements alongside functional ones
+1. **Delete conversation** — Update `bot/chat_ui.html`:
+   - Add a small "×" button on each conversation entry in the sidebar
+   - Click "×" → confirm dialog "Delete this conversation?" → remove from localStorage
+   - If deleting the active conversation, switch to a new empty chat
+   - Also support long-press on mobile (or a "Delete" option in a context menu)
 
-2. **Add tests for new scenarios**:
-   - Test each scenario loads correctly
-   - Test pass/fail criteria are well-formed
-   - Target: 285+ total tests
+2. **Search conversations** — Update `bot/chat_ui.html`:
+   - Add a search input at the top of the sidebar
+   - Filter conversations by matching keyword against all message content
+   - Show matching conversations with the matching text highlighted
+   - Clear search restores full list
 
-3. **Update backlog** — Mark F-035 as Complete (Sprint 15)
+3. **Dark/light theme toggle** — Update `bot/chat_ui.html`:
+   - Add a sun/moon icon button in the header (next to Debug button)
+   - Light theme: white background, dark text, light blue bubbles
+   - Dark theme: current colors (default)
+   - Save preference to localStorage
+   - Use CSS custom properties for all colors so the toggle just swaps a class
+
+4. **Update backlog** — Mark F-036, F-037, F-038 as Complete (Sprint 15)
 
 Acceptance Criteria
-- `ls evaluations/scenarios/*.yaml | wc -l` returns 8+
-- All scenarios have name, input, principles_tested, pass_criteria, fail_criteria
-- `.venv/bin/python3 -m pytest tests/ -v` — 285+ tests, 0 failures
+- Can delete a conversation from sidebar
+- Typing in search filters conversations by content
+- Sun/moon button toggles between dark and light themes
+- Theme preference persists across page reloads

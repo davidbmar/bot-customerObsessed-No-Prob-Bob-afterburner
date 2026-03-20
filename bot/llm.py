@@ -72,6 +72,37 @@ TOOL_DEFINITIONS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_to_backlog",
+            "description": "Add a bug or feature to the project backlog.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Project slug",
+                    },
+                    "kind": {
+                        "type": "string",
+                        "description": "Type of item: 'bug' or 'feature'",
+                        "enum": ["bug", "feature"],
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Short description of the bug or feature",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "description": "Priority level",
+                        "enum": ["Low", "Medium", "High", "Critical"],
+                    },
+                },
+                "required": ["slug", "kind", "title"],
+            },
+        },
+    },
 ]
 
 

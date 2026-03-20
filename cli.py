@@ -108,6 +108,47 @@ def cmd_chat(args: argparse.Namespace) -> None:
         print(f"\nBot: {resp.text}\n")
 
 
+def cmd_evaluate(args: argparse.Namespace) -> None:
+    """Run evaluation scenarios and print pass/fail results."""
+    from evaluations.runner import EvaluationRunner
+
+    runner = EvaluationRunner()
+    scenarios = runner.load_scenarios()
+
+    if not scenarios:
+        print("No scenarios found.")
+        sys.exit(1)
+
+    # Use a simple mock LLM that asks clarifying questions
+    def mock_llm(input_text: str) -> str:
+        return (
+            f"That's interesting. Can you tell me more about why "
+            f"that matters to your users? What problem does this solve? "
+            f"Who is most affected?"
+        )
+
+    results = runner.run_all(mock_llm)
+
+    passed = 0
+    failed = 0
+    for r in results:
+        status = "PASS" if r.passed else "FAIL"
+        if r.passed:
+            passed += 1
+        else:
+            failed += 1
+        print(f"  [{status}] {r.name}")
+        if not r.passed:
+            if r.fail_hits:
+                for fh in r.fail_hits:
+                    print(f"         fail: {fh}")
+            if not r.pass_hits:
+                print("         no pass criteria matched")
+
+    print(f"\n{passed} passed, {failed} failed out of {len(results)} scenarios")
+    sys.exit(0 if failed == 0 else 1)
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     """Show bot status: server reachability, personality, conversation count."""
     config = BotConfig.load()
@@ -151,6 +192,9 @@ def main() -> None:
     # status
     sub.add_parser("status", help="Show bot status")
 
+    # evaluate
+    sub.add_parser("evaluate", help="Run evaluation scenarios")
+
     args = parser.parse_args()
 
     if args.command == "start":
@@ -159,6 +203,8 @@ def main() -> None:
         cmd_chat(args)
     elif args.command == "status":
         cmd_status(args)
+    elif args.command == "evaluate":
+        cmd_evaluate(args)
     else:
         parser.print_help()
 

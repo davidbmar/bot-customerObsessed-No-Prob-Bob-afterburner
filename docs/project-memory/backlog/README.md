@@ -16,6 +16,8 @@ Track bugs and feature requests here.
 | B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Open |
 | B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Open |
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
+| B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Open |
+| B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Open |
 
 ## Features
 

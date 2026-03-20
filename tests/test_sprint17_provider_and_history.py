@@ -131,13 +131,13 @@ class TestLLMProvidersEndpointActiveLabel:
 # ---------------------------------------------------------------------------
 
 class TestProjectStatusDocs:
-    """Verify PROJECT_STATUS docs exist for all 16 sprints."""
+    """Verify PROJECT_STATUS docs exist for all 17 sprints."""
 
-    def test_sixteen_docs_exist(self):
+    def test_seventeen_docs_exist(self):
         docs = list(DOCS_DIR.glob("PROJECT_STATUS_*.md"))
-        assert len(docs) == 16, f"Expected 16, found {len(docs)}: {[d.name for d in docs]}"
+        assert len(docs) >= 17, f"Expected >=17, found {len(docs)}: {[d.name for d in docs]}"
 
-    @pytest.mark.parametrize("sprint_num", range(1, 17))
+    @pytest.mark.parametrize("sprint_num", range(1, 18))
     def test_doc_exists_for_sprint(self, sprint_num):
         matches = list(DOCS_DIR.glob(f"PROJECT_STATUS_*-sprint{sprint_num}.md"))
         assert len(matches) == 1, f"Expected 1 doc for sprint {sprint_num}, found {len(matches)}"

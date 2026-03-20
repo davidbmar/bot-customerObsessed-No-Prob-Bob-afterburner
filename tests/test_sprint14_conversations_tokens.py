@@ -189,7 +189,8 @@ class TestConversationSidebar:
         assert "sidebarBackdrop" in chat_html
 
     def test_sidebar_collapsed_by_default(self, chat_html):
-        assert 'conv-sidebar collapsed' in chat_html
+        # Sidebar hidden by CSS default (no 'open' class in markup)
+        assert 'class="conv-sidebar"' in chat_html
 
 
 # -- Cost display in HTML --

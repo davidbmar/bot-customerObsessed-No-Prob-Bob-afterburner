@@ -91,8 +91,8 @@ class TestProviderLabelFix:
     def test_health_check_label_for_default_provider(self):
         gw = Gateway()
         health = gw.health_check()
-        # Default provider is "ollama" (no provider_id set)
-        assert health["provider_label"] == "ollama"
+        # Default provider defaults to "qwen-3.5" (B-019 fix)
+        assert health["provider_label"] == "Qwen 3.5"
 
     def test_health_check_label_for_qwen(self):
         gw = Gateway(provider_id="qwen-3.5")

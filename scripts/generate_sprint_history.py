@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Generate PROJECT_STATUS docs for Sprints 1-11 from archived sprint briefs.
+"""Generate PROJECT_STATUS docs from archived sprint briefs.
 
 Reads each .sprint/history/sprint-{N}-brief.md, extracts goal and agent info,
 and writes docs/PROJECT_STATUS_YYYY-MM-DD-sprintN.md following the template.
+
+Usage:
+    python3 scripts/generate_sprint_history.py          # all available briefs
+    python3 scripts/generate_sprint_history.py 12 16    # sprints 12-16 only
 """
 
 import os
@@ -147,11 +151,31 @@ def generate_status_doc(brief: dict, date: str) -> str:
     return "\n".join(lines)
 
 
+def discover_sprint_range() -> tuple[int, int]:
+    """Discover available sprint briefs and return (min, max) sprint numbers."""
+    nums = []
+    for p in HISTORY_DIR.glob("sprint-*-brief.md"):
+        m = re.search(r"sprint-(\d+)-brief\.md", p.name)
+        if m:
+            nums.append(int(m.group(1)))
+    if not nums:
+        return (1, 0)  # empty range
+    return (min(nums), max(nums))
+
+
 def main():
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     generated = 0
 
-    for sprint_num in range(1, 12):
+    # Accept optional start/end args, otherwise generate for all available briefs
+    if len(sys.argv) >= 3:
+        start, end = int(sys.argv[1]), int(sys.argv[2])
+    elif len(sys.argv) == 2:
+        start = end = int(sys.argv[1])
+    else:
+        start, end = discover_sprint_range()
+
+    for sprint_num in range(start, end + 1):
         brief_path = HISTORY_DIR / f"sprint-{sprint_num}-brief.md"
         if not brief_path.exists():
             print(f"WARNING: {brief_path} not found, skipping")
@@ -167,7 +191,7 @@ def main():
         generated += 1
 
     print(f"\nTotal: {generated} PROJECT_STATUS docs generated")
-    return 0 if generated == 11 else 1
+    return 0 if generated > 0 else 1
 
 
 if __name__ == "__main__":

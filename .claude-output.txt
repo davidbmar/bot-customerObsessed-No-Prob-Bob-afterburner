@@ -1,22 +1,21 @@
-All tasks complete. Here's the summary:
-
 ---
 
-## Files Changed
+## Summary
 
-| File | Changes |
-|------|---------|
-| `bot/chat_ui.html` | Welcome message, debug panel localStorage, New Chat header button, enhanced loading indicator |
-| `bot/server.py` | Import fallback for direct execution, `if __name__` block |
-| `docs/project-memory/backlog/README.md` | F-018–F-022 marked Complete (Sprint 10) |
-| `docs/project-memory/sessions/S-2026-03-20-0309-sprint10-ux-polish.md` | Session doc (new) |
+### Files changed
+- **`bot/llm.py`** — Added `LLM_PROVIDERS` dict, `OpenAICompatibleClient`, `AnthropicClient`, `get_client()` factory, `_openai_tools_to_anthropic()` converter. Kept `OllamaClient` for backward compatibility.
+- **`bot/llm_config.py`** (new) — Per-provider config persistence with `load_provider_config()`, `save_provider_config()`, `get_active_provider()`, `set_active_provider()`.
+- **`bot/gateway.py`** — Added `switch_provider()` method, `provider_id` tracking, updated `health_check()` to include provider info.
+- **`bot/server.py`** — Added 4 endpoints: `GET /api/llm/providers`, `POST /api/llm/switch`, `GET /api/llm/config`, `POST /api/llm/config`.
+- **`bot/chat_ui.html`** — Provider cards grid, model dropdown, API key field, base URL field, Test Connection button, dynamic header updates.
+- **`tests/test_llm.py`** (new) — 39 new tests covering providers, factory, clients, config persistence, gateway switching, server endpoints, and UI.
 
-## Commands Run
-- `.venv/bin/python3 -m pytest tests/ -v` — **144 passed, 0 failures**
-- `git commit` + `git push -u origin HEAD`
+### Commands run
+- `.venv/bin/pip install anthropic openai pyyaml` 
+- `.venv/bin/python3 -m pytest tests/ -v` — **183 tests passed** (target: 155+)
+- `git push -u origin HEAD`
 
-## Notes / Follow-on Work
-- The `.venv` had to be recreated with Python 3.12 (system Python was 3.9.6, project requires >=3.11)
-- The debug panel was already starting collapsed in the HTML, but had no localStorage persistence — now it remembers user preference
-- `python3 bot/server.py` now works alongside `python3 -m bot` via import fallback pattern
-- No merge to main (per instructions)
+### Notes / follow-on work
+- `OllamaClient` (native Ollama `/api/chat` endpoint) is preserved for backward compat. The new `OpenAICompatibleClient` uses Ollama's `/v1` OpenAI-compatible endpoint instead.
+- API keys are stored in `~/.config/afterburner-bots/llm-providers.json` with env var fallback (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
+- The Test Connection button currently uses `/api/health` which tests the *active* provider — a more targeted per-provider test could be added later.

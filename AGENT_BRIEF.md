@@ -1,112 +1,80 @@
-agentA-multi-provider — Sprint 11
+agentA-streaming-and-polish — Sprint 12
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 10: UX polish — welcome message, debug panel, new chat button. 144 tests pass.
-- Current LLM: OllamaClient only (qwen3.5 via localhost:11434)
-- Need: Claude (3 tiers), ChatGPT, and any Ollama model — switchable from UI
+- Sprint 11: multi-provider LLM (Ollama + Claude + ChatGPT) with runtime switching from settings panel. 183 tests pass.
+- chat_stream() exists in bot/llm.py (OllamaClient line 316) but gateway.py uses non-streaming chat() (line 108)
+- AnthropicClient also has chat() but no streaming variant yet
+- Web chat has Enter-to-send (chat_ui.html line 586), welcome message, debug panel toggle, progress indicator
+- No PROJECT_STATUS docs exist for any sprint — dashboard shows 0 sprints
+- 11 sprint briefs archived in .sprint/history/
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Multi-provider LLM: Ollama, Claude (Haiku/Sonnet/Opus), and ChatGPT
-- Gear icon settings panel matching Afterburner dashboard's LLM provider pattern
-- Runtime switching — change provider/model mid-conversation
+- Wire up streaming responses via SSE so users see text as it generates (F-025)
+- Generate PROJECT_STATUS docs for Sprints 1-11 so dashboard shows sprint history (F-024, B-014)
+- Add conversation persistence across page reloads (F-028)
+- Add error handling when LLM is unreachable (F-029)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- Single agent to avoid merge conflicts
-- Reuse Afterburner's LLM_PROVIDERS pattern (see below) for speed
-- API keys stored in config file or env vars, NEVER in code
-- Install deps: .venv/bin/pip install anthropic openai
-
-Reference — Afterburner dashboard's LLM_PROVIDERS dict (copy this pattern):
-```python
-LLM_PROVIDERS = {
-    "qwen-3.5": {"label": "Qwen 3.5", "default_base_url": "http://localhost:11434/v1", "default_model": "qwen3.5:latest", "api_format": "openai", "needs_key": False, "model_choices": ["qwen3.5:latest", "qwen3.5:4b", "qwen3.5:9b", "qwen3.5:27b"]},
-    "ollama-other": {"label": "Ollama (other)", "default_base_url": "http://localhost:11434/v1", "default_model": "mistral-nemo:latest", "api_format": "openai", "needs_key": False, "model_choices": ["mistral-nemo:latest", "deepseek-r1:14b", "llama3.1:8b", "gemma2:9b"]},
-    "claude-haiku": {"label": "Claude Haiku", "default_base_url": "https://api.anthropic.com", "default_model": "claude-haiku-4-5-20251001", "api_format": "anthropic", "needs_key": True, "model_choices": ["claude-haiku-4-5-20251001"]},
-    "claude-sonnet": {"label": "Claude Sonnet", "default_base_url": "https://api.anthropic.com", "default_model": "claude-sonnet-4-6", "api_format": "anthropic", "needs_key": True, "model_choices": ["claude-sonnet-4-6"]},
-    "claude-opus": {"label": "Claude Opus", "default_base_url": "https://api.anthropic.com", "default_model": "claude-opus-4-6", "api_format": "anthropic", "needs_key": True, "model_choices": ["claude-opus-4-6"]},
-    "chatgpt": {"label": "ChatGPT", "default_base_url": "https://api.openai.com/v1", "default_model": "gpt-5.4", "api_format": "openai", "needs_key": True, "model_choices": ["gpt-5.4", "gpt-5.4-pro", "gpt-5-mini", "gpt-4o"]},
-}
-```
+- chat_stream() already exists in bot/llm.py — wire it through gateway and server, don't rewrite
+- Web chat UI is self-contained in bot/chat_ui.html (no build step, vanilla JS)
+- PROJECT_STATUS docs must follow the template in docs/project-memory/tools/PROJECT_STATUS_TEMPLATE.md
+- agentA owns bot/ and tests/ — agentB MUST NOT touch these directories
+- agentB owns scripts/ and docs/ — agentA MUST NOT touch these directories
 
 
 Objective
-- Add multi-provider LLM support with gear icon config panel
+- Wire streaming through gateway and server, add conversation persistence and error handling
 
 Tasks
-1. Add `LLM_PROVIDERS` dict to `bot/llm.py` (copy from reference above):
-   - Each provider has: label, default_base_url, default_model, api_format ("openai" or "anthropic"), needs_key, model_choices
-   - Two api_format types:
-     - `"openai"` — works for Ollama AND ChatGPT (both use OpenAI-compatible API)
-     - `"anthropic"` — uses the anthropic SDK
+1. **SSE streaming endpoint** — Add `POST /api/chat/stream` to `bot/server.py`:
+   - Returns `text/event-stream` content type
+   - Gateway calls `chat_stream()` instead of `chat()` when streaming
+   - Yields SSE events: `data: {"type": "token", "content": "word"}` for each chunk
+   - Final event: `data: {"type": "done", "response": "full text", "tools_called": [...], "principles_active": [...], "tokens": {...}, "duration_ms": N}`
+   - Keep existing `POST /api/chat` working (non-streaming fallback)
 
-2. Refactor `bot/llm.py`:
-   - Keep `OllamaClient` but rename to `OpenAICompatibleClient` — it works for any OpenAI-format API (Ollama, ChatGPT)
-   - Add `AnthropicClient` using the `anthropic` SDK:
-     - `pip install anthropic` in venv
-     - Method: `chat(messages, system_prompt, tools=None) -> LLMResponse`
-     - Pass system prompt as `system` parameter (not in messages)
-     - Map tool definitions to Claude's tool format
-   - Add factory: `get_client(provider_id) -> LLMClient` that reads LLM_PROVIDERS and returns the right client
-   - Both clients return the same `LLMResponse` dataclass
+2. **Gateway streaming support** — Add `process_message_stream()` to `bot/gateway.py`:
+   - Same logic as `process_message()` but yields chunks from `llm.chat_stream()`
+   - After streaming completes, run fact extraction and memory update (same as non-streaming path)
+   - For AnthropicClient: if no `chat_stream()` method, fall back to non-streaming and yield the full response as one chunk
 
-3. Add `bot/llm_config.py` for per-provider config persistence:
-   - Store in `~/.config/afterburner-bots/llm-providers.json` (same pattern as Afterburner)
-   - Each provider entry: base_url, model, api_key (encrypted or at least not plaintext — or just read from env)
-   - `load_provider_config(provider_id) -> dict`
-   - `save_provider_config(provider_id, config) -> None`
-   - `get_active_provider() -> str`
-   - `set_active_provider(provider_id) -> None`
+3. **Web chat SSE client** — Update `bot/chat_ui.html`:
+   - `sendMessage()` uses `fetch()` with streaming reader on `/api/chat/stream`
+   - Show bot message bubble immediately, append text as chunks arrive
+   - Update debug panel with final event data (tools, principles, tokens, latency)
+   - Progress indicator shows "Streaming..." instead of "Thinking..." when streaming
+   - Fall back to `/api/chat` if stream endpoint fails
 
-4. Update `bot/gateway.py`:
-   - On init, use `get_client(active_provider)` instead of hardcoded OllamaClient
-   - Add `switch_provider(provider_id, model=None)` method that swaps the LLM client at runtime
+4. **Conversation persistence** — Update `bot/chat_ui.html`:
+   - On each message exchange, save conversation to `localStorage` keyed by conversation ID
+   - On page load, check localStorage for existing conversation and restore messages
+   - "New Chat" button clears localStorage for current conversation
+   - Store: `{conversationId, messages: [{role, content, timestamp}], provider, model}`
 
-5. Update `bot/server.py` — add API endpoints:
-   - `GET /api/llm/providers` — returns LLM_PROVIDERS dict with current active provider marked
-   - `POST /api/llm/switch` — switch active provider + model, takes effect immediately
-   - `GET /api/llm/config` — returns current provider config (base_url, model, has_key)
-   - `POST /api/llm/config` — save provider-specific config (api_key, base_url override)
+5. **Error handling** — Update `bot/chat_ui.html` and `bot/server.py`:
+   - Server: catch `ConnectionError`, `httpx.ConnectError`, timeout in chat endpoints → return `{"error": "LLM unreachable", "detail": "..."}` with 503 status
+   - UI: on error response, show red-tinted message bubble: "Could not reach [provider]. Check that Ollama is running / API key is valid."
+   - UI: add retry button on error messages
+   - Server: catch `anthropic.AuthenticationError` → return `{"error": "Invalid API key", "detail": "..."}` with 401 status
 
-6. Update `bot/chat_ui.html` — gear icon opens config panel:
-   - Gear icon (⚙) in header opens a slide-out or modal panel
-   - Panel sections:
-     - **Provider selector** — radio buttons or cards for each provider (with label and icon)
-     - **Model selector** — dropdown populated from the selected provider's model_choices
-     - **API Key** — masked input, only shown when provider needs_key=True
-     - **Base URL** — text input, pre-filled with default, editable for custom endpoints
-     - **Save** button — saves config and switches provider
-     - **Test Connection** button — pings the provider and shows OK/error
-   - Current provider + model shown in header bar dynamically
-   - When provider switches, header updates immediately
+6. **Write tests** in `tests/test_server_api.py` and `tests/test_llm.py`:
+   - Test SSE endpoint returns proper event-stream content type
+   - Test SSE endpoint yields token events then done event
+   - Test error handling returns 503 when LLM unreachable
+   - Test error handling returns 401 for bad API key
+   - Target: 200+ total tests
 
-7. Install dependencies:
-   ```bash
-   .venv/bin/pip install anthropic openai
-   ```
-
-8. Write tests in `tests/test_llm.py`:
-   - `get_client("qwen-3.5")` returns OpenAICompatibleClient
-   - `get_client("claude-sonnet")` returns AnthropicClient
-   - `get_client("chatgpt")` returns OpenAICompatibleClient
-   - Provider config saves and loads correctly
-   - Unknown provider raises clear error
-   - Target: 155+ total tests
-
-9. Update backlog with completion status
+7. **Update backlog** — Mark F-025, F-028, F-029 as Complete (Sprint 12)
 
 Acceptance Criteria
-- `from bot.llm import get_client, LLM_PROVIDERS` works
-- Settings panel shows all 6 providers with model dropdowns
-- Switching to Claude → next message uses Claude API
-- Switching to ChatGPT → next message uses OpenAI API
-- Switching back to Ollama → next message uses local Ollama
-- API keys saved to config file, loaded from env as fallback
-- Header shows current provider + model
-- `.venv/bin/python3 -m pytest tests/ -v` — 155+ tests, 0 failures
+- Open web chat, send message → text streams in word-by-word (not all-at-once after 20s)
+- Refresh page → conversation is restored from localStorage
+- Stop Ollama, send message → red error bubble with retry button
+- `.venv/bin/python3 -m pytest tests/ -v` — 200+ tests, 0 failures

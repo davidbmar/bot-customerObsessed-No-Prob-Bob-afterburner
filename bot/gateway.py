@@ -284,6 +284,7 @@ class Gateway:
         """Check system health."""
         llm_ok = self.llm.health_check()
         provider = self._provider_id or "ollama"
+        provider_label = LLM_PROVIDERS.get(provider, {}).get("label", provider) if provider else "ollama"
         status = "ok" if llm_ok else "unavailable"
         return {
             "status": status,
@@ -291,4 +292,5 @@ class Gateway:
             "personality": self.personality.name,
             "model": self.llm.model,
             "provider": provider,
+            "provider_label": provider_label,
         }

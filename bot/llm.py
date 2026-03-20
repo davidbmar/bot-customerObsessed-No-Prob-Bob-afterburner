@@ -598,10 +598,20 @@ def get_client(
             base_url=resolved_url,
             api_key=resolved_key,
         )
+    elif not provider["needs_key"]:
+        # Local Ollama — use native /api/chat for accurate token counts
+        # (the /v1 OpenAI-compat endpoint inflates counts with thinking tokens)
+        ollama_url = resolved_url.rstrip("/")
+        if ollama_url.endswith("/v1"):
+            ollama_url = ollama_url[:-3]
+        return OllamaClient(
+            model=resolved_model,
+            base_url=ollama_url,
+        )
     else:
-        # OpenAI-compatible (Ollama, ChatGPT)
+        # Cloud OpenAI-compatible (ChatGPT)
         resolved_key = api_key
-        if provider["needs_key"] and not resolved_key:
+        if not resolved_key:
             resolved_key = os.environ.get("OPENAI_API_KEY", "")
         return OpenAICompatibleClient(
             model=resolved_model,

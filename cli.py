@@ -49,8 +49,25 @@ def cmd_start(args: argparse.Namespace) -> None:
     log.info("Web chat: %s", url)
     print(f"Server running at {url}")
 
+    # Start Telegram polling if requested
+    poller = None
+    telegram_enabled = args.telegram or config.telegram_enabled
+    if telegram_enabled:
+        token = config.telegram_token
+        if not token:
+            log.warning("Telegram enabled but no token configured — skipping polling")
+            print("Telegram: no token configured (set telegram.botToken in config)")
+        else:
+            from bot.polling import TelegramPoller
+            poller = TelegramPoller(bot_token=token, gateway=gateway)
+            poller.start()
+            log.info("Telegram polling active")
+            print("Telegram polling active")
+
     def shutdown(sig, frame):  # type: ignore[no-untyped-def]
         log.info("Shutting down...")
+        if poller:
+            poller.stop()
         server.shutdown()
         sys.exit(0)
 
@@ -125,6 +142,7 @@ def main() -> None:
     p_start = sub.add_parser("start", help="Start web server on port 1203")
     p_start.add_argument("--personality", "-p", help="Personality name")
     p_start.add_argument("--port", type=int, help="Web server port")
+    p_start.add_argument("--telegram", action="store_true", help="Enable Telegram polling")
 
     # chat
     p_chat = sub.add_parser("chat", help="Interactive CLI chat loop")

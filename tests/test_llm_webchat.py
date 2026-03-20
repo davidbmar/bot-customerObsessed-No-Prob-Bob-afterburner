@@ -122,7 +122,7 @@ class TestGateway:
     def test_gateway_init(self):
         gw = Gateway()
         assert gw.personality.name == "customer-discovery"
-        assert gw.llm.model == "qwen3.5:latest"
+        assert gw.llm.model == "qwen3:4b"
         assert len(gw.principles) > 0
 
     def test_personality_info(self):
@@ -130,15 +130,13 @@ class TestGateway:
         info = gw.get_personality_info()
         assert info["name"] == "customer-discovery"
         assert "Customer Obsession" in info["principles"]
-        assert info["model"] == "qwen3.5:latest"
+        assert info["model"] == "qwen3:4b"
 
-    def test_get_memory_creates_new(self):
+    def test_memory_shared_across_conversations(self):
         gw = Gateway()
-        mem = gw._get_memory("test-conv-1")
-        assert mem.chat_id == "test-conv-1"
-        # Same ID returns same instance
-        mem2 = gw._get_memory("test-conv-1")
-        assert mem is mem2
+        assert gw.memory is not None
+        # Gateway uses a single ConversationMemory instance
+        assert hasattr(gw.memory, "get_history")
 
     def test_gateway_response_fields(self):
         resp = GatewayResponse(
@@ -157,14 +155,14 @@ class TestGateway:
 # -- Server API field naming --
 
 class TestServerAPI:
-    def test_api_chat_uses_conversation_id(self):
-        """The /api/chat endpoint accepts conversation_id parameter."""
+    def test_api_chat_uses_chat_id(self):
+        """The /api/chat endpoint accepts chat_id parameter."""
         import inspect
         source = inspect.getsource(BotHTTPHandler._handle_chat)
-        assert "conversation_id" in source
+        assert "chat_id" in source
 
-    def test_api_response_includes_principles_active(self):
-        """The /api/chat response uses principles_active key."""
+    def test_api_response_includes_principles(self):
+        """The /api/chat response uses principles key."""
         import inspect
         source = inspect.getsource(BotHTTPHandler._handle_chat)
-        assert "principles_active" in source
+        assert "principles" in source

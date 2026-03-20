@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -44,8 +45,9 @@ def tool_save_discovery(slug: str, content: str) -> str:
     seed_dir = project_root / "docs" / "seed"
     seed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write discovery doc
-    filename = "customer-discovery.md"
+    # Write discovery doc with timestamp filename
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"discovery-{ts}.md"
     filepath = seed_dir / filename
     filepath.write_text(content)
     log.info("Saved discovery doc to %s", filepath)

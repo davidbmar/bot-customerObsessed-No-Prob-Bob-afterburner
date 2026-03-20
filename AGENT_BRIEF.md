@@ -1,62 +1,52 @@
-agentB-docs-and-polish — Sprint 16
+agentB-ui-fixes — Sprint 17
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 15: 9 eval scenarios (was 3), delete/search conversations, dark/light theme toggle. 363 tests pass.
-- save_discovery tool exists and API endpoint POST /api/tools/save_discovery exists (Sprint 13)
-- But no automated test proves the full loop: chat → synthesis → save seed → file appears in target project
-- README.md is minimal — no getting-started guide, no screenshots, no API reference
-- Debug panel still shows by default on page load (B-013 open since Sprint 12)
-- CLI evaluate command works but output is plain text with no color coding
+- Sprint 16: e2e integration tests (discovery→seed doc pipeline proven), comprehensive README, CLI evaluate colors. 399 tests pass.
+- Dashboard shows 11 sprints (Sprints 1-11 only) — Sprints 12-16 have no PROJECT_STATUS docs
+- Health endpoint returns provider_label: "ollama" instead of "Qwen 3.5" — chat_ui.html header shows this wrong label
+- Debug panel visible by default despite previous fix attempts — localStorage debug-panel state may override
+- scripts/generate_sprint_history.py already exists and generates docs from sprint briefs
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Prove the end-to-end value loop: discovery conversation → save seed doc → verify seed doc exists in an Afterburner project (F-039)
-- Write a comprehensive README with getting-started guide, screenshots, and API reference (F-042)
-- Fix debug panel showing by default on page load (B-013)
-- Improve CLI evaluate output with pass/fail colors (F-043)
+- Generate PROJECT_STATUS docs for Sprints 12-16 so dashboard shows all sprints (B-021)
+- Fix provider label in health endpoint and header — should show "Qwen 3.5" not "ollama" (B-019)
+- Fix debug panel defaulting to visible — should be hidden unless user opens it (B-022)
+- Add typing indicator animation while bot is streaming (F-040)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- agentA owns tests/, bot/server.py, bot/gateway.py, bot/tools.py — agentB MUST NOT touch these
-- agentB owns README.md, bot/chat_ui.html, evaluations/runner.py — agentA MUST NOT touch these
+- agentA owns bot/server.py, bot/llm.py, bot/gateway.py, scripts/, docs/PROJECT_STATUS_*, tests/ — agentB MUST NOT touch these
+- agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
 
 
 Objective
-- Write comprehensive README, fix debug panel, improve evaluate CLI output
+- Fix debug panel default state and add typing indicator animation
 
 Tasks
-1. **README.md** — Rewrite `README.md` with:
-   - Project name and one-line description
-   - Feature list with what's built (38 features across 15 sprints)
-   - Quick start: clone, install, run, open web chat
-   - Architecture overview (gateway pattern, personality framework, memory)
-   - API reference: all HTTP endpoints (`/api/chat`, `/api/chat/stream`, `/api/tools/save_discovery`, `/api/llm/providers`, etc.)
-   - Configuration: config file location, environment variables, personality docs
-   - Evaluation: how to run scenarios, add new scenarios
-   - Screenshots section (reference the existing screenshots or describe what to see)
-   - Tech stack summary
-   - Contributing guide (how to run tests, commit conventions)
+1. **Fix debug panel default state** (B-022):
+   - On first visit (no localStorage key), debug panel should be hidden
+   - Check the initialization code — if `localStorage.getItem('debug-panel')` is null, default to hidden
+   - Current bug: the panel shows because the code defaults to visible when no preference is saved
+   - Fix: change the default from `true`/visible to `false`/hidden
+   - Preserve existing behavior: if user explicitly opened it, keep it open on reload
 
-2. **Fix debug panel default** (B-013) — Update `bot/chat_ui.html`:
-   - On page load, debug panel should be hidden (collapsed)
-   - Only show when user clicks "Debug" button
-   - Check if there's a CSS class or JS state that controls initial visibility
-   - Save debug panel state to localStorage so it remembers user preference
+2. **Typing indicator animation** (F-040):
+   - While streaming, show a pulsing dot animation in the bot message bubble
+   - Three dots that pulse sequentially (CSS animation, no JS timer needed)
+   - Replace "Streaming..." text with the animated dots
+   - After streaming completes, dots disappear and full text is shown
+   - CSS keyframes: `@keyframes pulse { 0%, 80%, 100% { opacity: 0.3 } 40% { opacity: 1 } }`
+   - Each dot delays slightly: `.dot:nth-child(2) { animation-delay: 0.2s }` etc.
 
-3. **CLI evaluate colors** (F-043) — Update `evaluations/runner.py`:
-   - Use ANSI colors in terminal output: green for pass, red for fail, yellow for warnings
-   - Show summary: "6/9 scenarios passed" with colored status per scenario
-   - Show which principles were tested and whether they held
-   - Add `--verbose` flag for detailed output, default is summary
-
-4. **Update backlog** — Mark F-042, F-043, B-013 as Complete (Sprint 16)
+3. **Update backlog** — Mark B-022, F-040 as Complete (Sprint 17)
 
 Acceptance Criteria
-- README.md has Quick Start, API Reference, Architecture sections
-- Debug panel hidden on page load, toggled via button, state persisted
-- `afterburner-bot evaluate` shows colored pass/fail output
+- On fresh page load (clear localStorage first), debug panel is hidden
+- While bot is streaming, three animated dots pulse in the message bubble
+- Dots disappear when streaming completes

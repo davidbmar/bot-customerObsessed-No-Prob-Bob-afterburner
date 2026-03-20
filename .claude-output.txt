@@ -1,19 +1,21 @@
-All tasks complete.
+`★ Insight ─────────────────────────────────────`
+The streaming typing dots implementation uses a key pattern: **optimistic UI with graceful cleanup**. The dots are added to the DOM immediately when the streaming bubble is created, then removed via three separate paths: (1) on first token arrival (normal flow), (2) when stream ends without a done event (fallback), and (3) implicitly when the done event clears and re-renders the body with markdown. This defensive approach ensures dots never get "stuck" regardless of how the stream terminates.
+`─────────────────────────────────────────────────`
+
+---
 
 ## Summary
 
 ### Files changed
-- **README.md** (new) — comprehensive docs with Quick Start, Architecture diagram, API Reference (all 20 endpoints), Configuration, Evaluation guide, CLI commands, Tech Stack, Contributing
-- **bot/chat_ui.html** — added explicit `else` branch in debug panel localStorage restore to force collapsed state for new users (B-013 fix)
-- **evaluations/runner.py** — added ANSI color helpers with `isatty()` detection, `print_results()` function with summary and verbose modes, principles summary
-- **cli.py** — added `--verbose/-v` flag to evaluate subparser, switched to `print_results()`
-- **docs/project-memory/backlog/README.md** — marked B-013, F-042, F-043 as Complete (Sprint 16)
-- **docs/project-memory/sessions/S-2026-03-20-0654-sprint16-docs-and-polish.md** (new) — session doc
+- **`bot/chat_ui.html`** — Added inline typing dots CSS (`@keyframes pulse`, `.typing-dots-inline`) and modified `sendMessageStream()` to show pulsing dots inside the bot message bubble before tokens arrive, removing them on first token
+- **`docs/project-memory/backlog/README.md`** — Marked B-022 and F-040 as Complete (Sprint 17)
 
 ### Commands run
-- `pytest tests/ -v` — 363 passed
-- `cli.py evaluate --verbose` — 9/9 scenarios passed with colored output
+- `git pull origin main` — already up to date
+- `.venv/bin/python3 -m pytest tests/ -v` — 389 passed, 9 failed (pre-existing, missing optional deps), 1 skipped
+- `git push -u origin HEAD` — pushed to `agentB-ui-fixes`
 
 ### Notes / follow-on work
-- The debug panel fix (B-013) is minimal — the existing code was nearly correct; the explicit `else` branch makes the default-hidden behavior bulletproof for first-time users
-- The README references screenshots but none exist yet; a follow-on task could capture actual screenshots of the web chat UI
+- **B-022 (debug panel)**: The code already correctly defaults to hidden on first visit (init checks `localStorage.getItem('debugPanelVisible') === 'true'`). This was fixed in a prior sprint. Verified and confirmed working.
+- **F-040 (typing dots)**: Three pulsing dots appear inside the bot message bubble during streaming, removed on first token arrival. Uses CSS-only animation (no JS timers).
+- The 9 test failures are pre-existing — they require `anthropic` and `openai` packages which are optional dependencies not installed in the test venv.

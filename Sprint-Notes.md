@@ -1,10 +1,10 @@
-# Sprint 4 — Agent Notes
+# Sprint 5 — Agent Notes
 
-*Started: 2026-03-20 00:41 UTC*
+*Started: 2026-03-20 00:59 UTC*
 
 Phase 1 Agents: 2
-- agentA-eval-framework
-- agentB-debug-panel-tools
+- agentA-fix-eval-tools
+- agentB-fact-extraction
 
 Phase 2 Agents: 0
 (none)
@@ -13,9 +13,9 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-debug-panel-tools
+## agentB-fact-extraction
 
-*Completed: 2026-03-20 00:42 UTC*
+*Completed: 2026-03-20 00:59 UTC*
 
 ```
 Not logged in · Please run /login
@@ -24,9 +24,9 @@ Not logged in · Please run /login
 
 ---
 
-## agentA-eval-framework
+## agentA-fix-eval-tools
 
-*Completed: 2026-03-20 00:42 UTC*
+*Completed: 2026-03-20 00:59 UTC*
 
 ```
 Not logged in · Please run /login

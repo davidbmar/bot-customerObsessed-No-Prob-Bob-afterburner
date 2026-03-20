@@ -10,7 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient
+from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient, get_client, LLM_PROVIDERS
 from .memory import ConversationMemory
 from .personality import PersonalityLoader
 from .tools import execute_tool, set_config
@@ -41,6 +41,7 @@ class Gateway:
         ollama_url: str = "http://localhost:11434",
         personalities_dir: str | Path | None = None,
         config: Any = None,
+        provider_id: str | None = None,
     ) -> None:
         from pathlib import Path as _Path
         pdir = _Path(personalities_dir) if personalities_dir else _Path(__file__).parent.parent / "personalities"
@@ -48,11 +49,49 @@ class Gateway:
         self.personality = self._personality_loader.load(personality_name)
         self.system_prompt = self.personality.system_prompt
         self.principles = self.personality.principles
-        self.llm = OllamaClient(model=model, base_url=ollama_url)
+
+        # If a provider_id is given, use the multi-provider factory
+        if provider_id and provider_id in LLM_PROVIDERS:
+            self._provider_id = provider_id
+            self.llm = get_client(provider_id, model=model)
+        else:
+            self._provider_id = None
+            self.llm = OllamaClient(model=model, base_url=ollama_url)
+
         self.memory = ConversationMemory()
         self.config = config
         if config:
             set_config(config)
+
+    def switch_provider(self, provider_id: str, model: str | None = None) -> None:
+        """Swap the LLM client at runtime to a different provider."""
+        from .llm_config import load_provider_config, set_active_provider
+
+        if provider_id not in LLM_PROVIDERS:
+            raise ValueError(f"Unknown provider: '{provider_id}'")
+
+        cfg = load_provider_config(provider_id)
+        resolved_model = model or cfg.get("model") or LLM_PROVIDERS[provider_id]["default_model"]
+        api_key = cfg.get("api_key", "")
+        base_url = cfg.get("base_url") or LLM_PROVIDERS[provider_id]["default_base_url"]
+
+        old = self.llm
+        self.llm = get_client(
+            provider_id,
+            base_url=base_url,
+            model=resolved_model,
+            api_key=api_key,
+        )
+        self._provider_id = provider_id
+        set_active_provider(provider_id)
+
+        if hasattr(old, "close"):
+            try:
+                old.close()
+            except Exception:
+                pass
+
+        log.info("Switched LLM provider to %s (model=%s)", provider_id, resolved_model)
 
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.
@@ -149,9 +188,11 @@ class Gateway:
 
     def health_check(self) -> dict:
         """Check system health."""
-        ollama_ok = self.llm.health_check()
+        llm_ok = self.llm.health_check()
+        provider = self._provider_id or "ollama"
         return {
-            "ollama": "ok" if ollama_ok else "unavailable",
+            "ollama": "ok" if llm_ok else "unavailable",
             "personality": self.personality.name,
             "model": self.llm.model,
+            "provider": provider,
         }

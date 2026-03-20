@@ -1,9 +1,10 @@
-"""LLM interface — Qwen 3.5 via Ollama with tool calling and streaming support."""
+"""LLM interface — multi-provider support (Ollama, Claude, ChatGPT)."""
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Generator
@@ -14,6 +15,57 @@ log = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_MODEL = "qwen3.5:latest"
+
+LLM_PROVIDERS = {
+    "qwen-3.5": {
+        "label": "Qwen 3.5",
+        "default_base_url": "http://localhost:11434/v1",
+        "default_model": "qwen3.5:latest",
+        "api_format": "openai",
+        "needs_key": False,
+        "model_choices": ["qwen3.5:latest", "qwen3.5:4b", "qwen3.5:9b", "qwen3.5:27b"],
+    },
+    "ollama-other": {
+        "label": "Ollama (other)",
+        "default_base_url": "http://localhost:11434/v1",
+        "default_model": "mistral-nemo:latest",
+        "api_format": "openai",
+        "needs_key": False,
+        "model_choices": ["mistral-nemo:latest", "deepseek-r1:14b", "llama3.1:8b", "gemma2:9b"],
+    },
+    "claude-haiku": {
+        "label": "Claude Haiku",
+        "default_base_url": "https://api.anthropic.com",
+        "default_model": "claude-haiku-4-5-20251001",
+        "api_format": "anthropic",
+        "needs_key": True,
+        "model_choices": ["claude-haiku-4-5-20251001"],
+    },
+    "claude-sonnet": {
+        "label": "Claude Sonnet",
+        "default_base_url": "https://api.anthropic.com",
+        "default_model": "claude-sonnet-4-6",
+        "api_format": "anthropic",
+        "needs_key": True,
+        "model_choices": ["claude-sonnet-4-6"],
+    },
+    "claude-opus": {
+        "label": "Claude Opus",
+        "default_base_url": "https://api.anthropic.com",
+        "default_model": "claude-opus-4-6",
+        "api_format": "anthropic",
+        "needs_key": True,
+        "model_choices": ["claude-opus-4-6"],
+    },
+    "chatgpt": {
+        "label": "ChatGPT",
+        "default_base_url": "https://api.openai.com/v1",
+        "default_model": "gpt-5.4",
+        "api_format": "openai",
+        "needs_key": True,
+        "model_choices": ["gpt-5.4", "gpt-5.4-pro", "gpt-5-mini", "gpt-4o"],
+    },
+}
 
 
 @dataclass
@@ -31,7 +83,7 @@ class LLMResponse:
     duration_ms: int = 0
 
 
-# -- Tool definitions for Ollama format --
+# -- Tool definitions for OpenAI format --
 
 TOOL_DEFINITIONS: list[dict] = [
     {
@@ -181,6 +233,19 @@ TOOL_DEFINITIONS: list[dict] = [
 ]
 
 
+def _openai_tools_to_anthropic(tools: list[dict]) -> list[dict]:
+    """Convert OpenAI-format tool definitions to Anthropic's tool format."""
+    result = []
+    for tool in tools:
+        fn = tool.get("function", {})
+        result.append({
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "input_schema": fn.get("parameters", {}),
+        })
+    return result
+
+
 class OllamaClient:
     """Chat completion via Ollama's /api/chat endpoint with streaming support."""
 
@@ -254,13 +319,7 @@ class OllamaClient:
         system_prompt: str | None = None,
         tools: list[dict] | None = None,
     ) -> Generator[str, None, LLMResponse]:
-        """Stream a chat completion, yielding content chunks.
-
-        Yields partial content strings as they arrive.
-        Returns the final LLMResponse when the generator is exhausted.
-        Use: gen = client.chat_stream(...); for chunk in gen: ...
-        The return value can be captured via StopIteration.value.
-        """
+        """Stream a chat completion, yielding content chunks."""
         all_messages = self._build_messages(messages, system_prompt)
 
         payload: dict[str, Any] = {
@@ -288,13 +347,11 @@ class OllamaClient:
                     data = json.loads(line)
                     msg = data.get("message", {})
 
-                    # Accumulate content chunks
                     chunk = msg.get("content", "")
                     if chunk:
                         full_content += chunk
                         yield chunk
 
-                    # Capture tool calls from the final message
                     for tc in msg.get("tool_calls", []):
                         fn = tc.get("function", {})
                         tool_calls.append(
@@ -304,7 +361,6 @@ class OllamaClient:
                             )
                         )
 
-                    # Final message contains token counts
                     if data.get("done"):
                         input_tokens = data.get("prompt_eval_count", 0)
                         output_tokens = data.get("eval_count", 0)
@@ -345,3 +401,210 @@ class OllamaClient:
             all_messages.append({"role": "system", "content": system_prompt})
         all_messages.extend(messages)
         return all_messages
+
+
+class OpenAICompatibleClient:
+    """Chat completion via OpenAI-compatible API (works for Ollama /v1 and ChatGPT)."""
+
+    def __init__(
+        self,
+        model: str = DEFAULT_MODEL,
+        base_url: str = "http://localhost:11434/v1",
+        api_key: str | None = None,
+        timeout: float = 120.0,
+    ) -> None:
+        from openai import OpenAI
+
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self._client = OpenAI(
+            base_url=self.base_url,
+            api_key=api_key or "ollama",
+            timeout=timeout,
+        )
+
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        tools: list[dict] | None = None,
+    ) -> LLMResponse:
+        """Send a chat completion request."""
+        all_messages: list[dict] = []
+        if system_prompt:
+            all_messages.append({"role": "system", "content": system_prompt})
+        all_messages.extend(messages)
+
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": all_messages,
+        }
+        if tools:
+            kwargs["tools"] = tools
+
+        start = time.monotonic()
+        try:
+            resp = self._client.chat.completions.create(**kwargs)
+        except Exception as exc:
+            log.error("OpenAI-compatible request failed: %s", exc)
+            return LLMResponse(
+                content=f"Sorry, I'm having trouble connecting to the LLM. ({exc})",
+                duration_ms=int((time.monotonic() - start) * 1000),
+            )
+
+        duration_ms = int((time.monotonic() - start) * 1000)
+        choice = resp.choices[0] if resp.choices else None
+        content = choice.message.content or "" if choice else ""
+
+        tool_calls: list[ToolCall] = []
+        if choice and choice.message.tool_calls:
+            for tc in choice.message.tool_calls:
+                try:
+                    args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                except json.JSONDecodeError:
+                    args = {}
+                tool_calls.append(ToolCall(name=tc.function.name, arguments=args))
+
+        usage = resp.usage
+        return LLMResponse(
+            content=content,
+            tool_calls=tool_calls,
+            input_tokens=usage.prompt_tokens if usage else 0,
+            output_tokens=usage.completion_tokens if usage else 0,
+            duration_ms=duration_ms,
+        )
+
+    def health_check(self) -> bool:
+        """Check if the API endpoint is reachable."""
+        try:
+            self._client.models.list()
+            return True
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        self._client.close()
+
+
+class AnthropicClient:
+    """Chat completion via the Anthropic SDK."""
+
+    def __init__(
+        self,
+        model: str = "claude-sonnet-4-6",
+        base_url: str = "https://api.anthropic.com",
+        api_key: str | None = None,
+        timeout: float = 120.0,
+    ) -> None:
+        import anthropic
+
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        self._client = anthropic.Anthropic(
+            api_key=resolved_key,
+            base_url=self.base_url,
+            timeout=timeout,
+        )
+
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        tools: list[dict] | None = None,
+    ) -> LLMResponse:
+        """Send a chat completion request to the Anthropic API."""
+        # Filter out system messages — Claude uses a separate system parameter
+        filtered = [m for m in messages if m.get("role") != "system"]
+
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": filtered,
+            "max_tokens": 4096,
+        }
+        if system_prompt:
+            kwargs["system"] = system_prompt
+        if tools:
+            kwargs["tools"] = _openai_tools_to_anthropic(tools)
+
+        start = time.monotonic()
+        try:
+            resp = self._client.messages.create(**kwargs)
+        except Exception as exc:
+            log.error("Anthropic request failed: %s", exc)
+            return LLMResponse(
+                content=f"Sorry, I'm having trouble connecting to the LLM. ({exc})",
+                duration_ms=int((time.monotonic() - start) * 1000),
+            )
+
+        duration_ms = int((time.monotonic() - start) * 1000)
+
+        content_parts = []
+        tool_calls: list[ToolCall] = []
+        for block in resp.content:
+            if block.type == "text":
+                content_parts.append(block.text)
+            elif block.type == "tool_use":
+                tool_calls.append(
+                    ToolCall(name=block.name, arguments=block.input or {})
+                )
+
+        usage = resp.usage
+        return LLMResponse(
+            content="\n".join(content_parts),
+            tool_calls=tool_calls,
+            input_tokens=usage.input_tokens if usage else 0,
+            output_tokens=usage.output_tokens if usage else 0,
+            duration_ms=duration_ms,
+        )
+
+    def health_check(self) -> bool:
+        """Check if the Anthropic API is reachable."""
+        try:
+            # A lightweight check — just verify the client can connect
+            self._client.messages.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=1,
+            )
+            return True
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        self._client.close()
+
+
+def get_client(
+    provider_id: str,
+    base_url: str | None = None,
+    model: str | None = None,
+    api_key: str | None = None,
+) -> OllamaClient | OpenAICompatibleClient | AnthropicClient:
+    """Factory: return the right LLM client for a given provider ID."""
+    if provider_id not in LLM_PROVIDERS:
+        raise ValueError(f"Unknown LLM provider: '{provider_id}'. Available: {list(LLM_PROVIDERS.keys())}")
+
+    provider = LLM_PROVIDERS[provider_id]
+    resolved_url = base_url or provider["default_base_url"]
+    resolved_model = model or provider["default_model"]
+
+    if provider["api_format"] == "anthropic":
+        resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        return AnthropicClient(
+            model=resolved_model,
+            base_url=resolved_url,
+            api_key=resolved_key,
+        )
+    else:
+        # OpenAI-compatible (Ollama, ChatGPT)
+        resolved_key = api_key
+        if provider["needs_key"] and not resolved_key:
+            resolved_key = os.environ.get("OPENAI_API_KEY", "")
+        return OpenAICompatibleClient(
+            model=resolved_model,
+            base_url=resolved_url,
+            api_key=resolved_key,
+        )

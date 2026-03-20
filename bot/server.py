@@ -57,6 +57,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_export_conversation(parsed)
         elif path == "/api/projects":
             self._handle_get_projects()
+        elif path == "/api/llm/providers":
+            self._handle_get_llm_providers()
+        elif path == "/api/llm/config":
+            self._handle_get_llm_config(parsed)
         else:
             self.send_error(404)
 
@@ -74,6 +78,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_personality_reload()
         elif path == "/api/projects/switch":
             self._handle_switch_project()
+        elif path == "/api/llm/switch":
+            self._handle_llm_switch()
+        elif path == "/api/llm/config":
+            self._handle_post_llm_config()
         else:
             self.send_error(404)
 
@@ -223,6 +231,78 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
                 {"error": f"Project '{slug}' not registered"},
                 status=404,
             )
+
+    def _handle_get_llm_providers(self) -> None:
+        """Return LLM_PROVIDERS dict with active provider marked."""
+        from .llm import LLM_PROVIDERS
+        from .llm_config import get_active_provider
+
+        active = getattr(self.gateway, "_provider_id", None) or get_active_provider()
+        result = {}
+        for pid, pinfo in LLM_PROVIDERS.items():
+            result[pid] = dict(pinfo, active=(pid == active))
+        self._json_response({
+            "providers": result,
+            "active_provider": active,
+        })
+
+    def _handle_llm_switch(self) -> None:
+        """Switch active LLM provider + model."""
+        body = self._read_body()
+        if body is None:
+            return
+        provider_id = body.get("provider_id", "").strip()
+        model = body.get("model", "").strip() or None
+        if not provider_id:
+            self._json_response({"error": "Missing 'provider_id'"}, status=400)
+            return
+        try:
+            self.gateway.switch_provider(provider_id, model=model)
+            self._json_response({
+                "provider": provider_id,
+                "model": self.gateway.llm.model,
+                "status": "switched",
+            })
+        except ValueError as exc:
+            self._json_response({"error": str(exc)}, status=400)
+
+    def _handle_get_llm_config(self, parsed) -> None:
+        """Return current provider config (base_url, model, has_key)."""
+        from .llm_config import load_provider_config, get_active_provider
+
+        qs = parse_qs(parsed.query)
+        provider_id = qs.get("provider_id", [None])[0]
+        if not provider_id:
+            provider_id = getattr(self.gateway, "_provider_id", None) or get_active_provider()
+
+        cfg = load_provider_config(provider_id)
+        self._json_response({
+            "provider_id": provider_id,
+            "base_url": cfg["base_url"],
+            "model": cfg["model"],
+            "has_key": bool(cfg.get("api_key")),
+        })
+
+    def _handle_post_llm_config(self) -> None:
+        """Save provider-specific config (api_key, base_url override)."""
+        from .llm_config import save_provider_config
+
+        body = self._read_body()
+        if body is None:
+            return
+        provider_id = body.get("provider_id", "").strip()
+        if not provider_id:
+            self._json_response({"error": "Missing 'provider_id'"}, status=400)
+            return
+        config_data = {}
+        if "base_url" in body:
+            config_data["base_url"] = body["base_url"]
+        if "model" in body:
+            config_data["model"] = body["model"]
+        if "api_key" in body:
+            config_data["api_key"] = body["api_key"]
+        save_provider_config(provider_id, config_data)
+        self._json_response({"status": "saved", "provider_id": provider_id})
 
     def _serve_chat_ui(self) -> None:
         """Serve the self-contained chat UI HTML."""

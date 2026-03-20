@@ -510,6 +510,30 @@
     40% { transform: translateY(-4px); opacity: 1; }
   }
 
+  /* Inline typing dots inside bot message bubble while streaming */
+  .typing-dots-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .typing-dots-inline .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: pulse 1.4s infinite ease-in-out;
+  }
+
+  .typing-dots-inline .dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots-inline .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
+  }
+
   /* Debug sidebar panel */
   .debug-panel {
     width: 300px;
@@ -1465,11 +1489,24 @@ function sendMessageStream(text) {
 
     var body = document.createElement('div');
     body.className = 'body';
+
+    // Show pulsing typing dots inside the bubble until first token arrives
+    var inlineDots = document.createElement('div');
+    inlineDots.className = 'typing-dots-inline';
+    inlineDots.id = 'streamingDots';
+    for (var d = 0; d < 3; d++) {
+      var dotEl = document.createElement('div');
+      dotEl.className = 'dot';
+      inlineDots.appendChild(dotEl);
+    }
+    body.appendChild(inlineDots);
+
     el.appendChild(body);
     group.appendChild(el);
 
     var container = document.getElementById('messages');
     container.appendChild(group);
+    var dotsRemoved = false;
 
     var reader = resp.body.getReader();
     var decoder = new TextDecoder();
@@ -1480,6 +1517,9 @@ function sendMessageStream(text) {
       return reader.read().then(function(result) {
         if (result.done) {
           // Stream ended without done event — finalize
+          // Remove typing dots if still present
+          var remainingDots = document.getElementById('streamingDots');
+          if (remainingDots) remainingDots.remove();
           if (fullText) {
             while (body.firstChild) body.removeChild(body.firstChild);
             renderMarkdownToDOM(fullText, body);
@@ -1501,6 +1541,12 @@ function sendMessageStream(text) {
           } catch(e) { continue; }
 
           if (evt.type === 'token') {
+            // Remove typing dots on first token
+            if (!dotsRemoved) {
+              var dots = document.getElementById('streamingDots');
+              if (dots) dots.remove();
+              dotsRemoved = true;
+            }
             fullText += evt.content;
             body.textContent = fullText;
             container.scrollTop = container.scrollHeight;

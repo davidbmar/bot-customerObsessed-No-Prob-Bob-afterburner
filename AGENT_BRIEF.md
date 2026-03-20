@@ -1,4 +1,4 @@
-agentA-provider-and-history — Sprint 17
+agentB-ui-fixes — Sprint 17
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -26,29 +26,27 @@ Constraints
 
 
 Objective
-- Generate PROJECT_STATUS docs for Sprints 12-16, fix provider label in health endpoint
+- Fix debug panel default state and add typing indicator animation
 
 Tasks
-1. **Generate PROJECT_STATUS docs for Sprints 12-16**:
-   - Run `scripts/generate_sprint_history.py` or extend it to handle Sprints 12-16
-   - Sprint briefs are in `.sprint/history/sprint-{12..16}-brief.md`
-   - If briefs aren't archived yet, check SPRINT_BRIEF.md or git history
-   - Each doc should follow the same format as Sprints 1-11 docs
+1. **Fix debug panel default state** (B-022):
+   - On first visit (no localStorage key), debug panel should be hidden
+   - Check the initialization code — if `localStorage.getItem('debug-panel')` is null, default to hidden
+   - Current bug: the panel shows because the code defaults to visible when no preference is saved
+   - Fix: change the default from `true`/visible to `false`/hidden
+   - Preserve existing behavior: if user explicitly opened it, keep it open on reload
 
-2. **Fix provider label in health endpoint** (B-019):
-   - In `bot/server.py`, the `/api/health` handler returns `provider_label`
-   - Currently it returns the raw provider key ("ollama") instead of the display label from LLM_PROVIDERS
-   - Fix: look up the active provider in LLM_PROVIDERS and return its `label` field (e.g., "Qwen 3.5")
-   - Also fix the `/api/llm/providers` response to include an `active_label` field
+2. **Typing indicator animation** (F-040):
+   - While streaming, show a pulsing dot animation in the bot message bubble
+   - Three dots that pulse sequentially (CSS animation, no JS timer needed)
+   - Replace "Streaming..." text with the animated dots
+   - After streaming completes, dots disappear and full text is shown
+   - CSS keyframes: `@keyframes pulse { 0%, 80%, 100% { opacity: 0.3 } 40% { opacity: 1 } }`
+   - Each dot delays slightly: `.dot:nth-child(2) { animation-delay: 0.2s }` etc.
 
-3. **Write tests**:
-   - Test health endpoint returns correct provider_label for each provider
-   - Test PROJECT_STATUS docs exist for Sprints 12-16
-   - Target: 410+ total tests
-
-4. **Update backlog** — Mark B-019, B-021 as Complete (Sprint 17)
+3. **Update backlog** — Mark B-022, F-040 as Complete (Sprint 17)
 
 Acceptance Criteria
-- `ls docs/PROJECT_STATUS_*.md | wc -l` returns 16
-- `curl http://localhost:1203/api/health | jq .provider_label` returns "Qwen 3.5" (not "ollama")
-- `.venv/bin/python3 -m pytest tests/ -v` — 410+ tests, 0 failures
+- On fresh page load (clear localStorage first), debug panel is hidden
+- While bot is streaming, three animated dots pulse in the message bubble
+- Dots disappear when streaming completes

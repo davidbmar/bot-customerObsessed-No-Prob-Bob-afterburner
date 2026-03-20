@@ -1,70 +1,90 @@
-# Sprint 3
+# Sprint 4
 
 Goal
-- Fix remaining bugs (B-006, B-007) so all tests pass and save_discovery works
-- Add end-to-end test proving conversation → seed doc pipeline (F-004)
-- Add CLI chat and status commands (F-008, F-009)
+- Add evaluation framework to test bot behavior against scenarios (F-005)
+- Add web chat debug panel showing tools, principles, tokens, latency (F-010)
+- Add more Afterburner tools: get_project_summary, add_to_backlog (F-003, F-012)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
+- Web chat UI is self-contained in bot/chat_ui.html (no build step)
 
 Merge Order
-1. agentA-fix-tools-tests
-2. agentB-cli-e2e
+1. agentA-eval-framework
+2. agentB-debug-panel-tools
 
 Merge Verification
 ```bash
 cd /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner
-.venv/bin/python3 -c "from bot.tools import save_discovery; print('save_discovery: OK')"
-.venv/bin/python3 -c "from bot.gateway import Gateway; print('Gateway: OK')"
+.venv/bin/python3 -c "from bot.tools import save_discovery, get_project_summary, add_to_backlog; print('Tools: OK')"
+.venv/bin/python3 -c "from evaluations.runner import EvaluationRunner; print('Eval: OK')"
 .venv/bin/python3 -m pytest tests/ -v 2>&1 | tail -5
 ```
 
 Previous Sprint
-- Sprint 2 fixed critical import bugs (B-001 to B-004), added Telegram polling (F-001), added save_discovery tool structure
-- 50 of 51 tests pass — one test uses wrong field name (chat_id vs conversation_id)
-- save_discovery exists in tools.py but isn't properly exported/importable
-- Personality (9 principles), Gateway, Server, Memory, LLM client all work
+- Sprint 3: all 56 tests pass, save_discovery works, CLI chat/status commands work, e2e test proves conversation→seed doc pipeline
+- Bot runs: personality loads (9 principles), gateway pipelines messages, memory persists, server starts on 1203
+- Remaining roadmap items: evaluation framework, more tools, web chat polish
 
-## agentA-fix-tools-tests
-
-Objective
-- Fix save_discovery export and the failing test so all 51 tests pass
-
-Tasks
-- Fix `bot/tools.py`: ensure `save_discovery` is a properly importable function. Check the current file — it may define the function under a different name or inside a class. Make `from bot.tools import save_discovery` work
-- Fix `tests/test_llm_webchat.py` test `test_api_chat_uses_chat_id`: the server uses `conversation_id` not `chat_id`. Either update the test to check for `conversation_id`, or update the server to also accept `chat_id` as an alias
-- Run full test suite: `.venv/bin/python3 -m pytest tests/ -v` — all tests must pass
-- If any other test failures are found, fix them
-- Update backlog: mark B-006 and B-007 as Fixed
-
-Acceptance Criteria
-- `from bot.tools import save_discovery` works
-- `.venv/bin/python3 -m pytest tests/ -v` — all tests pass, 0 failures
-- Backlog updated
-
-## agentB-cli-e2e
+## agentA-eval-framework
 
 Objective
-- Add CLI chat/status commands and an end-to-end integration test
+- Build the evaluation framework that tests bot behavior against YAML scenario files
 
 Tasks
-- Add `chat` subcommand to `cli.py`: interactive terminal loop that reads user input, sends to Gateway, prints bot response. Uses readline for input. Type `exit` or Ctrl+D to quit. Shows personality name on startup
-- Add `status` subcommand to `cli.py`: prints bot status — is server running (check port 1203)? which personality is loaded? how many conversations exist? Ollama reachable?
-- Write `tests/test_e2e.py` — end-to-end test that:
-  - Creates a temporary project directory with `docs/seed/`
-  - Initializes Gateway with customer-discovery personality
-  - Sends a sequence of discovery messages (simulating a customer conversation)
-  - Verifies the gateway returns responses (doesn't need Ollama — mock the LLM response)
-  - Calls save_discovery with structured output
-  - Verifies a seed doc markdown file was written to the temp project's `docs/seed/`
-  - Verifies the seed doc contains expected sections (Problem, Users, Use Cases, Success Criteria)
-- Update backlog: mark F-004, F-008, F-009 as Complete
+- Create `evaluations/runner.py` with an `EvaluationRunner` class:
+  - Loads YAML scenario files from `evaluations/scenarios/`
+  - Each scenario defines: name, personality, messages (user inputs), expected_behaviors (what the bot should do)
+  - Runs each scenario through the Gateway with a mock LLM (so tests don't need Ollama)
+  - Checks responses against expected_behaviors using simple keyword/pattern matching
+  - Returns pass/fail per scenario with details
+- Update existing scenario files in `evaluations/scenarios/` (pushback.yaml, surface-request.yaml, vague-requirements.yaml) to match the runner's expected format:
+  ```yaml
+  name: "Pushback on vague feature request"
+  personality: customer-discovery
+  messages:
+    - role: user
+      content: "We need a dark mode"
+  expected_behaviors:
+    - "asks why" or "asks about the problem"
+    - "does not immediately agree to build"
+  ```
+- Add `tests/test_evaluations.py` that runs all scenarios and verifies the runner works
+- Add a CLI command: `python3 cli.py evaluate` that runs all scenarios and prints results
 
 Acceptance Criteria
-- `python3 cli.py chat` starts interactive loop (exits on EOF)
-- `python3 cli.py status` prints status info without crashing
-- `.venv/bin/python3 -m pytest tests/test_e2e.py -v` passes
+- `from evaluations.runner import EvaluationRunner` imports
+- `python3 cli.py evaluate` runs scenarios and prints pass/fail
+- `.venv/bin/python3 -m pytest tests/test_evaluations.py -v` passes
+- At least 3 scenario files exist and are parseable
+
+## agentB-debug-panel-tools
+
+Objective
+- Add debug panel to web chat UI and more Afterburner integration tools
+
+Tasks
+- Update `bot/chat_ui.html` to add a collapsible debug panel:
+  - Shows after each bot response (not always visible — toggle button)
+  - Displays: active personality name, principles list, tools called (if any), input/output token count, response latency in ms
+  - Dark themed, matches existing chat UI style
+  - Data comes from the /api/chat response (which already returns tools_called, principles_active, input_tokens, output_tokens, duration_ms)
+- Implement `get_project_summary` in `bot/tools.py` (F-003):
+  - Reads a project's Vision, Plan, and Roadmap from `docs/lifecycle/`
+  - Returns a structured summary (title, problem statement, current sprint status)
+  - Register as LLM tool
+- Implement `add_to_backlog` in `bot/tools.py` (F-012):
+  - Appends a bug or feature entry to a project's `docs/project-memory/backlog/README.md`
+  - Accepts: type (bug/feature), title, priority, description
+  - Auto-assigns next ID (B-NNN or F-NNN)
+  - Register as LLM tool
+- Write tests for both new tools in `tests/test_tools.py`
+- Update backlog: mark F-003, F-010, F-012 as Complete
+
+Acceptance Criteria
+- Web chat debug panel shows principles, tools, tokens after each response
+- `from bot.tools import get_project_summary, add_to_backlog` works
+- `.venv/bin/python3 -m pytest tests/test_tools.py -v` passes with new tool tests
 - Backlog updated

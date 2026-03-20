@@ -1,44 +1,49 @@
-agentB-cli-e2e — Sprint 3
+agentB-debug-panel-tools — Sprint 4
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 2 fixed critical import bugs (B-001 to B-004), added Telegram polling (F-001), added save_discovery tool structure
-- 50 of 51 tests pass — one test uses wrong field name (chat_id vs conversation_id)
-- save_discovery exists in tools.py but isn't properly exported/importable
-- Personality (9 principles), Gateway, Server, Memory, LLM client all work
+- Sprint 3: all 56 tests pass, save_discovery works, CLI chat/status commands work, e2e test proves conversation→seed doc pipeline
+- Bot runs: personality loads (9 principles), gateway pipelines messages, memory persists, server starts on 1203
+- Remaining roadmap items: evaluation framework, more tools, web chat polish
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix remaining bugs (B-006, B-007) so all tests pass and save_discovery works
-- Add end-to-end test proving conversation → seed doc pipeline (F-004)
-- Add CLI chat and status commands (F-008, F-009)
+- Add evaluation framework to test bot behavior against scenarios (F-005)
+- Add web chat debug panel showing tools, principles, tokens, latency (F-010)
+- Add more Afterburner tools: get_project_summary, add_to_backlog (F-003, F-012)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
+- Web chat UI is self-contained in bot/chat_ui.html (no build step)
 
 
 Objective
-- Add CLI chat/status commands and an end-to-end integration test
+- Add debug panel to web chat UI and more Afterburner integration tools
 
 Tasks
-- Add `chat` subcommand to `cli.py`: interactive terminal loop that reads user input, sends to Gateway, prints bot response. Uses readline for input. Type `exit` or Ctrl+D to quit. Shows personality name on startup
-- Add `status` subcommand to `cli.py`: prints bot status — is server running (check port 1203)? which personality is loaded? how many conversations exist? Ollama reachable?
-- Write `tests/test_e2e.py` — end-to-end test that:
-  - Creates a temporary project directory with `docs/seed/`
-  - Initializes Gateway with customer-discovery personality
-  - Sends a sequence of discovery messages (simulating a customer conversation)
-  - Verifies the gateway returns responses (doesn't need Ollama — mock the LLM response)
-  - Calls save_discovery with structured output
-  - Verifies a seed doc markdown file was written to the temp project's `docs/seed/`
-  - Verifies the seed doc contains expected sections (Problem, Users, Use Cases, Success Criteria)
-- Update backlog: mark F-004, F-008, F-009 as Complete
+- Update `bot/chat_ui.html` to add a collapsible debug panel:
+  - Shows after each bot response (not always visible — toggle button)
+  - Displays: active personality name, principles list, tools called (if any), input/output token count, response latency in ms
+  - Dark themed, matches existing chat UI style
+  - Data comes from the /api/chat response (which already returns tools_called, principles_active, input_tokens, output_tokens, duration_ms)
+- Implement `get_project_summary` in `bot/tools.py` (F-003):
+  - Reads a project's Vision, Plan, and Roadmap from `docs/lifecycle/`
+  - Returns a structured summary (title, problem statement, current sprint status)
+  - Register as LLM tool
+- Implement `add_to_backlog` in `bot/tools.py` (F-012):
+  - Appends a bug or feature entry to a project's `docs/project-memory/backlog/README.md`
+  - Accepts: type (bug/feature), title, priority, description
+  - Auto-assigns next ID (B-NNN or F-NNN)
+  - Register as LLM tool
+- Write tests for both new tools in `tests/test_tools.py`
+- Update backlog: mark F-003, F-010, F-012 as Complete
 
 Acceptance Criteria
-- `python3 cli.py chat` starts interactive loop (exits on EOF)
-- `python3 cli.py status` prints status info without crashing
-- `.venv/bin/python3 -m pytest tests/test_e2e.py -v` passes
+- Web chat debug panel shows principles, tools, tokens after each response
+- `from bot.tools import get_project_summary, add_to_backlog` works
+- `.venv/bin/python3 -m pytest tests/test_tools.py -v` passes with new tool tests
 - Backlog updated

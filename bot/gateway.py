@@ -10,9 +10,9 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaLLM
+from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient
 from .memory import ConversationMemory
-from .personality import Personality
+from .personality import PersonalityLoader
 from .tools import execute_tool
 
 log = logging.getLogger(__name__)
@@ -39,11 +39,15 @@ class Gateway:
         personality_name: str = "customer-discovery",
         model: str = "qwen3:4b",
         ollama_url: str = "http://localhost:11434",
+        personalities_dir: str | Path | None = None,
     ) -> None:
-        self.personality = Personality(personality_name)
-        self.system_prompt = self.personality.to_system_prompt()
-        self.principles = self.personality.get_principles()
-        self.llm = OllamaLLM(model=model, base_url=ollama_url)
+        from pathlib import Path as _Path
+        pdir = _Path(personalities_dir) if personalities_dir else _Path(__file__).parent.parent / "personalities"
+        loader = PersonalityLoader(pdir)
+        self.personality = loader.load(personality_name)
+        self.system_prompt = self.personality.system_prompt
+        self.principles = self.personality.principles
+        self.llm = OllamaClient(model=model, base_url=ollama_url)
         self.memory = ConversationMemory()
 
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:

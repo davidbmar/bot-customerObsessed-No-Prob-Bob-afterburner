@@ -79,7 +79,19 @@ class TelegramPoller:
         if not text or not chat_id:
             return
 
-        # Skip commands that aren't for us
+        # Handle /start command
+        if text.strip() == "/start":
+            welcome = (
+                "Welcome! I'm your Afterburner customer discovery bot.\n\n"
+                "Tell me about the problem you're trying to solve, "
+                "and I'll help you think through your users, use cases, "
+                "and success criteria.\n\n"
+                "Just type naturally — no special commands needed."
+            )
+            self._send_message(chat_id, welcome)
+            return
+
+        # Skip other slash commands that aren't for us
         if text.startswith("/") and not text.startswith("/ask"):
             return
 

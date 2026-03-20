@@ -1098,12 +1098,16 @@ function init() {
     })
     .catch(function() {});
 
-  // Restore debug panel preference from localStorage
+  // Restore debug panel preference from localStorage (default: hidden)
   var savedDebug = localStorage.getItem('debugPanelVisible');
   if (savedDebug === 'true') {
     debugVisible = true;
     document.getElementById('debugToggle').classList.add('active');
     document.getElementById('debugPanel').classList.remove('collapsed');
+  } else {
+    debugVisible = false;
+    document.getElementById('debugToggle').classList.remove('active');
+    document.getElementById('debugPanel').classList.add('collapsed');
   }
 
   // Try to restore conversation from localStorage

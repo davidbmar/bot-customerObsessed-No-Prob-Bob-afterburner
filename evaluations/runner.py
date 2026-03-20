@@ -18,6 +18,31 @@ from typing import Any, Callable
 import yaml
 
 
+# ANSI color helpers — only emit codes when writing to a terminal
+def _use_color() -> bool:
+    return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+
+def _green(text: str) -> str:
+    return f"\033[32m{text}\033[0m" if _use_color() else text
+
+
+def _red(text: str) -> str:
+    return f"\033[31m{text}\033[0m" if _use_color() else text
+
+
+def _yellow(text: str) -> str:
+    return f"\033[33m{text}\033[0m" if _use_color() else text
+
+
+def _bold(text: str) -> str:
+    return f"\033[1m{text}\033[0m" if _use_color() else text
+
+
+def _dim(text: str) -> str:
+    return f"\033[2m{text}\033[0m" if _use_color() else text
+
+
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 
 
@@ -185,6 +210,78 @@ def _criterion_matches(response: str, criterion: str) -> bool:
         return any(w in response for w in all_words)
 
     return False
+
+
+def print_results(
+    results: list[ScenarioResult],
+    verbose: bool = False,
+    scenarios: list[dict[str, Any]] | None = None,
+) -> None:
+    """Print evaluation results with colored pass/fail output."""
+    passed = sum(1 for r in results if r.passed)
+    failed = len(results) - passed
+
+    # Build a map of scenario name → principles_tested
+    principles_map: dict[str, list[str]] = {}
+    if scenarios:
+        for s in scenarios:
+            principles_map[s["name"]] = s.get("principles_tested", [])
+
+    for r in results:
+        if r.passed:
+            status = _green("PASS")
+        else:
+            status = _red("FAIL")
+        print(f"  [{status}] {r.name}")
+
+        if verbose:
+            # Show principles tested
+            principles = principles_map.get(r.name, [])
+            if principles:
+                print(f"         {_dim('principles:')} {', '.join(principles)}")
+            if r.pass_hits:
+                for ph in r.pass_hits:
+                    print(f"         {_green('+')} {ph}")
+            if not r.passed:
+                if r.fail_hits:
+                    for fh in r.fail_hits:
+                        print(f"         {_red('-')} {_red('fail:')} {fh}")
+                if not r.pass_hits:
+                    print(f"         {_yellow('!')} {_yellow('no pass criteria matched')}")
+        else:
+            # Summary mode: only show failure reasons
+            if not r.passed:
+                if r.fail_hits:
+                    for fh in r.fail_hits:
+                        print(f"         {_red('fail:')} {fh}")
+                if not r.pass_hits:
+                    print(f"         {_yellow('no pass criteria matched')}")
+
+    # Summary line
+    print()
+    if failed == 0:
+        summary = _green(f"{passed}/{len(results)} scenarios passed")
+    else:
+        summary = _red(f"{passed}/{len(results)} scenarios passed")
+    print(f"  {_bold(summary)}")
+
+    # Principles summary in verbose mode
+    if verbose and principles_map:
+        all_principles: set[str] = set()
+        passed_principles: set[str] = set()
+        for r in results:
+            ps = principles_map.get(r.name, [])
+            all_principles.update(ps)
+            if r.passed:
+                passed_principles.update(ps)
+        failed_principles = all_principles - passed_principles
+        if all_principles:
+            print(f"\n  {_bold('Principles:')}")
+            for p in sorted(all_principles):
+                if p in passed_principles and p not in failed_principles:
+                    print(f"    {_green('+')} {p}")
+                else:
+                    print(f"    {_red('-')} {p}")
 
 
 # Keep backward-compatible standalone functions

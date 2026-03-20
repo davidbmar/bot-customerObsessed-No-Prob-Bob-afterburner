@@ -18,7 +18,7 @@ Track bugs and feature requests here.
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
 | B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Fixed (Sprint 9) |
 | B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Fixed (Sprint 9) |
-| B-013 | Debug panel visible by default on page load — F-019 (Sprint 10) may not have fully landed | Low | Open |
+| B-013 | Debug panel visible by default on page load — F-019 (Sprint 10) may not have fully landed | Low | Complete (Sprint 16) |
 | B-014 | No PROJECT_STATUS docs exist — sprint-merge.sh never ran (all 11 sprints merged manually or via sprint-run.sh that crashed) | High | Complete (Sprint 12) |
 | B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Open |
 | B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
@@ -72,5 +72,5 @@ Track bugs and feature requests here.
 | F-039 | End-to-end integration test: discovery conversation → save seed → verify in Afterburner project | High | Complete (Sprint 16) |
 | F-040 | Typing indicator shows bot avatar animation while streaming (pulse or dots) | Low | Open |
 | F-041 | Conversation title editing — click title in sidebar to rename | Low | Open |
-| F-042 | README with getting-started guide, screenshots, and API reference | High | Open |
-| F-043 | CLI evaluate command improvements — show pass/fail per scenario with colors | Medium | Open |
+| F-042 | README with getting-started guide, screenshots, and API reference | High | Complete (Sprint 16) |
+| F-043 | CLI evaluate command improvements — show pass/fail per scenario with colors | Medium | Complete (Sprint 16) |

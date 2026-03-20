@@ -1,22 +1,22 @@
-`★ Insight ─────────────────────────────────────`
-- **Theme via CSS custom properties**: Because the existing code already used `var(--bg)`, `var(--text)`, etc. everywhere, adding a light theme was just defining an `html.light` class with different values — zero changes to individual component styles. This is the power of CSS custom properties for theming.
-- **Search with snippet extraction**: Rather than just filtering, the search extracts a context snippet around the match and highlights it with `<mark>`, giving the user visual confirmation of *where* the keyword appeared in the conversation.
-`─────────────────────────────────────────────────`
+All tasks complete.
 
 ---
 
-## Summary
+## Files changed
 
-**Files changed:**
-- `bot/chat_ui.html` — Added all three features (delete, search, theme toggle)
-- `docs/project-memory/backlog/README.md` — Marked F-036, F-037, F-038 as Complete (Sprint 15)
-- `docs/project-memory/sessions/S-2026-03-20-0640-sprint15-chat-ux.md` — Session doc
+| File | Change |
+|------|--------|
+| `tests/test_e2e_pipeline.py` | **Created** — 36 new tests across 8 test classes proving the full discovery-to-seed-doc pipeline |
+| `bot/tools.py` | **Modified** — Added `try/except OSError` around file operations in `tool_save_discovery` for graceful error handling |
+| `docs/project-memory/backlog/README.md` | **Modified** — Marked F-039 as Complete (Sprint 16) |
+| `docs/project-memory/sessions/S-2026-03-20-0655-sprint16-e2e-pipeline.md` | **Created** — Session doc |
 
-**Commands run:**
-- `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — 271 passed
-- `git commit` + `git push -u origin HEAD`
+## Commands run
 
-**Notes / follow-on work:**
-- The brief mentioned "long-press on mobile" for delete — the current implementation uses a confirm dialog which works universally including mobile. A dedicated long-press gesture could be added later if desired.
-- Light theme colors are GitHub-inspired. Could be fine-tuned based on user feedback.
+- `python3 -m pytest tests/ -v` — **399 tests pass, 0 failures** (was 363)
+- `git push -u origin HEAD` — pushed to `agentA-e2e-integration`
+
+## Notes / follow-on work
+
+- The `test_multiple_saves_create_separate_files` test uses a 1.1s `time.sleep()` to ensure different timestamps — if test speed becomes a concern, this could be refactored to mock `datetime.now`
+- The HTTP endpoint tests validate the tool logic directly rather than making actual HTTP requests (the server test infra uses `port=0` but doesn't bind). A future improvement could add actual HTTP client tests using `urllib.request` against the running server.

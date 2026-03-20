@@ -14,6 +14,8 @@ Track bugs and feature requests here.
 | B-006 | save_discovery not exported from bot/tools.py | High | Fixed (Sprint 3) |
 | B-007 | test uses chat_id but server uses conversation_id | Medium | Fixed (Sprint 3) |
 | B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Open |
+| B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Open |
+| B-010 | GitHub not configured in dashboard project entry | Low | Open |
 
 ## Features
 
@@ -29,5 +31,10 @@ Track bugs and feature requests here.
 | F-008 | CLI chat command | Medium | Complete (Sprint 3) |
 | F-009 | CLI status command | Low | Complete (Sprint 3) |
 | F-010 | Web chat debug panel — tools called, principles, tokens, latency | High | Complete (Sprint 7) |
-| F-011 | get_sprint_status tool — check sprint progress from bot | Medium | Complete (Sprint 7) |
-| F-012 | add_to_backlog tool — bot can add bugs/features to project backlog | Medium | Complete (Sprint 6) |
+| F-011 | get_sprint_status tool | Medium | Complete (Sprint 7) |
+| F-012 | add_to_backlog tool | Medium | Complete (Sprint 6) |
+| F-013 | Multi-project support — bot can switch between Afterburner projects | High | Planned |
+| F-014 | Post-sprint feedback loop — "here's what shipped, does it match?" | Medium | Planned |
+| F-015 | generate_vision tool — bot generates Vision doc from discovery conversation | High | Planned |
+| F-016 | Conversation export — download chat as markdown | Low | Planned |
+| F-017 | Bot personality hot-reload — change personality without restarting server | Medium | Planned |

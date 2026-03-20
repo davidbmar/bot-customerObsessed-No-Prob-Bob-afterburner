@@ -44,8 +44,8 @@ class Gateway:
     ) -> None:
         from pathlib import Path as _Path
         pdir = _Path(personalities_dir) if personalities_dir else _Path(__file__).parent.parent / "personalities"
-        loader = PersonalityLoader(pdir)
-        self.personality = loader.load(personality_name)
+        self._personality_loader = PersonalityLoader(pdir)
+        self.personality = self._personality_loader.load(personality_name)
         self.system_prompt = self.personality.system_prompt
         self.principles = self.personality.principles
         self.llm = OllamaClient(model=model, base_url=ollama_url)
@@ -131,6 +131,13 @@ class Gateway:
             llm_resp.output_tokens += follow_up.output_tokens
 
         return tools_called
+
+    def reload_personality(self) -> None:
+        """Re-read the current personality from disk (hot-reload)."""
+        self.personality = self._personality_loader.load(self.personality.name)
+        self.system_prompt = self.personality.system_prompt
+        self.principles = self.personality.principles
+        log.info("Reloaded personality: %s", self.personality.name)
 
     def get_personality_info(self) -> dict:
         """Return personality metadata for debug panels."""

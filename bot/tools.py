@@ -461,5 +461,5 @@ def feedback_on_sprint(project_root: Path) -> str:
     return "\n".join(summary_parts)
 
 
-# Public aliases
+# Public alias for tool dispatch compatibility
 save_discovery = tool_save_discovery

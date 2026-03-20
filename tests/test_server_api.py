@@ -107,6 +107,45 @@ class TestNewConversation:
         assert hasattr(BotHTTPHandler, "_handle_new_conversation")
 
 
+class TestConversationExport:
+    """Tests for GET /api/conversations/export."""
+
+    def test_handler_has_export_method(self) -> None:
+        assert hasattr(BotHTTPHandler, "_handle_export_conversation")
+
+    def test_export_returns_markdown(self, gateway) -> None:
+        """Gateway memory can export a conversation."""
+        gateway.memory.add("test-export", "user", "Hello")
+        gateway.memory.add("test-export", "assistant", "Hi there!")
+        md = gateway.memory.export_markdown("test-export")
+        assert "# Conversation test-export" in md
+        assert "**User:** Hello" in md
+        assert "**Bot:** Hi there!" in md
+
+    def test_export_empty_conversation(self, gateway) -> None:
+        """Export of nonexistent conversation returns empty string."""
+        md = gateway.memory.export_markdown("nonexistent")
+        assert md == ""
+
+
+class TestPersonalityReload:
+    """Tests for POST /api/personality/reload."""
+
+    def test_handler_has_reload_method(self) -> None:
+        assert hasattr(BotHTTPHandler, "_handle_personality_reload")
+
+    def test_gateway_reload_personality(self, gateway) -> None:
+        """Gateway.reload_personality re-reads from disk."""
+        original_name = gateway.personality.name
+        gateway.reload_personality()
+        assert gateway.personality.name == original_name
+        assert len(gateway.principles) > 0
+
+    def test_gateway_has_personality_loader(self, gateway) -> None:
+        """Gateway stores a loader reference for hot-reload."""
+        assert hasattr(gateway, "_personality_loader")
+
+
 class TestChatResponseIncludesPersonality:
     """Tests that /api/chat response includes personality name."""
 

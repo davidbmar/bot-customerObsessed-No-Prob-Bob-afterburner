@@ -75,3 +75,18 @@ class ConversationMemory:
         if not path.exists():
             return 0
         return sum(1 for line in path.read_text().splitlines() if line.strip())
+
+    def export_markdown(self, conversation_id: str) -> str:
+        """Export a conversation as formatted markdown."""
+        messages = self.get_history(conversation_id, limit=10000)
+        if not messages:
+            return ""
+
+        parts = [f"# Conversation {conversation_id}\n"]
+        for msg in messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            label = "User" if role == "user" else "Bot"
+            parts.append(f"**{label}:** {content}\n\n---\n")
+
+        return "\n".join(parts)

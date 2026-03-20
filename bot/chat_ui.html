@@ -21,6 +21,22 @@
     --error: #f85149;
   }
 
+  html.light {
+    --bg: #ffffff;
+    --bg-secondary: #f6f8fa;
+    --bg-tertiary: #e9ecef;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --text-muted: #656d76;
+    --accent: #0969da;
+    --accent-dim: #0550ae;
+    --user-bg: #ddf4ff;
+    --bot-bg: #f6f8fa;
+    --success: #1a7f37;
+    --warning: #9a6700;
+    --error: #cf222e;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -139,8 +155,33 @@
     padding: 4px 0;
   }
 
+  .conv-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .conv-search input {
+    width: 100%;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
+  .conv-search input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .conv-search input::placeholder { color: var(--text-muted); }
+
   .conv-item {
-    display: block;
+    display: flex;
+    align-items: flex-start;
     width: 100%;
     background: none;
     border: none;
@@ -151,9 +192,36 @@
     font-family: inherit;
     color: var(--text);
     transition: background 0.1s;
+    position: relative;
   }
 
   .conv-item:hover { background: var(--bg-tertiary); }
+
+  .conv-item-content { flex: 1; min-width: 0; }
+
+  .conv-item-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  .conv-item:hover .conv-item-delete { opacity: 1; }
+  .conv-item-delete:hover { color: var(--error); }
+
+  mark.search-highlight {
+    background: var(--warning);
+    color: var(--bg);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
 
   .conv-item.active {
     background: var(--bg-tertiary);
@@ -815,6 +883,7 @@
   <div class="header-actions">
     <button class="btn-small" onclick="newConversation()" title="New Chat">+ New Chat</button>
     <button class="btn-small" onclick="openSettings()" title="Settings" style="font-size:20px;padding:4px 12px;line-height:1">&#9881;</button>
+    <button class="btn-small" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:16px;padding:4px 8px;line-height:1">&#9790;</button>
     <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panels">Debug</button>
     <div class="header-meta">
       <span class="status-dot loading" id="statusDot"></span>
@@ -830,6 +899,9 @@
     <div class="conv-sidebar-header">
       <h3>Conversations</h3>
       <button class="btn-new-chat" onclick="newConversation()">+ New</button>
+    </div>
+    <div class="conv-search">
+      <input type="text" id="convSearchInput" placeholder="Search conversations..." oninput="filterConversations()">
     </div>
     <div class="conv-list" id="convList"></div>
   </div>
@@ -2073,6 +2145,7 @@ function refreshConversationList() {
   var list = document.getElementById('convList');
   while (list.firstChild) list.removeChild(list.firstChild);
 
+  var query = (typeof convSearchQuery === 'string') ? convSearchQuery : '';
   var convs = [];
   for (var i = 0; i < localStorage.length; i++) {
     var key = localStorage.key(i);
@@ -2082,29 +2155,48 @@ function refreshConversationList() {
       if (!state || !state.messages || state.messages.length === 0) continue;
       var firstUser = '';
       var msgCount = 0;
+      var allText = '';
+      var matchSnippet = '';
       for (var j = 0; j < state.messages.length; j++) {
-        if (state.messages[j].role === 'user' && !firstUser) {
-          firstUser = state.messages[j].content;
+        var msg = state.messages[j];
+        if (msg.role === 'user' && !firstUser) {
+          firstUser = msg.content;
         }
-        if (state.messages[j].role !== 'error') msgCount++;
+        if (msg.role !== 'error') msgCount++;
+        allText += ' ' + (msg.content || '');
       }
+
+      // Filter by search query
+      if (query) {
+        var lowerText = allText.toLowerCase();
+        var idx = lowerText.indexOf(query);
+        if (idx === -1) continue;
+        // Extract a snippet around the match
+        var start = Math.max(0, idx - 15);
+        var end = Math.min(allText.length, idx + query.length + 25);
+        matchSnippet = (start > 0 ? '...' : '') +
+          allText.substring(start, end).trim() +
+          (end < allText.length ? '...' : '');
+      }
+
       convs.push({
         id: state.conversationId,
         preview: firstUser ? firstUser.substring(0, 40) : '(empty)',
         msgCount: msgCount,
         timestamp: state.messages[state.messages.length - 1].timestamp || '',
-        key: key
+        key: key,
+        matchSnippet: matchSnippet
       });
     } catch(e) { continue; }
   }
 
-  // Sort by key (most recent first — conv IDs contain timestamp)
+  // Sort by key (most recent first)
   convs.sort(function(a, b) { return b.key.localeCompare(a.key); });
 
   if (convs.length === 0) {
     var empty = document.createElement('div');
     empty.style.cssText = 'padding:20px 12px;color:var(--text-muted);font-size:12px;text-align:center';
-    empty.textContent = 'No conversations yet';
+    empty.textContent = query ? 'No matching conversations' : 'No conversations yet';
     list.appendChild(empty);
     return;
   }
@@ -2118,10 +2210,17 @@ function refreshConversationList() {
       return function() { switchToConversation(cid); };
     })(conv.id);
 
+    var content = document.createElement('div');
+    content.className = 'conv-item-content';
+
     var preview = document.createElement('div');
     preview.className = 'conv-item-preview';
-    preview.textContent = conv.preview;
-    item.appendChild(preview);
+    if (query && conv.matchSnippet) {
+      highlightText(conv.matchSnippet, query, preview);
+    } else {
+      preview.textContent = conv.preview;
+    }
+    content.appendChild(preview);
 
     var meta = document.createElement('div');
     meta.className = 'conv-item-meta';
@@ -2131,10 +2230,37 @@ function refreshConversationList() {
     var count = document.createElement('span');
     count.textContent = conv.msgCount + ' msgs';
     meta.appendChild(count);
-    item.appendChild(meta);
+    content.appendChild(meta);
+
+    item.appendChild(content);
+
+    // Delete button
+    var delBtn = document.createElement('button');
+    delBtn.className = 'conv-item-delete';
+    delBtn.textContent = '\u00d7';
+    delBtn.title = 'Delete conversation';
+    delBtn.onclick = (function(cid) {
+      return function(e) { deleteConversation(cid, e); };
+    })(conv.id);
+    item.appendChild(delBtn);
 
     list.appendChild(item);
   }
+}
+
+function highlightText(text, query, container) {
+  var lower = text.toLowerCase();
+  var idx = lower.indexOf(query);
+  if (idx === -1) {
+    container.textContent = text;
+    return;
+  }
+  container.appendChild(document.createTextNode(text.substring(0, idx)));
+  var mark = document.createElement('mark');
+  mark.className = 'search-highlight';
+  mark.textContent = text.substring(idx, idx + query.length);
+  container.appendChild(mark);
+  container.appendChild(document.createTextNode(text.substring(idx + query.length)));
 }
 
 function switchToConversation(cid) {
@@ -2178,12 +2304,68 @@ function switchToConversation(cid) {
   } catch(e) {}
 }
 
+// -- Theme Toggle --
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var isLight = html.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  var btn = document.getElementById('themeToggle');
+  var isLight = document.documentElement.classList.contains('light');
+  btn.textContent = isLight ? '\u2600' : '\u263E';
+  btn.title = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+}
+
+function restoreTheme() {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  }
+  updateThemeIcon();
+}
+
+// -- Delete Conversation --
+
+function deleteConversation(cid, evt) {
+  if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+  if (!confirm('Delete this conversation?')) return;
+
+  try {
+    localStorage.removeItem('conv_' + cid);
+  } catch(e) {}
+
+  if (cid === conversationId) {
+    conversationId = 'web-' + Date.now().toString(36);
+    clearContainer(document.getElementById('messages'));
+    document.getElementById('debugConvId').textContent = conversationId;
+    document.getElementById('settingsConvId').textContent = conversationId;
+    localStorage.setItem('lastConversationId', conversationId);
+    showWelcomeMessage();
+  }
+
+  refreshConversationList();
+}
+
+// -- Search/Filter Conversations --
+
+var convSearchQuery = '';
+
+function filterConversations() {
+  convSearchQuery = (document.getElementById('convSearchInput').value || '').trim().toLowerCase();
+  refreshConversationList();
+}
+
 // Auto-resize textarea
 document.getElementById('input').addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
+restoreTheme();
 init();
 </script>
 </body>

@@ -694,10 +694,11 @@ function init() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var dot = document.getElementById('statusDot');
-      dot.className = 'status-dot ' + (data.ollama === 'ok' ? 'ok' : 'error');
+      var isOk = data.status === 'ok' || data.ollama === 'ok';
+      dot.className = 'status-dot ' + (isOk ? 'ok' : 'error');
       var provLabel = data.provider || 'ollama';
       document.getElementById('modelInfo').textContent = provLabel + ' \u00b7 ' + data.model + ' \u00b7 ' + data.personality;
-      document.getElementById('debugStatus').textContent = 'LLM: ' + data.ollama;
+      document.getElementById('debugStatus').textContent = 'LLM: ' + (isOk ? 'ok' : 'unavailable');
       document.getElementById('debugPersonality').textContent = data.personality;
     })
     .catch(function(e) {
@@ -1365,12 +1366,12 @@ function testConnection() {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    if (data.ollama === 'ok') {
+    if (data.status === 'ok' || data.ollama === 'ok') {
       el.className = 'test-result ok';
-      el.textContent = '\u2714 Connected to ' + (data.model || 'LLM');
+      el.textContent = '\u2714 Connected to ' + (data.provider || 'LLM') + ' / ' + (data.model || '');
     } else {
       el.className = 'test-result fail';
-      el.textContent = '\u2718 LLM unavailable';
+      el.textContent = '\u2718 ' + (data.provider || 'LLM') + ' unavailable — check API key and connection';
     }
   })
   .catch(function(e) {

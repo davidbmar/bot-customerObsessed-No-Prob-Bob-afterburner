@@ -190,8 +190,10 @@ class Gateway:
         """Check system health."""
         llm_ok = self.llm.health_check()
         provider = self._provider_id or "ollama"
+        status = "ok" if llm_ok else "unavailable"
         return {
-            "ollama": "ok" if llm_ok else "unavailable",
+            "status": status,
+            "ollama": status,  # backward compat
             "personality": self.personality.name,
             "model": self.llm.model,
             "provider": provider,

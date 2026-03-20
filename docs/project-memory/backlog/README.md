@@ -24,8 +24,10 @@ Track bugs and feature requests here.
 | B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
 | B-017 | `python3 bot/server.py` fails with relative import error — must use `python3 -m bot.server` (F-022 regression) | Medium | Complete (Sprint 13) |
 | B-018 | Token count inflated — shows 1378 out tokens for a 20-word response, likely counting thinking tokens or misreporting | Low | Complete (Sprint 14) |
-| B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — Sprint 12 may have changed provider naming | Low | Complete (Sprint 14) |
+| B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — health endpoint returns provider_label: "ollama" not "Qwen 3.5" | Low | Reopened |
 | B-020 | Sprint 12 agent done markers not written — sprint-launch.sh done detection broken (related to B-008) | Medium | Open |
+| B-021 | Dashboard only shows Sprints 1-11 — Sprints 12-16 need PROJECT_STATUS docs generated | Medium | Open |
+| B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Open |
 
 ## Features
 

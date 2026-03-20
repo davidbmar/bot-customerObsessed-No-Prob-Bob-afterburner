@@ -10,13 +10,15 @@ Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- Single agent to avoid merge conflicts
 - chat_stream() already exists in bot/llm.py — wire it through gateway and server, don't rewrite
 - Web chat UI is self-contained in bot/chat_ui.html (no build step, vanilla JS)
 - PROJECT_STATUS docs must follow the template in docs/project-memory/tools/PROJECT_STATUS_TEMPLATE.md
+- agentA owns bot/ and tests/ — agentB MUST NOT touch these directories
+- agentB owns scripts/ and docs/ — agentA MUST NOT touch these directories
 
 Merge Order
-1. agentA-streaming-and-polish
+1. agentB-sprint-history
+2. agentA-streaming-and-polish
 
 Merge Verification
 ```bash
@@ -38,7 +40,7 @@ Previous Sprint
 ## agentA-streaming-and-polish
 
 Objective
-- Wire streaming, generate sprint history, add persistence and error handling
+- Wire streaming through gateway and server, add conversation persistence and error handling
 
 Tasks
 1. **SSE streaming endpoint** — Add `POST /api/chat/stream` to `bot/server.py`:
@@ -72,8 +74,29 @@ Tasks
    - UI: add retry button on error messages
    - Server: catch `anthropic.AuthenticationError` → return `{"error": "Invalid API key", "detail": "..."}` with 401 status
 
-6. **Generate PROJECT_STATUS docs for Sprints 1-11** — Create a script `scripts/generate_sprint_history.py`:
-   - Read each `.sprint/history/sprint-{N}-brief.md`
+6. **Write tests** in `tests/test_server_api.py` and `tests/test_llm.py`:
+   - Test SSE endpoint returns proper event-stream content type
+   - Test SSE endpoint yields token events then done event
+   - Test error handling returns 503 when LLM unreachable
+   - Test error handling returns 401 for bad API key
+   - Target: 200+ total tests
+
+7. **Update backlog** — Mark F-025, F-028, F-029 as Complete (Sprint 12)
+
+Acceptance Criteria
+- Open web chat, send message → text streams in word-by-word (not all-at-once after 20s)
+- Refresh page → conversation is restored from localStorage
+- Stop Ollama, send message → red error bubble with retry button
+- `.venv/bin/python3 -m pytest tests/ -v` — 200+ tests, 0 failures
+
+## agentB-sprint-history
+
+Objective
+- Generate PROJECT_STATUS docs for Sprints 1-11 so the dashboard shows sprint history
+
+Tasks
+1. **Create `scripts/generate_sprint_history.py`**:
+   - Read each `.sprint/history/sprint-{N}-brief.md` for N=1..11
    - Read the PROJECT_STATUS template from `docs/project-memory/tools/PROJECT_STATUS_TEMPLATE.md`
    - For each sprint, generate a `docs/PROJECT_STATUS_YYYY-MM-DD-sprintN.md` with:
      - Sprint number, date (from git log of the brief archive commit)
@@ -82,22 +105,19 @@ Tasks
      - Merge table with "Clean" status (all sprints merged successfully)
      - Status: Complete
    - Use git log dates: `git log --format=%aI --diff-filter=A -- .sprint/history/sprint-N-brief.md`
-   - Run the script as part of this sprint's work
+   - If git log returns no date, use 2026-03-19 as fallback
 
-7. **Write tests** in `tests/test_server_api.py` and `tests/test_llm.py`:
-   - Test SSE endpoint returns proper event-stream content type
-   - Test SSE endpoint yields token events then done event
-   - Test error handling returns 503 when LLM unreachable
-   - Test error handling returns 401 for bad API key
-   - Test conversation persistence localStorage integration (can be a JS-level test or mock)
-   - Target: 200+ total tests
+2. **Run the script** to generate all 11 docs:
+   ```bash
+   .venv/bin/python3 scripts/generate_sprint_history.py
+   ```
 
-8. **Update backlog** — Mark F-024, F-025, F-028, F-029 as Complete (Sprint 12)
+3. **Verify**: `ls docs/PROJECT_STATUS_*.md | wc -l` should return 11
+
+4. **Update backlog** — Mark F-024 and B-014 as Complete (Sprint 12)
 
 Acceptance Criteria
-- Open web chat, send message → text streams in word-by-word (not all-at-once after 20s)
-- Refresh page → conversation is restored from localStorage
-- Stop Ollama, send message → red error bubble with retry button
 - `ls docs/PROJECT_STATUS_*.md | wc -l` returns 11
-- Rebuild dashboard data → Sprints count shows 11
-- `.venv/bin/python3 -m pytest tests/ -v` — 200+ tests, 0 failures
+- Each doc follows PROJECT_STATUS_TEMPLATE.md format
+- Each doc has correct sprint number, goal, and agent list from the brief
+- Merge table uses format: `| # | Branch | Deliverable | Phase | Conflicts |`

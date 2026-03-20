@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sessions — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link ">Vision</a>
+      <a href="plan.html" class="site-nav-link ">Plan</a>
+      <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="sprints.html" class="site-nav-link ">Sprints</a>
+      <a href="sessions.html" class="site-nav-link nav-active">Sessions</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+    </nav>
+    <main class="site-main">
+      <h1>Sessions</h1>
+<p class="section-intro">9 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0557-sprint12-history-docs</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0557-sprint12-history-docs Title: Generate PROJECT_STATUS docs for Sprints 1-11 Date: 2026-03-20 Author: agentB</p>
+<h2>Goal</h2>
+<p>Generate PROJECT_STATUS docs for all 11 historical sprints so the Afterburner dashboard displays sprint history.</p>
+<h2>Context</h2>
+<p>No PROJECT_STATUS docs existed because sprint-merge.sh never ran (all 11 sprints were merged manually). The dashboard showed 0 sprints. This is Sprint 12, agentB&#x27;s task (F-024, B-014).</p>
+<h2>Plan</h2>
+<ol><li>Create scripts/generate_sprint_history.py to parse sprint briefs and generate PROJECT_STATUS docs</li><li>Run the script to generate all 11 docs</li><li>Update backlog to mark F-024 and B-014 as Complete</li></ol>
+<h2>Changes Made</h2>
+<ul><li>Created <code>scripts/generate_sprint_history.py</code> — reads .sprint/history/sprint-{N}-brief.md, extracts goals/agents/objectives, generates PROJECT_STATUS docs following the template</li><li>Generated 11 PROJECT_STATUS docs in docs/ (one per sprint)</li><li>Updated backlog: F-024 and B-014 marked Complete (Sprint 12)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used git log dates for each sprint brief&#x27;s archive commit to derive the date for each PROJECT_STATUS doc</li><li>Used &quot;Clean&quot; for all merge conflict statuses since all sprints merged successfully</li><li>Historical commit details marked as &quot;see git log&quot; since we can&#x27;t retroactively determine per-agent file counts</li></ul>
+<h2>Open Questions</h2>
+<ul><li>Dashboard data rebuild needed after merge to make sprints visible in the dashboard</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending commit)</li></ul>
+<p>PRs:</p>
+<ul><li>(pending)</li></ul>
+<p>ADRs:</p>
+<ul><li>None</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0309-sprint10-ux-polish</h3><h1>S-2026-03-20-0309-sprint10-ux-polish</h1>
+<h2>Title</h2>
+<p>Sprint 10: UX Polish from Live Playwright Testing</p>
+<h2>Goal</h2>
+<p>Fix all UX issues found during live testing: welcome message, debug panel default hidden, new conversation button, better loading state, server entry point.</p>
+<h2>Context</h2>
+<ul><li>Sprint 9 delivered conversation export and personality hot-reload (144 tests pass)</li><li>Live Playwright testing found UX gaps: empty chat on load, debug panel always visible, no quick new-chat button, simplistic loading indicator</li></ul>
+<h2>Plan</h2>
+<ol><li>F-018: Welcome message on chat load</li><li>F-019: Debug panel default hidden with localStorage persistence</li><li>F-020: New Conversation button in header</li><li>F-021: Better loading indicator with elapsed time and &gt;30s message</li><li>F-022: Server entry point for <code>python3 bot/server.py</code></li><li>Update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/chat_ui.html</code>: Added <code>showWelcomeMessage()</code> called from <code>init()</code> and <code>newConversation()</code></li><li><code>bot/chat_ui.html</code>: Added localStorage persistence for debug panel visibility</li><li><code>bot/chat_ui.html</code>: Added &quot;+ New Chat&quot; button in header-actions</li><li><code>bot/chat_ui.html</code>: Enhanced <code>showTyping()</code>/<code>hideTyping()</code> with setInterval elapsed counter and &gt;30s message</li><li><code>bot/server.py</code>: Added try/except ImportError for relative/absolute imports, added <code>if __name__</code> block</li><li><code>docs/project-memory/backlog/README.md</code>: Marked F-018 through F-022 as Complete (Sprint 10)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Welcome message is UI-only decoration (not saved to conversation memory)</li><li>Debug panel default hidden, with localStorage remembering user preference</li><li>New Chat button placed before settings gear for quick access</li><li>Loading indicator uses setInterval (not requestAnimationFrame) since 1s granularity is sufficient</li></ul>
+<h2>Tests</h2>
+<ul><li>144 passed, 0 failures</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0146-sprint7-webchat-polish</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0146-sprint7-webchat-polish Title: Sprint 7 — Web chat UI polish, debug panel, settings, get_sprint_status Date: 2026-03-20 Author: agentA</p>
+<h2>Goal</h2>
+<p>Polish the web chat UI with working debug panel, settings panel, better UX, and add get_sprint_status tool.</p>
+<h2>Context</h2>
+<p>Sprint 6 delivered evaluation framework and tools. Web chat UI had a debug panel skeleton but didn&#x27;t render real data. No settings panel or way to switch personality/model from UI.</p>
+<h2>Plan</h2>
+<ol><li>Add API endpoints (personalities, config, conversations/new) to server.py</li><li>Implement get_sprint_status tool in tools.py and register in llm.py</li><li>Rewrite chat_ui.html with per-message debug sections, settings panel, typing indicator, timestamps, markdown rendering</li><li>Write tests for all new functionality</li><li>Update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li><strong>bot/server.py</strong>: Added GET /api/personalities, GET /api/config, POST /api/config, POST /api/conversations/new endpoints. Added personality field to /api/chat response.</li><li><strong>bot/tools.py</strong>: Implemented get_sprint_status and tool_get_sprint_status functions. Registered in execute_tool dispatch.</li><li><strong>bot/llm.py</strong>: Added get_sprint_status to TOOL_DEFINITIONS.</li><li><strong>bot/chat_ui.html</strong>: Complete rewrite with per-message collapsible debug sections (personality, principles as pills, tools with args, tokens, latency, memory count), settings slide-out panel (personality dropdown, model input, Ollama URL, new conversation, clear history), typing indicator with animated dots, timestamps on messages, safe DOM-based markdown rendering (bold, italic, code, code blocks, lists), responsive layout for mobile.</li><li><strong>tests/test_tools.py</strong>: Added 5 tests for get_sprint_status.</li><li><strong>tests/test_server_api.py</strong>: New test file with 7 tests for API endpoints.</li><li><strong>tests/test_llm_webchat.py</strong>: Updated &quot;New Chat&quot; assertion to &quot;New Conversation&quot;.</li><li><strong>docs/project-memory/backlog/README.md</strong>: Marked F-007, F-010, F-011 as Complete (Sprint 7).</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used safe DOM methods (createElement, textContent) instead of innerHTML for markdown rendering to prevent XSS</li><li>Settings panel is a slide-out overlay rather than a separate page to keep the SPA feel</li><li>Debug panels are per-message (collapsible below each bot response) AND sidebar (aggregate view) — toggled together with the Debug button</li><li>New Conversation button moved from header to settings panel; gear icon in header opens settings</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>See git log for this session</li></ul>
+<p>PRs:</p>
+<ul><li>TBD</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0024-fix-tools-tests</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0024-fix-tools-tests Title: Fix save_discovery export and chat_id test (B-006, B-007) Date: 2026-03-20 Author: agentA (Sprint 3)</p>
+<h2>Goal</h2>
+<p>Fix remaining bugs B-006 and B-007 so all 51 tests pass and <code>from bot.tools import save_discovery</code> works.</p>
+<h2>Context</h2>
+<p>Sprint 2 left two known bugs: save_discovery not importable by its public name (only <code>tool_save_discovery</code> existed), and a test checking for <code>chat_id</code> when the server uses <code>conversation_id</code>.</p>
+<h2>Plan</h2>
+<ol><li>Add <code>save_discovery</code> alias in bot/tools.py</li><li>Fix the test to check for <code>conversation_id</code></li><li>Run full test suite</li><li>Update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/tools.py</code>: Added <code>save_discovery = tool_save_discovery</code> alias at module level</li><li><code>tests/test_llm_webchat.py</code>: Renamed <code>test_api_chat_uses_chat_id</code> to <code>test_api_chat_uses_conversation_id</code>, updated assertion to check for <code>conversation_id</code></li><li><code>docs/project-memory/backlog/README.md</code>: Marked B-006, B-007 as Fixed (Sprint 3); F-002 as Complete</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Added alias rather than renaming function: <code>tool_save_discovery</code> is the internal implementation name used in the dispatch table and tests; <code>save_discovery</code> is the public API alias. This avoids breaking existing test imports.</li><li>Updated the test to match server reality (<code>conversation_id</code>) rather than changing the server to accept <code>chat_id</code>, since <code>conversation_id</code> is the correct semantic name.</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(see git log for this session)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0007-fix-imports</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0007-fix-imports Title: Fix all import and API mismatches (B-001, B-002, B-003, B-004) Date: 2026-03-20 Author: agentA</p>
+<h2>Goal</h2>
+<p>Fix all critical merge bugs so the bot actually runs — resolve import mismatches, config field gaps, and server API inconsistencies left from Sprint 1 merges.</p>
+<h2>Context</h2>
+<p>Sprint 1 merge conflicts left gateway.py referencing OllamaLLM (class is OllamaClient), Personality (class is PersonalityLoader), and config missing model_name/personality_name properties. Server used chat_id instead of conversation_id expected by tests.</p>
+<h2>Plan</h2>
+<ol><li>Fix gateway.py imports and class references</li><li>Add model_name/personality_name properties to BotConfig</li><li>Fix server.py field naming (conversation_id, principles_active)</li><li>Add create_app factory and __main__.py entry point</li><li>Install pytest, run tests, fix failures</li><li>Update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/gateway.py</code>: Fixed imports (OllamaLLM -&gt; OllamaClient, Personality -&gt; PersonalityLoader), added ChatMemory wrapper class with _get_memory(), fixed default model to qwen3.5:latest</li><li><code>bot/config.py</code>: Added model_name and personality_name properties</li><li><code>bot/server.py</code>: Changed chat_id -&gt; conversation_id, principles -&gt; principles_active in _handle_chat, added create_app() factory</li><li><code>bot/__main__.py</code>: New entry point for <code>python3 -m bot</code></li><li><code>docs/project-memory/backlog/README.md</code>: Marked B-001 through B-004 as Fixed</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used PersonalityLoader + PersonalityDoc pattern rather than creating a Personality wrapper class — aligns with existing personality.py exports</li><li>Added ChatMemory dataclass as a per-conversation wrapper around ConversationMemory to support the _get_memory() API expected by tests</li><li>Default model changed to qwen3.5:latest in Gateway to match llm.py&#x27;s DEFAULT_MODEL</li></ul>
+<h2>Open Questions</h2>
+<p>None — all acceptance criteria met.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0006-telegram-tools</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0006-telegram-tools Title: Telegram polling transport and save_discovery tool Date: 2026-03-20 Author: Agent B (Sprint 2)</p>
+<h2>Goal</h2>
+<p>Add Telegram transport with long-polling and the save_discovery tool, plus fix critical merge bugs from Sprint 1.</p>
+<h2>Context</h2>
+<p>Sprint 1 left import mismatches between modules (OllamaLLM vs OllamaClient, Personality vs PersonalityLoader). This session fixes those and implements F-001 (Telegram) and F-002 (save_discovery).</p>
+<h2>Plan</h2>
+<ol><li>Fix gateway.py import bugs (B-001)</li><li>Add /start command handling to TelegramPoller</li><li>Update save_discovery to use timestamped filenames</li><li>Add --telegram flag to CLI</li><li>Write tests for tools</li><li>Fix pre-existing test failures from Sprint 1 merge</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/gateway.py</code>: Fixed OllamaLLM -&gt; OllamaClient import, Personality -&gt; PersonalityLoader</li><li><code>bot/polling.py</code>: Added /start command with welcome message</li><li><code>bot/tools.py</code>: Updated save_discovery to use <code>discovery-{timestamp}.md</code> filenames</li><li><code>cli.py</code>: Added --telegram flag, Telegram polling integration in cmd_start</li><li><code>tests/test_tools.py</code>: 7 new tests for save_discovery and tool registration</li><li><code>tests/test_llm_webchat.py</code>: Fixed 5 broken tests from Sprint 1 merge conflicts</li><li><code>docs/project-memory/backlog/README.md</code>: Marked B-001, F-001, F-002 as complete</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used threading (not asyncio) for Telegram poller to match existing server architecture</li><li>Welcome message on /start includes brief personality intro and usage hint</li><li>Timestamped filenames use UTC to match project conventions</li></ul>
+<h2>Open Questions</h2>
+<ul><li>None</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-19-2352-llm-webchat</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-19-2352-llm-webchat Title: Build LLM client (Ollama) and web chat UI with debug panel Date: 2026-03-19 Author: agentB (Claude)</p>
+<h2>Goal</h2>
+<p>Implement the LLM webchat stack: OllamaClient with streaming, HTTP server on port 1203, dark-themed chat UI with collapsible debug panel, and gateway orchestration layer.</p>
+<h2>Context</h2>
+<p>Sprint 1 agent B task. Existing stub code had solid foundations — OllamaLLM class, server handler, gateway, and chat UI. Needed updates to match the brief: class rename, streaming support, conversation_id naming, standalone server mode, collapsible debug panel, new conversation button.</p>
+<h2>Plan</h2>
+<ol><li>Update bot/llm.py: rename OllamaLLM -&gt; OllamaClient, add chat_stream(), change default model to qwen3.5:latest</li><li>Update bot/gateway.py: rename chat_id -&gt; conversation_id, update imports</li><li>Update bot/server.py: add main() with graceful shutdown, standalone mode, conversation_id</li><li>Update bot/chat_ui.html: collapsible debug panel, new conversation button, latency display</li><li>Update bot/config.py: align default model</li><li>Add tests</li></ol>
+<h2>Changes Made</h2>
+<ul><li>bot/llm.py: Renamed class to OllamaClient, added chat_stream() generator for streaming responses, changed default model to qwen3.5:latest, extracted _build_messages() helper</li><li>bot/gateway.py: Renamed chat_id -&gt; conversation_id throughout, updated import to OllamaClient, updated default model</li><li>bot/server.py: Added main() with SIGINT/SIGTERM graceful shutdown, stale process cleanup, startup config logging. Changed chat_id -&gt; conversation_id in API. Added __main__ block for standalone execution. Response JSON uses principles_active key.</li><li>bot/chat_ui.html: Added collapsible debug panel (toggle button), New Chat button, dedicated latency display, conversation ID in debug panel. Uses conversation_id in API calls.</li><li>bot/config.py: Updated default model to qwen3.5:latest</li><li>tests/test_llm_webchat.py: 20 tests covering OllamaClient, dataclasses, tool definitions, chat UI structure, gateway, and server API naming</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Kept existing code structure and patterns rather than full rewrite — stubs were well-designed</li><li>Used Generator[str, None, LLMResponse] pattern for streaming — yields chunks, returns final metadata via StopIteration.value</li><li>Used promise-based (.then/.catch) JS instead of async/await for broader compatibility</li><li>Debug panel collapse uses CSS class toggle rather than DOM manipulation</li></ul>
+<h2>Open Questions</h2>
+<ul><li>Streaming not yet wired through the gateway/server (non-streaming chat() used for API). Could add SSE endpoint later.</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending) feat: implement LLM webchat with OllamaClient, server, and debug UI</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-19-2350-memory-cli</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-19-2350-memory-cli Title: Implement conversation memory system and CLI commands Date: 2026-03-19 Author: Agent C</p>
+<h2>Goal</h2>
+<p>Build the conversation memory system (JSONL-backed) and CLI commands (start, chat, status) for the afterburner bot.</p>
+<h2>Context</h2>
+<p>Sprint 1, Agent C task. Project scaffolding exists with stub modules. Need to implement ConversationMemory class, rewrite CLI, and add centralized config with data_dir.</p>
+<h2>Plan</h2>
+<ol><li>Add data_dir to BotConfig</li><li>Rewrite memory.py with ConversationMemory (JSONL per conversation_id)</li><li>Update gateway.py and server.py for new memory API</li><li>Rewrite cli.py with start/chat/status commands</li><li>Write and pass tests</li></ol>
+<h2>Changes Made</h2>
+<ul><li>bot/config.py: Added data_dir field, conversations_dir property, DEFAULT_DATA_DIR constant</li><li>bot/memory.py: Replaced ChatMemory with ConversationMemory class (JSONL-backed, one file per conversation_id)</li><li>bot/gateway.py: Updated to use ConversationMemory instead of per-chat ChatMemory instances</li><li>bot/server.py: Updated /api/history endpoint for new memory API</li><li>cli.py: Rewritten with start/chat/status commands; status shows server reachability, personality, model, conversation count</li><li>tests/test_memory.py: 14 tests covering add/retrieve, isolation, list, clear, JSONL format</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>ConversationMemory is a single-instance class managing all conversations (vs. per-chat instances) — simpler Gateway code</li><li>Storage at ~/.local/share/afterburner-bot/conversations/ (XDG data dir, not config dir)</li><li>Status command uses httpx GET to check server reachability rather than importing Gateway</li></ul>
+<h2>Open Questions</h2>
+<ul><li>None</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(see git log after commit)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-19-2349-sprint1-personality-framework</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-19-2349-sprint1-personality-framework Title: Implement personality framework with inheritance and principle extraction Date: 2026-03-19 Author: agentA</p>
+<h2>Goal</h2>
+<p>Build the personality framework: PersonalityLoader class with YAML frontmatter-based inheritance, principle extraction from markdown, and system prompt generation.</p>
+<h2>Context</h2>
+<p>Sprint 1 — first implementation. Stub files existed with a basic Personality class using plain-text <code>Extends:</code> directives. Brief requires a PersonalityLoader + PersonalityDoc pattern with YAML frontmatter.</p>
+<h2>Plan</h2>
+<ol><li>Rewrite personality markdown files with YAML frontmatter (extends: base)</li><li>Add ## Principles / ### Name sections to both base and customer-discovery</li><li>Implement PersonalityLoader with load() -&gt; PersonalityDoc</li><li>Write comprehensive tests</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>personalities/base.md</code> — added YAML frontmatter, ## Principles section with Polite/Honest/Helpful/Curious</li><li><code>personalities/customer-discovery.md</code> — YAML frontmatter with extends: base, principles: Customer Obsession, Dive Deep, Bias for Action, Working Backwards, Structured Output</li><li><code>bot/personality.py</code> — complete rewrite: PersonalityDoc dataclass + PersonalityLoader class with inheritance resolution, principle extraction, system prompt generation</li><li><code>tests/test_personality.py</code> — 10 tests covering loading, inheritance, principle merging, system prompt content, error handling, listing</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used YAML frontmatter for metadata instead of plain-text directives (cleaner, standard pattern)</li><li>PersonalityDoc stores raw_content as body without frontmatter (consumers shouldn&#x27;t see metadata)</li><li>Principles extracted via ### headings under ## Principles section (structured but still readable markdown)</li><li>Parent principles come before child principles in merged list (base behavior first, specialization second)</li></ul>
+<h2>Open Questions</h2>
+<ul><li>None</li></ul>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending commit)</li></ul></div><hr>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

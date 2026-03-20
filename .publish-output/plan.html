@@ -27,26 +27,64 @@
       <a href="plan.html" class="site-nav-link nav-active">Plan</a>
       <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
       <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="sprints.html" class="site-nav-link ">Sprints</a>
+      <a href="sessions.html" class="site-nav-link ">Sessions</a>
       <a href="backlog.html" class="site-nav-link ">Backlog</a>
     </nav>
     <main class="site-main">
       <h1>Plan</h1>
 <h2>Problem</h2>
-<p>Afterburner handles engineering (sprints, agents, code), but there&#x27;s no customer-facing layer that captures what to build and why. The gap between &#x27;customer has a problem&#x27; and &#x27;engineer writes code&#x27; is filled by meetings, Slack threads, and tribal knowledge. There is no automated bridge from customer conversations to engineering pipelines — discovery interviews are manual, requirements flow through Notion/Jira, and context is lost at every handoff.</p>
+<p>AI developer tools start with the code and assume you know what to build. The gap between &quot;customer has a problem&quot; and &quot;engineer writes code&quot; is filled by manual discovery interviews, Notion/Jira tickets, and lost context at every handoff. No existing tool bridges customer conversations to automated engineering pipelines.</p>
 <h2>Appetite</h2>
-<p>3 phases over approximately 6-8 sprints to reach full production. Phase 1 (2-3 sprints): Personality framework + web chat + text bot MVP. Phase 2 (2-3 sprints): Full Afterburner integration + evaluation framework. Phase 3 (2 sprints): Voice + multi-platform + customer profiles.</p>
-<h2>Solution Sketch</h2>
-<p>The bot uses a gateway pattern — a single LLM orchestration layer (Qwen 3:4b via Ollama) with multiple transport adapters (web chat on port 1203, Telegram polling, CLI). The personality framework reads markdown documents that encode principles, not rigid rules, allowing the LLM to use judgment. Key architectural decisions: Personality as markdown documents with inheritance (base.md → customer-discovery.md). Memory as a separate JSONL-based system, not embedded in personality. Tool calls bridge the bot to Afterburner (save_discovery, generate_vision, add_to_backlog, get_project_summary, get_sprint_status). Web chat includes a debug panel showing principles, tools, memory, and token usage. The bot translates customer conversations into seed docs, which flow into Afterburner&#x27;s lifecycle pipeline (Vision → Plan → Sprint → Shipped code → Customer feedback loop).</p>
-<h2>Market Fit Analysis</h2>
-<p>No existing tool bridges customer conversations to automated engineering pipelines. Current alternatives: manual discovery interviews → Notion/Jira → engineering tickets. This bot automates the entire chain: conversation → seed docs → vision → plan → sprint → shipped code → customer feedback loop. Most AI dev tools start with the code and assume you know what to build. This starts with the customer, obsessively understanding the problem before a single line is written.</p>
-<h2>Differentiation Strategy</h2>
-<p>Starts with the customer, not the code — most AI dev tools assume you know what to build. Personality framework is reusable — future bots (tech support, internal PM) plug into the same system with personality inheritance. Local LLM inference (Ollama) means no API costs, full privacy, works offline. Deep integration with Afterburner&#x27;s sprint pipeline — bot outputs become engineering inputs automatically. Personality is encoded as markdown documents that LLMs read directly, not config files or YAML schemas, allowing natural authoring and LLM judgment. Scenario-based evaluation framework tests whether the bot behaves according to its principles, not just unit test correctness.</p>
-<h2>Rabbit Holes</h2>
-<p>Don&#x27;t over-engineer the personality format — markdown is enough, no YAML schemas needed. Don&#x27;t build a custom vector DB for memory — JSONL + JSON facts is sufficient for Phase 1. Don&#x27;t try to support every LLM provider in Phase 1 — Ollama only, add Claude/OpenAI later. Voice/STT is Phase 3 — don&#x27;t let it creep into earlier phases. Avoid embedding memory rules inside the personality; keep memory as a separate reusable service. Don&#x27;t try to automate sprint launching from bot conversations — a human should review seed docs first.</p>
-<h2>No-Gos</h2>
-<p>No WhatsApp in Phase 1 (requires Business API approval). No vector database or embedding-based retrieval in Phase 1. No multi-tenant or cloud-hosted deployment — local only. No payment or billing integration. No automated sprint launching from bot conversations (human reviews seed docs first).</p>
-<h2>Sprint Candidates</h2>
-<p>Sprint 1 — Foundation: Personality loader with inheritance, base + customer-discovery personality docs, Qwen 3:4b via Ollama with tool calling, web chat UI (port 1203) with debug panel, conversation memory (JSONL per chat), CLI commands (start, chat, status). Sprint 2 — Telegram + Tools: Telegram polling transport, tools (save_discovery, get_project_summary), end-to-end test (conversation → seed doc written to project), config system (~/.config/afterburner-bots/config.json). Sprint 3 — Evaluation + Integration: Evaluation framework with YAML scenarios, more tools (generate_vision, add_to_backlog, get_sprint_status), fact extraction from conversations, post-sprint feedback loop. Sprint 4 — Polish + Docs Site: Web chat settings panel, multi-project support, documentation site built and deployed to S3/CloudFront, README and getting-started guide.</p>
+<p>4 phases over 16+ sprints. Phases 1-2 are complete (11 sprints shipped). Phase 3 is next (Sprints 12-15). Phase 4 is future exploration.</p>
+<h2>Phase 1: Foundation (DONE — Sprints 1-4)</h2>
+<p><strong>Goal:</strong> Working bot you can talk to, guided by a personality framework.</p>
+<p><strong>Delivered:</strong></p>
+<ul><li>Personality framework with markdown documents and inheritance (base.md → customer-discovery.md)</li><li>9 discovery principles (Customer Obsession, Dive Deep, etc.)</li><li>Qwen 3:4b via Ollama with tool calling</li><li>Web chat UI at localhost:1203 — dark theme, chat bubbles</li><li>Conversation memory (JSONL per chat, per-session isolation)</li><li>CLI: start, chat, status commands</li><li>Telegram polling transport</li><li>save_discovery tool — conversation → seed doc pipeline</li><li>End-to-end test proving the full flow</li></ul>
+<p><strong>Test count at Phase 1 end:</strong> 56 tests</p>
+<h2>Phase 2: Integration + Polish + Multi-Provider (DONE — Sprints 5-11)</h2>
+<p><strong>Goal:</strong> Full Afterburner integration, evaluation framework, polished UX, multi-provider LLM.</p>
+<p><strong>Delivered:</strong></p>
+<ul><li>Evaluation framework with YAML scenario tests and CLI runner (3 scenarios)</li><li>4 additional tools: get_project_summary, add_to_backlog, get_sprint_status, generate_vision</li><li>Fact extraction from conversations (LLM-generated structured summaries)</li><li>feedback_on_sprint tool (&quot;here&#x27;s what shipped, does it match?&quot;)</li><li>Web chat debug panel — principles, tools called, tokens, latency, facts (toggle on/off)</li><li>Web chat settings panel — switch personality, switch model, view memory</li><li>Multi-project support — bot switches between Afterburner projects</li><li>Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus), runtime switching from UI</li><li>Conversation export to markdown</li><li>Personality hot-reload (change behavior without restart)</li><li>UX polish: welcome message, progress indicator (animated dots + elapsed time), new conversation button</li></ul>
+<p><strong>Test count at Phase 2 end:</strong> 183 tests</p>
+<p><strong>Notable sprint lessons:</strong></p>
+<ul><li>Sprints 4-5 had merge failures when multiple agents touched the same files. Sprint 6 switched to single-agent sprints for reliability — this pattern held through Sprint 11.</li><li>Multi-provider LLM (Sprint 11) was the capstone: the bot went from Ollama-only to supporting Claude, validating the gateway architecture.</li></ul>
+<h2>Phase 3: Agent SDK + Voice + Profiles (NEXT — Sprints 12-15)</h2>
+<p><strong>Goal:</strong> Migrate to the Agent SDK architecture, add voice support, customer profiles, and a second personality type.</p>
+<p>The seed docs include a TypeScript Agent SDK reference implementation (vibecode-agent) that demonstrates the target architecture: query loop, WebSocket streaming, typed permission gating, in-process MCP server.</p>
+<h3>Sprint 12 Candidate: Agent SDK Migration</h3>
+<ul><li>Port the Python LLM gateway to TypeScript Agent SDK <code>query()</code> loop</li><li>Replace HTTP request/response with WebSocket streaming (agent → web chat)</li><li>Typed tool definitions via <code>createSdkMcpServer()</code> + Zod schemas</li><li>Preserve all 6 existing tools as MCP tools</li><li><strong>Target:</strong> 200+ tests (port existing Python tests to TypeScript)</li></ul>
+<h3>Sprint 13 Candidate: Permission Gating + Profiles</h3>
+<ul><li>Permission model: auto-allow read ops, require approval for destructive tools (save_discovery, generate_vision, add_to_backlog)</li><li>Customer profiles: cross-conversation knowledge store (who said what across sessions)</li><li>Profile-aware context injection (previous conversations with same customer inform current session)</li><li><strong>Target:</strong> 220+ tests</li></ul>
+<h3>Sprint 14 Candidate: Voice + WhatsApp</h3>
+<ul><li>Whisper STT for Telegram voice messages</li><li>WhatsApp transport via tool-telegram-whatsapp</li><li>TTS responses (optional, using macOS <code>say</code> or cloud TTS)</li><li>Voice message → text → discovery → text response flow</li><li><strong>Target:</strong> 240+ tests</li></ul>
+<h3>Sprint 15 Candidate: Second Personality + Evaluation Expansion</h3>
+<ul><li>Tech-support personality to validate framework reusability</li><li>Personality inheritance tested with real usage (base → tech-support)</li><li>Expanded evaluation scenarios (10+ scenarios across both personalities)</li><li>Evaluation comparison: same input, different personality, expected different behavior</li><li><strong>Target:</strong> 260+ tests</li></ul>
+<h2>Phase 4: Multi-Bot Platform (FUTURE — Sprint 16+)</h2>
+<p><strong>Goal:</strong> From a single bot to a platform for building and deploying personality-driven agents.</p>
+<p><strong>Exploration areas:</strong></p>
+<ul><li>Active learning — bot improves discovery questions based on which conversations produce the best seed docs</li><li>Personality marketplace — community-contributed bot behaviors with evaluation scores</li><li>Multi-bot orchestration — discovery bot hands off to tech-support bot with shared customer context</li><li>Cloud deployment — move from local-only to hosted service</li><li>Sub-agents — spin off dedicated agents for long-running tasks (like the vibecode-agent pattern for terraform)</li></ul>
+<h2>Solution Architecture</h2>
+<p>The bot uses a <strong>gateway pattern</strong> — a single LLM orchestration layer with multiple transport adapters (web chat, Telegram, CLI) and multiple LLM backends (Ollama, Claude). The personality framework reads markdown documents that encode principles, not rigid rules, allowing the LLM to use judgment.</p>
+<p><strong>Current architecture (Python, Phase 2):</strong></p>
+<pre><code class="lang-">Web Chat (:1203) ──┐
+Telegram polling ──┼──→ Gateway ──→ LLM (Ollama/Claude) ──→ Response
+CLI ───────────────┘       │              │
+                           │         Tool calls
+                           │              │
+                     Memory (JSONL)   Afterburner APIs
+                     Facts (JSON)     (6 tools)</code></pre>
+<p><strong>Target architecture (TypeScript Agent SDK, Phase 3):</strong></p>
+<pre><code class="lang-">Web Chat (WebSocket) ──┐
+Telegram ──────────────┼──→ Agent SDK query() loop ──→ Claude ──→ Stream
+CLI ───────────────────┘       │                          │
+                               │                    MCP Tools (typed)
+                          Permission Gate            Afterburner APIs
+                          (approve/deny)             Customer Profiles</code></pre>
+<h2>Rabbit Holes (Updated)</h2>
+<ul><li>Don&#x27;t over-engineer the personality format — markdown is enough, no YAML schemas needed. ✅ Validated across 11 sprints.</li><li>Don&#x27;t build a custom vector DB for memory — JSONL + JSON facts is sufficient. ✅ Still holds.</li><li>~~Don&#x27;t try to support every LLM provider~~ — Multi-provider shipped in Sprint 11. Gateway pattern validated.</li><li>Voice/STT is Phase 3 — don&#x27;t let it creep into Phase 2. ✅ Held.</li><li>Don&#x27;t try to port everything to TypeScript at once — migrate the LLM gateway first, keep tools working.</li><li>Don&#x27;t add cloud deployment before the Agent SDK migration is solid — local-first.</li></ul>
+<h2>No-Gos (Updated)</h2>
+<ul><li>~~No WhatsApp in Phase 1~~ — WhatsApp is now a Phase 3 item, transport layer exists in tool-telegram-whatsapp.</li><li>No multi-tenant or cloud-hosted deployment until Phase 4.</li><li>No payment or billing integration.</li><li>No automated sprint launching from bot conversations (human reviews seed docs first). Still holds.</li><li>No embedding-based retrieval — fact extraction + JSONL is the memory model.</li></ul>
     </main>
     <footer class="site-footer">
       <p>Generated by Afterburner</p>

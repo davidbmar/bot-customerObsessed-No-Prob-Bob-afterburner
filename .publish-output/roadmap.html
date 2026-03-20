@@ -27,26 +27,107 @@
       <a href="plan.html" class="site-nav-link ">Plan</a>
       <a href="roadmap.html" class="site-nav-link nav-active">Roadmap</a>
       <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="sprints.html" class="site-nav-link ">Sprints</a>
+      <a href="sessions.html" class="site-nav-link ">Sessions</a>
       <a href="backlog.html" class="site-nav-link ">Backlog</a>
     </nav>
     <main class="site-main">
       <h1>Roadmap</h1>
-<h2>Roadmap</h2>
-<h3>Current Focus</h3>
-<ul><li>Create Afterburner project: <code>afterburner create_project afterburner-customer-bot</code></li><li>Personality loader (reads markdown, generates system prompt)</li><li>Base personality + customer-discovery personality docs</li><li>Qwen 3.5 via Ollama with tool-calling (<code>bot/llm.py</code>)</li><li><strong>Web chat UI at <code>http://localhost:1203/chat</code></strong> — dark theme, debug panel showing tools/principles/memory</li><li><strong>Web chat API</strong>: <code>POST /api/chat</code> (send message, get response), <code>GET /api/history</code> (conversation), <code>GET /api/personality</code> (current personality info)</li><li>Telegram polling loop (runs alongside web server)</li><li>Tools: save_discovery, get_project_summary</li><li>Conversation memory (JSONL per chat, works for both web and Telegram)</li><li>CLI: <code>afterburner-bot start</code> (server + polling), <code>afterburner-bot chat</code> (interactive CLI)</li><li>Test: have a real discovery conversation via web chat AND Telegram</li></ul>
-<h3>Next Up</h3>
-<ul><li>More tools: generate_vision, add_to_backlog, get_sprint_status</li><li>Post-sprint feedback loop (&quot;here&#x27;s what shipped, does it match?&quot;)</li><li>Evaluation framework with scenario tests</li><li>Fact extraction from conversations (LLM-generated summaries)</li><li>Multi-project support (backend registry)</li><li>Web chat settings panel: switch personality, switch model, view memory</li></ul>
+<h2>Completed Phases</h2>
+<h3>Phase 1: Foundation (Sprints 1-4) ✅</h3>
+<ul><li>Personality framework with inheritance (base.md → customer-discovery.md, 9 principles)</li><li>Qwen 3:4b via Ollama with tool calling</li><li>Web chat UI at localhost:1203 (dark theme, chat bubbles)</li><li>Conversation memory (JSONL per chat)</li><li>CLI commands: start, chat, status</li><li>Telegram polling transport</li><li>save_discovery tool (conversation → seed doc)</li><li>End-to-end pipeline test</li><li><strong>56 tests passing</strong></li></ul>
+<h3>Phase 2: Integration + Polish + Multi-Provider (Sprints 5-11) ✅</h3>
+<ul><li>Evaluation framework (YAML scenarios, CLI runner)</li><li>5 additional tools: get_project_summary, add_to_backlog, get_sprint_status, generate_vision, feedback_on_sprint</li><li>Fact extraction (LLM-generated structured summaries)</li><li>Web chat debug panel (principles, tools, tokens, latency, facts — toggleable)</li><li>Web chat settings panel (switch personality, model, provider)</li><li>Multi-project support (switch between Afterburner projects)</li><li>Multi-provider LLM: Ollama + Claude (Haiku/Sonnet/Opus), runtime switching</li><li>Conversation export to markdown</li><li>Personality hot-reload</li><li>UX: welcome message, progress indicator, new conversation button</li><li><strong>183 tests passing, 22 features shipped</strong></li></ul>
+<h2>Current Focus: Phase 3 — Agent SDK + Voice + Profiles</h2>
+<h3>Sprint 12: Agent SDK Migration</h3>
+<ul><li>Port LLM gateway from Python to TypeScript Agent SDK <code>query()</code> loop</li><li>WebSocket streaming (agent → web chat, replacing HTTP request/response)</li><li>Typed MCP tools via <code>createSdkMcpServer()</code> + Zod schemas</li><li>Permission gating framework (auto-allow / require-approval)</li></ul>
+<h3>Sprint 13: Customer Profiles + Permissions</h3>
+<ul><li>Cross-conversation customer knowledge store</li><li>Profile-aware context injection</li><li>Permission UI in web chat (approve/deny destructive tool calls)</li></ul>
+<h3>Sprint 14: Voice + WhatsApp</h3>
+<ul><li>Whisper STT for Telegram voice messages</li><li>WhatsApp transport via tool-telegram-whatsapp</li><li>Optional TTS responses</li></ul>
+<h3>Sprint 15: Second Personality + Evaluation Expansion</h3>
+<ul><li>Tech-support personality (validates framework reusability)</li><li>10+ evaluation scenarios across both personality types</li><li>Comparative evaluation (same input, different personality)</li></ul>
+<h2>Future: Phase 4 — Multi-Bot Platform (Sprint 16+)</h2>
+<ul><li>Active learning from conversation outcomes</li><li>Personality marketplace</li><li>Multi-bot orchestration with shared customer context</li><li>Cloud deployment</li><li>Sub-agents for long-running tasks</li></ul>
 <h2>Architecture</h2>
-<h3>Key Decisions</h3>
-<ol><li><strong>Personality as a document, not config.</strong> Markdown that the LLM reads directly — humans write and review it naturally, the LLM interprets as guidance not rules.</li></ol>
-<ol><li><strong>Principles over patterns.</strong> Encode the <em>spirit</em> (&quot;understand the problem before proposing solutions&quot;) not the exact phrases (&quot;say &#x27;tell me more about...&#x27;&quot;). The LLM has judgment — let it use it.</li></ol>
-<ol><li><strong>Separate principles from prompts.</strong> Principles are the <em>what</em> (Customer Obsession). The system prompt is the <em>how</em> for a specific LLM. Different LLMs need different prompting — Qwen 3.5 might need more explicit instructions than Claude.</li></ol>
-<ol><li><strong>Memory as a separate system.</strong> Don&#x27;t embed memory rules in the personality. A reusable memory service that summarizes past conversations, extracts key facts, and feeds relevant context per conversation.</li></ol>
-<ol><li><strong>Personality inheritance.</strong> A base personality (polite, helpful, honest) that specific personalities extend with domain-specific principles.</li></ol>
-<ol><li><strong>Scenario-based evaluation.</strong> Test personalities with conversation scenarios, not unit tests. &quot;Given this input, does the bot behave according to its principles?&quot;</li></ol>
-<h3>Tech Stack</h3>
-<ul><li><strong>Bot backend:</strong> Python 3.11+, httpx, PyYAML</li><li><strong>LLM:</strong> Qwen 3:4b via Ollama (local inference — no API costs, privacy, works offline)</li><li><strong>Web chat:</strong> Self-contained HTML/CSS/JS served by bot&#x27;s HTTP server (port 1203)</li><li><strong>Telegram:</strong> Bot API polling via httpx</li><li><strong>Memory:</strong> JSONL per-chat + JSON fact extraction</li><li><strong>Evaluation:</strong> YAML scenario files tested against LLM responses</li><li><strong>Docs site:</strong> Static HTML deployed to S3 + CloudFront</li></ul>
-<p>--- implementation-phases.md ---</p>
+<h3>Current State (Python, Phase 2)</h3>
+<pre><code class="lang-">┌─────────────────────────────────────────────────────────────┐
+│  No Prob Bob (Python)                                       │
+│                                                             │
+│  Transports:            LLM Gateway:        Memory:         │
+│  ┌──────────┐           ┌────────────┐      ┌──────────┐   │
+│  │ Web Chat │──┐        │ get_client │      │ JSONL    │   │
+│  │  :1203   │  │        │            │      │ per-chat │   │
+│  ├──────────┤  ├──→ Gateway ──→│ Ollama   │  │ history  │   │
+│  │ Telegram │  │        │            │      ├──────────┤   │
+│  │ polling  │──┤        │ Claude     │      │ Facts    │   │
+│  ├──────────┤  │        │ (anthropic │      │ JSON     │   │
+│  │   CLI    │──┘        │  SDK)      │      └──────────┘   │
+│  └──────────┘           └────────────┘                      │
+│                                                             │
+│  Tools (6):                        Personalities:           │
+│  ├── save_discovery                ├── base.md              │
+│  ├── get_project_summary           └── customer-discovery.md│
+│  ├── add_to_backlog                                         │
+│  ├── get_sprint_status             Evaluations:             │
+│  ├── generate_vision               ├── surface-request.yaml │
+│  └── feedback_on_sprint            ├── vague-requirements   │
+│                                    └── pushback.yaml        │
+└─────────────────────────────────────────────────────────────┘
+         │
+         │ Afterburner APIs
+         ▼
+┌─────────────────────────┐
+│ Afterburner Dashboard   │
+│ :1201                   │
+│ (lifecycle, sprints,    │
+│  project memory)        │
+└─────────────────────────┘</code></pre>
+<h3>Phase 3 Target (TypeScript Agent SDK)</h3>
+<pre><code class="lang-">┌─────────────────────────────────────────────────────────────┐
+│  No Prob Bob (Agent SDK)                                    │
+│                                                             │
+│  Transports:            Agent Core:          Memory:        │
+│  ┌──────────┐           ┌────────────────┐   ┌───────────┐ │
+│  │ Web Chat │──┐        │ query() loop   │   │ Customer  │ │
+│  │ WebSocket│  │        │ (Agent SDK)    │   │ Profiles  │ │
+│  ├──────────┤  ├──→ Express ──→│                │   ├───────────┤ │
+│  │ Telegram │  │   + WS   │ Claude         │   │ JSONL     │ │
+│  │ polling  │──┤        │ (streaming)    │   │ per-chat  │ │
+│  ├──────────┤  │        │                │   ├───────────┤ │
+│  │ WhatsApp │──┤        │ Permission     │   │ Facts     │ │
+│  ├──────────┤  │        │ Gate           │   │ (struct.) │ │
+│  │   CLI    │──┘        └────────────────┘   └───────────┘ │
+│  └──────────┘                                               │
+│                                                             │
+│  MCP Tools (typed, Zod schemas):                            │
+│  ├── save_discovery        ← auto-allow                     │
+│  ├── get_project_summary   ← auto-allow                     │
+│  ├── add_to_backlog        ← require approval               │
+│  ├── get_sprint_status     ← auto-allow                     │
+│  ├── generate_vision       ← require approval               │
+│  └── feedback_on_sprint    ← auto-allow                     │
+│                                                             │
+│  Personalities:              Voice:                          │
+│  ├── base.md                 ├── Whisper STT (Telegram)     │
+│  ├── customer-discovery.md   └── TTS (optional)             │
+│  └── tech-support.md                                        │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<h2>Tech Stack</h2>
+<h3>Current (Phase 2)</h3>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Technology</th></tr></thead><tbody><tr><td>Bot backend</td><td>Python 3.11+, httpx, PyYAML</td></tr><tr><td>LLM (local)</td><td>Qwen 3.5 via Ollama</td></tr><tr><td>LLM (cloud)</td><td>Claude (Haiku/Sonnet/Opus) via anthropic SDK</td></tr><tr><td>Web chat</td><td>Self-contained HTML/CSS/JS (port 1203, no build step)</td></tr><tr><td>Telegram</td><td>Bot API polling via httpx</td></tr><tr><td>Memory</td><td>JSONL per-chat + JSON fact extraction</td></tr><tr><td>Evaluation</td><td>YAML scenario files + LLM judge</td></tr><tr><td>Config</td><td>JSON at ~/.config/afterburner-bots/config.json</td></tr><tr><td>Tests</td><td>pytest (183 tests)</td></tr></tbody></table></div>
+<h3>Phase 3 Additions</h3>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Technology</th></tr></thead><tbody><tr><td>Agent core</td><td>TypeScript, Claude Agent SDK (<code>query()</code> loop)</td></tr><tr><td>Streaming</td><td>WebSocket (Express + ws)</td></tr><tr><td>Tool definitions</td><td>MCP via <code>createSdkMcpServer()</code> + Zod schemas</td></tr><tr><td>Permissions</td><td>Typed gate (auto-allow / require-approval)</td></tr><tr><td>Voice STT</td><td>Whisper (small model)</td></tr><tr><td>WhatsApp</td><td>tool-telegram-whatsapp transport layer</td></tr><tr><td>Customer profiles</td><td>JSON cross-conversation store</td></tr></tbody></table></div>
+<h2>Key Architectural Decisions</h2>
+<ol><li><strong>Personality as markdown, not config.</strong> Humans write documents, LLMs read them. No YAML schemas, no rigid templates. Validated across 11 sprints and 22 features.</li></ol>
+<ol><li><strong>Principles over patterns.</strong> Encode the spirit (&quot;understand the problem before proposing solutions&quot;), not exact phrases. The LLM has judgment — let it use it.</li></ol>
+<ol><li><strong>Gateway pattern for LLM abstraction.</strong> Multiple transports feed into one gateway, which routes to one of N providers. Validated when Claude was added in Sprint 11 with zero transport changes.</li></ol>
+<ol><li><strong>Memory as a separate system.</strong> Not embedded in personality. Reusable across all bots. JSONL for history, JSON for extracted facts.</li></ol>
+<ol><li><strong>Personality inheritance.</strong> base.md defines foundation behavior. Domain personalities extend it. New bots inherit base automatically.</li></ol>
+<ol><li><strong>Scenario-based evaluation.</strong> Test bot behavior with conversation scenarios, not unit tests. &quot;Given this input, does the bot follow its principles?&quot;</li></ol>
+<ol><li><strong>Single-agent sprints.</strong> After merge failures in Sprints 4-5, switched to single-agent sprints for reliability. This pattern held through Sprint 11.</li></ol>
+<h2>Open Bugs</h2>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>Title</th><th>Priority</th></tr></thead><tbody><tr><td>B-008</td><td>sprint-run.sh crashes with <code>local -A</code> on zsh — agents run but merge/polling dies</td><td>High</td></tr><tr><td>B-009</td><td>Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built</td><td>Medium</td></tr><tr><td>B-010</td><td>GitHub not configured in dashboard project entry</td><td>Low</td></tr></tbody></table></div>
     </main>
     <footer class="site-footer">
       <p>Generated by Afterburner</p>

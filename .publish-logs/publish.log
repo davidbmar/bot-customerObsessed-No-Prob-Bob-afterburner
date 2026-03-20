@@ -147,3 +147,58 @@ Invalidating CloudFront distribution E1YX41GAI6KJG5
     }
 }
 Deploy complete. Files synced: 0
+
+--- Generate started at 2026-03-20T06:07:00.893861+00:00 ---
+Generated 8 pages to /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output
+
+--- Deploy started at 2026-03-20T06:07:00.909925+00:00 ---
+Infrastructure ready: bucket=bot-customer-obsessed-no-prob-bob-afterburner-s3-website, cloudfront=d3gb25yycyv0d9.cloudfront.net
+Syncing /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/
+Completed 1.7 KiB/125.0 KiB (14.4 KiB/s) with 10 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/auth.js to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/auth.js
+Completed 1.7 KiB/125.0 KiB (14.4 KiB/s) with 9 file(s) remaining
+Completed 11.0 KiB/125.0 KiB (40.5 KiB/s) with 9 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/css/style.css to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/css/style.css
+Completed 11.0 KiB/125.0 KiB (40.5 KiB/s) with 8 file(s) remaining
+Completed 18.9 KiB/125.0 KiB (68.5 KiB/s) with 8 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/backlog.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/backlog.html
+Completed 18.9 KiB/125.0 KiB (68.5 KiB/s) with 7 file(s) remaining
+Completed 28.7 KiB/125.0 KiB (103.9 KiB/s) with 7 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/vision.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/vision.html
+Completed 28.7 KiB/125.0 KiB (103.9 KiB/s) with 6 file(s) remaining
+Completed 38.5 KiB/125.0 KiB (138.5 KiB/s) with 6 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/plan.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/plan.html
+Completed 38.5 KiB/125.0 KiB (138.5 KiB/s) with 5 file(s) remaining
+Completed 41.5 KiB/125.0 KiB (149.1 KiB/s) with 5 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/index.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/index.html
+Completed 41.5 KiB/125.0 KiB (149.1 KiB/s) with 4 file(s) remaining
+Completed 54.3 KiB/125.0 KiB (195.0 KiB/s) with 4 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/roadmap.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/roadmap.html
+Completed 54.3 KiB/125.0 KiB (195.0 KiB/s) with 3 file(s) remaining
+Completed 76.0 KiB/125.0 KiB (241.3 KiB/s) with 3 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/sessions.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/sessions.html
+Completed 76.0 KiB/125.0 KiB (241.3 KiB/s) with 2 file(s) remaining
+Completed 105.6 KiB/125.0 KiB (332.0 KiB/s) with 2 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/use-cases.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/use-cases.html
+Completed 105.6 KiB/125.0 KiB (332.0 KiB/s) with 1 file(s) remaining
+Completed 125.0 KiB/125.0 KiB (388.6 KiB/s) with 1 file(s) remaining
+upload: ../../bot-customerObsessed-No-Prob-Bob-afterburner/.publish-output/sprints.html to s3://bot-customer-obsessed-no-prob-bob-afterburner-s3-website/sprints.html
+Invalidating CloudFront distribution E1YX41GAI6KJG5
+{
+    "Location": "https://cloudfront.amazonaws.com/2020-05-31/distribution/E1YX41GAI6KJG5/invalidation/I3AFU3YRT35T5RBI1VULUSXYI7",
+    "Invalidation": {
+        "Id": "I3AFU3YRT35T5RBI1VULUSXYI7",
+        "Status": "InProgress",
+        "CreateTime": "2026-03-20T06:07:04.863000+00:00",
+        "InvalidationBatch": {
+            "Paths": {
+                "Quantity": 1,
+                "Items": [
+                    "/*"
+                ]
+            },
+            "CallerReference": "cli-1773986824-67552"
+        }
+    }
+}
+Deploy complete. Files synced: 10

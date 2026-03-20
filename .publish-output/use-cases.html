@@ -27,23 +27,68 @@
       <a href="plan.html" class="site-nav-link ">Plan</a>
       <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
       <a href="use-cases.html" class="site-nav-link nav-active">Use Cases</a>
+      <a href="sprints.html" class="site-nav-link ">Sprints</a>
+      <a href="sessions.html" class="site-nav-link ">Sessions</a>
       <a href="backlog.html" class="site-nav-link ">Backlog</a>
     </nav>
     <main class="site-main">
       <h1>Use Cases</h1>
-<div class="seed-entry"><h3>README</h3><h1>Seed Directory</h1>
-<p>Drop source materials here to auto-generate lifecycle document drafts.</p>
-<h2>Supported Formats</h2>
-<ul><li><strong>Markdown</strong> (<code>.md</code>) — best support, headings are parsed as sections</li><li><strong>Text</strong> (<code>.txt</code>) — plain text, parsed by heading patterns</li><li><strong>Word</strong> (<code>.docx</code>) — text extracted from document XML</li></ul>
-<h2>What to Put Here</h2>
-<p>Any documents that describe your product vision, architecture, sprint plans, or technical decisions:</p>
-<ul><li>Product briefs or blueprints</li><li>Architecture decision documents</li><li>Sprint execution guides</li><li>Technical specs or RFCs</li><li>Meeting notes with key decisions</li></ul>
-<h2>How It Works</h2>
-<ol><li>Drop files into this <code>docs/seed/</code> directory</li><li>Open the Sprint Dashboard → Lifecycle tab</li><li>Click <strong>Scan Seed Directory</strong> to see detected files</li><li>Click <strong>Generate Drafts</strong> to auto-populate Vision, Plan, and Roadmap forms</li><li>Review and edit the generated drafts — they&#x27;re starting points, not final versions</li></ol>
-<h2>What Gets Extracted</h2>
-<p>The generator looks for:</p>
-<ul><li><strong>Vision</strong>: product name, problem statements, target audience, differentiators, solution descriptions</li><li><strong>Plan</strong>: appetite/timeline, solution sketches, market analysis, rabbit holes, no-gos, sprint candidates</li><li><strong>Roadmap</strong>: current focus, milestones, system architecture, key decisions, tech stack, constraints</li><li><strong>Codebase signals</strong>: package.json (name, dependencies), Prisma schema (data models), README (description)</li></ul>
-<p>Drafts fill empty fields only — they never overwrite content you&#x27;ve already written.</p></div><hr>
+<div class="seed-entry"><h3>README</h3><h1>vibecode-agent</h1>
+<p>The autonomous deploy agent for Vibecode. Powered by the Claude Agent SDK.</p>
+<h2>Architecture</h2>
+<pre><code class="lang-">deploy-portal (frontend)
+    │  POST /api/jobs
+    │  WebSocket ws://…?jobId=xxx
+    ▼
+vibecode-agent (this repo)  ← you are here
+    │  runDeployAgent()
+    │  Claude Agent SDK (query loop)
+    ▼
+Claude Sonnet 4.6
+    │  calls tools via in-process MCP
+    ▼
+AWS Tools:  ensure_ecr_repo, get_ecr_login_password,
+            get_deploy_status, force_ecs_redeploy, get_secret
+Repo Tools: clone_repo, detect_app_type
+Bash:       general-purpose (docker build/push, terraform, etc.)</code></pre>
+<h2>How the loop works</h2>
+<ol><li><code>deploy-portal</code> POSTs a <code>DeployJob</code> to <code>/api/jobs</code></li><li>Server assigns a <code>jobId</code>, immediately returns it to the frontend</li><li>Frontend connects a WebSocket using that <code>jobId</code></li><li><code>runDeployAgent()</code> starts — internally the Agent SDK drives:</li></ol>
+<ul><li>gather context (clone repo, detect type)</li><li>take action (build image, push to ECR, run terraform, deploy ECS)</li><li>verify (health check)</li><li>repeat until done</li></ul>
+<ol><li>Every agent message streams over WebSocket in real time</li><li>Destructive operations (terraform apply, prod deploys) pause and wait</li></ol>
+<p>   for the user to click Approve in the portal</p>
+<h2>Permission model</h2>
+<div class="table-wrap"><table><thead><tr><th>Tool</th><th>Behavior</th></tr></thead><tbody><tr><td>Bash, Read, Glob, list_ecr_repos, get_deploy_status, clone_repo, run_terraform_plan</td><td>Auto-allow</td></tr><tr><td>push_to_production, run_terraform_apply, delete_ecr_repo, rotate_secrets</td><td>Require human approval</td></tr><tr><td>Everything else</td><td>Auto-allow + audit log</td></tr></tbody></table></div>
+<h2>Getting started</h2>
+<pre><code class="lang-bash">npm install
+
+# Local test (interactive terminal approval)
+ANTHROPIC_API_KEY=sk-... tsx src/test-run.ts
+
+# Full server
+ANTHROPIC_API_KEY=sk-... \
+AWS_REGION=us-east-1 \
+AWS_ACCOUNT_ID=123456789012 \
+npm run dev</code></pre>
+<h2>Environment variables</h2>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>ANTHROPIC_API_KEY</code></td><td>Yes</td><td>Your Anthropic API key</td></tr><tr><td><code>AWS_REGION</code></td><td>No</td><td>Defaults to us-east-1</td></tr><tr><td><code>AWS_ACCOUNT_ID</code></td><td>Yes</td><td>Your AWS account ID</td></tr><tr><td><code>VIBECODE_WORKSPACE</code></td><td>No</td><td>Where repos are cloned (default: /tmp/vibecode-jobs)</td></tr><tr><td><code>PORT</code></td><td>No</td><td>Server port (default: 3001)</td></tr></tbody></table></div>
+<h2>Key files</h2>
+<pre><code class="lang-">src/
+  agent.ts         ← core: query() call, permission gate, prompt builder
+  system-prompt.ts ← agent personality and operating rules
+  server.ts        ← Express + WebSocket bridge to deploy-portal
+  test-run.ts      ← local smoke test
+
+tools/
+  aws.ts           ← typed AWS tools (ECR, ECS, Secrets Manager)
+  repo.ts          ← typed repo tools (clone, detect)
+
+types/
+  index.ts         ← DeployJob, AgentMessage, DeployResult</code></pre>
+<h2>What to build next</h2>
+<ul><li><strong>Job persistence</strong>: Write transcript + result to DynamoDB after each run</li><li><strong>Audit log</strong>: Persist every tool call with input/output for SOC2</li><li><strong>Queue</strong>: Add BullMQ or SQS in front of runJob() for concurrency control</li><li><strong>CLAUDE.md</strong>: Drop a <code>CLAUDE.md</code> in your infra repo with Vibecode-specific</li></ul>
+<p>  conventions; the agent will read it automatically via settingSources: [&#x27;project&#x27;]</p>
+<ul><li><strong>Subagents</strong>: Spin off a dedicated terraform subagent for long plan/apply cycles</li></ul>
+<p>  so they run in an isolated context window</p></div><hr>
 <div class="seed-entry"><h3>customer-discovery-bot</h3><h1>Customer Discovery Bot — Architecture &amp; Implementation</h1>
 <h2>Context</h2>
 <p>Afterburner handles engineering (sprints, agents, code). But there&#x27;s no customer-facing layer that captures <strong>what to build and why</strong>. We need a bot that lives in Telegram/WhatsApp, talks to customers, obsessively clarifies use cases, and translates conversations into requirements Afterburner can execute.</p>

@@ -6,7 +6,7 @@ AI developer tools start with the code and assume you know what to build. The ga
 
 ## Appetite
 
-4 phases over 16+ sprints. Phases 1-2 are complete (11 sprints shipped). Phase 3 is next (Sprints 12-15). Phase 4 is future exploration.
+4 phases over 19+ sprints. Phases 1-2 are complete (19 sprints shipped). Phase 3 is next. Phase 4 is future exploration.
 
 ## Phase 1: Foundation (DONE — Sprints 1-4)
 
@@ -25,111 +25,84 @@ AI developer tools start with the code and assume you know what to build. The ga
 
 **Test count at Phase 1 end:** 56 tests
 
-## Phase 2: Integration + Polish + Multi-Provider (DONE — Sprints 5-11)
+## Phase 2: Integration + Polish + Multi-Provider (DONE — Sprints 5-19)
 
-**Goal:** Full Afterburner integration, evaluation framework, polished UX, multi-provider LLM.
+**Goal:** Full Afterburner integration, evaluation framework, polished UX, multi-provider LLM, production-ready web chat.
 
-**Delivered:**
-- Evaluation framework with YAML scenario tests and CLI runner (3 scenarios)
-- 4 additional tools: get_project_summary, add_to_backlog, get_sprint_status, generate_vision
+**Delivered (Sprints 5-11, original Phase 2):**
+- Evaluation framework with YAML scenario tests and CLI runner
+- 6 Afterburner tools: save_discovery, get_project_summary, add_to_backlog, get_sprint_status, generate_vision, feedback_on_sprint
 - Fact extraction from conversations (LLM-generated structured summaries)
-- feedback_on_sprint tool ("here's what shipped, does it match?")
-- Web chat debug panel — principles, tools called, tokens, latency, facts (toggle on/off)
-- Web chat settings panel — switch personality, switch model, view memory
-- Multi-project support — bot switches between Afterburner projects
-- Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus), runtime switching from UI
-- Conversation export to markdown
-- Personality hot-reload (change behavior without restart)
-- UX polish: welcome message, progress indicator (animated dots + elapsed time), new conversation button
+- Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus) + ChatGPT, runtime switching from UI
+- Web chat debug panel, settings panel, welcome message, progress indicator
+- Multi-project support, conversation export, personality hot-reload
 
-**Test count at Phase 2 end:** 183 tests
+**Delivered (Sprints 12-19, extended Phase 2):**
+- SSE streaming responses (word-by-word instead of waiting 20-40s)
+- Conversation persistence across page reloads (localStorage)
+- Error handling with retry (red error bubbles when LLM unreachable)
+- 19 PROJECT_STATUS docs for full dashboard sprint history
+- Save-as-seed-doc button in web chat UI
+- Auto-synthesis after 5+ exchanges (Problem/Users/Use Cases/Success Criteria)
+- Auto-scroll on new messages
+- Mobile-responsive CSS with viewport meta
+- Conversation sidebar with search, delete, title editing
+- Token cost display for paid providers
+- Dark/light theme toggle with system preference detection
+- 9 evaluation scenarios (technical, emotional, multi-problem, solution-fixated, returning, enterprise)
+- E2E integration tests proving discovery→seed doc pipeline
+- Comprehensive README with quick start, API reference, architecture
+- CLI evaluate with colored pass/fail output
+- Markdown rendering in bot messages (bold, code, lists)
+- Date grouping in chat history (Today, Yesterday, Mar 19)
+- Structured seed doc export with Problem/Users/Use Cases sections
+- Debug panel hidden by default (CSS-level fix)
+- Sidebar collapsed on first visit
+- Typing indicator animation (pulsing dots)
+
+**Test count at Phase 2 end:** 485 tests, 52 features shipped
 
 **Notable sprint lessons:**
-- Sprints 4-5 had merge failures when multiple agents touched the same files. Sprint 6 switched to single-agent sprints for reliability — this pattern held through Sprint 11.
-- Multi-provider LLM (Sprint 11) was the capstone: the bot went from Ollama-only to supporting Claude, validating the gateway architecture.
+- Sprints 4-5 had merge failures with multiple agents. Sprint 6 switched to single-agent sprints. Sprints 12-19 used safe file-ownership splitting for 2-agent parallelism.
+- The build→test→backlog→sprint loop (Sprints 12-19) shipped 30 features and +302 tests in ~3 hours of wall clock time.
 
-## Phase 3: Agent SDK + Voice + Profiles (NEXT — Sprints 12-15)
+## Phase 3: Agent SDK + Voice + Profiles (NEXT)
 
 **Goal:** Migrate to the Agent SDK architecture, add voice support, customer profiles, and a second personality type.
 
 The seed docs include a TypeScript Agent SDK reference implementation (vibecode-agent) that demonstrates the target architecture: query loop, WebSocket streaming, typed permission gating, in-process MCP server.
 
-### Sprint 12 Candidate: Agent SDK Migration
-- Port the Python LLM gateway to TypeScript Agent SDK `query()` loop
-- Replace HTTP request/response with WebSocket streaming (agent → web chat)
-- Typed tool definitions via `createSdkMcpServer()` + Zod schemas
-- Preserve all 6 existing tools as MCP tools
-- **Target:** 200+ tests (port existing Python tests to TypeScript)
+### Sprint Candidates
+- Agent SDK Migration: Port Python LLM gateway to TypeScript Agent SDK `query()` loop
+- WebSocket streaming: Replace SSE with WebSocket for bidirectional communication
+- Permission gating: Auto-allow read ops, require approval for destructive tools
+- Customer profiles: Cross-conversation knowledge store
+- Voice: Whisper STT for Telegram voice messages, WhatsApp transport
+- Second personality: Tech-support personality to validate framework reusability
 
-### Sprint 13 Candidate: Permission Gating + Profiles
-- Permission model: auto-allow read ops, require approval for destructive tools (save_discovery, generate_vision, add_to_backlog)
-- Customer profiles: cross-conversation knowledge store (who said what across sessions)
-- Profile-aware context injection (previous conversations with same customer inform current session)
-- **Target:** 220+ tests
-
-### Sprint 14 Candidate: Voice + WhatsApp
-- Whisper STT for Telegram voice messages
-- WhatsApp transport via tool-telegram-whatsapp
-- TTS responses (optional, using macOS `say` or cloud TTS)
-- Voice message → text → discovery → text response flow
-- **Target:** 240+ tests
-
-### Sprint 15 Candidate: Second Personality + Evaluation Expansion
-- Tech-support personality to validate framework reusability
-- Personality inheritance tested with real usage (base → tech-support)
-- Expanded evaluation scenarios (10+ scenarios across both personalities)
-- Evaluation comparison: same input, different personality, expected different behavior
-- **Target:** 260+ tests
-
-## Phase 4: Multi-Bot Platform (FUTURE — Sprint 16+)
+## Phase 4: Multi-Bot Platform (FUTURE)
 
 **Goal:** From a single bot to a platform for building and deploying personality-driven agents.
 
 **Exploration areas:**
-- Active learning — bot improves discovery questions based on which conversations produce the best seed docs
-- Personality marketplace — community-contributed bot behaviors with evaluation scores
-- Multi-bot orchestration — discovery bot hands off to tech-support bot with shared customer context
-- Cloud deployment — move from local-only to hosted service
-- Sub-agents — spin off dedicated agents for long-running tasks (like the vibecode-agent pattern for terraform)
-
-## Solution Architecture
-
-The bot uses a **gateway pattern** — a single LLM orchestration layer with multiple transport adapters (web chat, Telegram, CLI) and multiple LLM backends (Ollama, Claude). The personality framework reads markdown documents that encode principles, not rigid rules, allowing the LLM to use judgment.
-
-**Current architecture (Python, Phase 2):**
-```
-Web Chat (:1203) ──┐
-Telegram polling ──┼──→ Gateway ──→ LLM (Ollama/Claude) ──→ Response
-CLI ───────────────┘       │              │
-                           │         Tool calls
-                           │              │
-                     Memory (JSONL)   Afterburner APIs
-                     Facts (JSON)     (6 tools)
-```
-
-**Target architecture (TypeScript Agent SDK, Phase 3):**
-```
-Web Chat (WebSocket) ──┐
-Telegram ──────────────┼──→ Agent SDK query() loop ──→ Claude ──→ Stream
-CLI ───────────────────┘       │                          │
-                               │                    MCP Tools (typed)
-                          Permission Gate            Afterburner APIs
-                          (approve/deny)             Customer Profiles
-```
+- Active learning from conversation outcomes
+- Personality marketplace
+- Multi-bot orchestration with shared customer context
+- Cloud deployment
+- Sub-agents for long-running tasks
 
 ## Rabbit Holes (Updated)
 
-- Don't over-engineer the personality format — markdown is enough, no YAML schemas needed. ✅ Validated across 11 sprints.
+- Don't over-engineer the personality format — markdown is enough. ✅ Validated across 19 sprints.
 - Don't build a custom vector DB for memory — JSONL + JSON facts is sufficient. ✅ Still holds.
-- ~~Don't try to support every LLM provider~~ — Multi-provider shipped in Sprint 11. Gateway pattern validated.
-- Voice/STT is Phase 3 — don't let it creep into Phase 2. ✅ Held.
-- Don't try to port everything to TypeScript at once — migrate the LLM gateway first, keep tools working.
-- Don't add cloud deployment before the Agent SDK migration is solid — local-first.
+- Multi-provider shipped in Sprint 11. Gateway pattern validated. ✅
+- Voice/STT remains Phase 3.
+- Don't port everything to TypeScript at once — migrate the LLM gateway first.
+- Don't add cloud deployment before the Agent SDK migration is solid.
 
 ## No-Gos (Updated)
 
-- ~~No WhatsApp in Phase 1~~ — WhatsApp is now a Phase 3 item, transport layer exists in tool-telegram-whatsapp.
 - No multi-tenant or cloud-hosted deployment until Phase 4.
 - No payment or billing integration.
-- No automated sprint launching from bot conversations (human reviews seed docs first). Still holds.
+- No automated sprint launching from bot conversations (human reviews seed docs first).
 - No embedding-based retrieval — fact extraction + JSONL is the memory model.

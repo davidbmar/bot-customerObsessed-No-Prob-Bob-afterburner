@@ -15,6 +15,10 @@ import os
 import signal
 import sys
 
+# Ignore SIGPIPE — prevents crash when Anthropic/OpenAI SDK encounters broken pipes
+if hasattr(signal, "SIGPIPE"):
+    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+
 # Load .env file if present (for API keys)
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 if os.path.isfile(_env_path):

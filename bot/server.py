@@ -7,7 +7,13 @@ import logging
 import os
 import signal
 import subprocess
+import sys
 import threading
+
+# Ignore SIGPIPE — prevents crash when external API clients (anthropic/openai)
+# encounter broken pipes in threaded HTTP handlers
+if hasattr(signal, "SIGPIPE"):
+    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 import uuid
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -98,17 +104,22 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._json_response({"error": "Empty message"}, status=400)
             return
 
-        response = self.gateway.process_message(conversation_id, text)
-        self._json_response({
-            "response": response.text,
-            "personality": self.gateway.personality.name,
-            "tools_called": response.tools_called,
-            "principles_active": response.principles,
-            "memory_count": response.memory_count,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "duration_ms": response.duration_ms,
-        })
+        try:
+            response = self.gateway.process_message(conversation_id, text)
+            self._json_response({
+                "response": response.text,
+                "personality": self.gateway.personality.name,
+                "tools_called": response.tools_called,
+                "principles_active": response.principles,
+                "memory_count": response.memory_count,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "duration_ms": response.duration_ms,
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self._json_response({"error": str(e)}, status=500)
 
     def _handle_get_personalities(self) -> None:
         """List available personalities from the personalities/ directory."""
@@ -374,10 +385,18 @@ class ThreadedHTTPServer(HTTPServer):
     def _handle(self, request, client_address) -> None:  # type: ignore[no-untyped-def]
         try:
             self.finish_request(request, client_address)
-        except Exception:
-            self.handle_error(request, client_address)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            try:
+                self.handle_error(request, client_address)
+            except Exception:
+                pass
         finally:
-            self.shutdown_request(request)
+            try:
+                self.shutdown_request(request)
+            except Exception:
+                pass
 
 
 def create_app(gateway: Gateway | None = None, port: int = PORT) -> ThreadedHTTPServer:
@@ -397,7 +416,7 @@ def start_server(gateway: Gateway, port: int = PORT) -> ThreadedHTTPServer:
 
     server = create_app(gateway, port)
 
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=False)
     thread.start()
 
     log.info("Bot web server started at http://%s:%d/chat", HOST, port)

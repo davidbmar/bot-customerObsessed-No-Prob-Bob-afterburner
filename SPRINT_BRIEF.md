@@ -1,97 +1,102 @@
-# Sprint 15
+# Sprint 16
 
 Goal
-- Add more evaluation scenarios — expand from 3 to 8+ scenarios with diverse customer types (F-035)
-- Delete conversation from sidebar — right-click or swipe to remove old chats (F-036)
-- Search conversations — filter sidebar by keyword (F-037)
-- Dark/light theme toggle (F-038)
+- Prove the end-to-end value loop: discovery conversation → save seed doc → verify seed doc exists in an Afterburner project (F-039)
+- Write a comprehensive README with getting-started guide, screenshots, and API reference (F-042)
+- Fix debug panel showing by default on page load (B-013)
+- Improve CLI evaluate output with pass/fail colors (F-043)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- Web chat UI is self-contained in bot/chat_ui.html (no build step, vanilla JS)
-- agentA owns evaluations/ and tests/ — agentB MUST NOT touch these
-- agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
+- agentA owns tests/, bot/server.py, bot/gateway.py, bot/tools.py — agentB MUST NOT touch these
+- agentB owns README.md, bot/chat_ui.html, evaluations/runner.py — agentA MUST NOT touch these
 
 Merge Order
-1. agentA-eval-expansion
-2. agentB-chat-ux
+1. agentA-e2e-integration
+2. agentB-docs-and-polish
 
 Merge Verification
 ```bash
 cd /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner
-.venv/bin/python3 -c "from evaluations.runner import EvaluationRunner; r = EvaluationRunner('evaluations/scenarios'); print(f'Scenarios: {len(r.scenarios)}')"
 .venv/bin/python3 -m pytest tests/ -v 2>&1 | tail -5
+cat README.md | head -5
 ```
 
 Previous Sprint
-- Sprint 14: conversation sidebar, token count fix, provider label fix, cost display. 271 tests pass.
-- Evaluation framework exists with 3 scenarios (surface-request, vague-requirements, pushback)
-- Sidebar shows past conversations with first message preview, timestamp, message count
-- Published to CloudFront: https://d3gb25yycyv0d9.cloudfront.net
+- Sprint 15: 9 eval scenarios (was 3), delete/search conversations, dark/light theme toggle. 363 tests pass.
+- save_discovery tool exists and API endpoint POST /api/tools/save_discovery exists (Sprint 13)
+- But no automated test proves the full loop: chat → synthesis → save seed → file appears in target project
+- README.md is minimal — no getting-started guide, no screenshots, no API reference
+- Debug panel still shows by default on page load (B-013 open since Sprint 12)
+- CLI evaluate command works but output is plain text with no color coding
 
-## agentA-eval-expansion
-
-Objective
-- Expand evaluation scenarios to test more customer types and edge cases
-
-Tasks
-1. **Add 5+ new evaluation scenarios** in `evaluations/scenarios/`:
-   - `technical-customer.yaml` — customer who speaks in technical jargon ("we need a REST API with OAuth2")
-     - Pass: bot asks about the users of the API, not just the tech specs
-   - `emotional-customer.yaml` — frustrated customer ("nothing works, this is terrible")
-     - Pass: bot acknowledges frustration before diving into discovery
-   - `multi-problem.yaml` — customer describes 3 problems at once
-     - Pass: bot helps prioritize, doesn't try to solve all at once
-   - `solution-fixated.yaml` — customer insists on a specific solution ("we need React Native")
-     - Pass: bot asks what problem the solution is meant to solve
-   - `returning-customer.yaml` — customer references a previous conversation
-     - Pass: bot acknowledges continuity and builds on prior context
-   - `enterprise-customer.yaml` — customer mentions compliance, security, audit requirements
-     - Pass: bot captures non-functional requirements alongside functional ones
-
-2. **Add tests for new scenarios**:
-   - Test each scenario loads correctly
-   - Test pass/fail criteria are well-formed
-   - Target: 285+ total tests
-
-3. **Update backlog** — Mark F-035 as Complete (Sprint 15)
-
-Acceptance Criteria
-- `ls evaluations/scenarios/*.yaml | wc -l` returns 8+
-- All scenarios have name, input, principles_tested, pass_criteria, fail_criteria
-- `.venv/bin/python3 -m pytest tests/ -v` — 285+ tests, 0 failures
-
-## agentB-chat-ux
+## agentA-e2e-integration
 
 Objective
-- Add conversation deletion, search, and theme toggle to web chat
+- Write integration tests proving the full discovery-to-seed-doc pipeline
 
 Tasks
-1. **Delete conversation** — Update `bot/chat_ui.html`:
-   - Add a small "×" button on each conversation entry in the sidebar
-   - Click "×" → confirm dialog "Delete this conversation?" → remove from localStorage
-   - If deleting the active conversation, switch to a new empty chat
-   - Also support long-press on mobile (or a "Delete" option in a context menu)
+1. **End-to-end integration test** — Create `tests/test_e2e_pipeline.py`:
+   - Test 1: Create a temporary project directory with `docs/seed/`
+   - Test 2: Simulate 5 message exchanges through the Gateway (mock LLM responses)
+   - Test 3: Call `save_discovery(project_root, conversation_summary)`
+   - Test 4: Verify a seed doc file was created in `{project_root}/docs/seed/`
+   - Test 5: Verify the seed doc contains the expected synthesis sections (Problem, Users, Use Cases)
+   - Test 6: Test the `/api/tools/save_discovery` HTTP endpoint returns 200 and creates the file
+   - Use `tempfile.mkdtemp()` for test project directories, clean up in teardown
 
-2. **Search conversations** — Update `bot/chat_ui.html`:
-   - Add a search input at the top of the sidebar
-   - Filter conversations by matching keyword against all message content
-   - Show matching conversations with the matching text highlighted
-   - Clear search restores full list
+2. **Fix save_discovery to handle missing project gracefully**:
+   - If the target project doesn't exist or `docs/seed/` doesn't exist, create it
+   - Return clear error message if project_root is invalid
 
-3. **Dark/light theme toggle** — Update `bot/chat_ui.html`:
-   - Add a sun/moon icon button in the header (next to Debug button)
-   - Light theme: white background, dark text, light blue bubbles
-   - Dark theme: current colors (default)
-   - Save preference to localStorage
-   - Use CSS custom properties for all colors so the toggle just swaps a class
+3. **Write tests for edge cases**:
+   - save_discovery with empty content
+   - save_discovery with invalid project path
+   - save_discovery when docs/seed/ doesn't exist (should create it)
+   - Target: 380+ total tests
 
-4. **Update backlog** — Mark F-036, F-037, F-038 as Complete (Sprint 15)
+4. **Update backlog** — Mark F-039 as Complete (Sprint 16)
 
 Acceptance Criteria
-- Can delete a conversation from sidebar
-- Typing in search filters conversations by content
-- Sun/moon button toggles between dark and light themes
-- Theme preference persists across page reloads
+- `tests/test_e2e_pipeline.py` proves the full loop
+- save_discovery creates `docs/seed/` if missing
+- `.venv/bin/python3 -m pytest tests/ -v` — 380+ tests, 0 failures
+
+## agentB-docs-and-polish
+
+Objective
+- Write comprehensive README, fix debug panel, improve evaluate CLI output
+
+Tasks
+1. **README.md** — Rewrite `README.md` with:
+   - Project name and one-line description
+   - Feature list with what's built (38 features across 15 sprints)
+   - Quick start: clone, install, run, open web chat
+   - Architecture overview (gateway pattern, personality framework, memory)
+   - API reference: all HTTP endpoints (`/api/chat`, `/api/chat/stream`, `/api/tools/save_discovery`, `/api/llm/providers`, etc.)
+   - Configuration: config file location, environment variables, personality docs
+   - Evaluation: how to run scenarios, add new scenarios
+   - Screenshots section (reference the existing screenshots or describe what to see)
+   - Tech stack summary
+   - Contributing guide (how to run tests, commit conventions)
+
+2. **Fix debug panel default** (B-013) — Update `bot/chat_ui.html`:
+   - On page load, debug panel should be hidden (collapsed)
+   - Only show when user clicks "Debug" button
+   - Check if there's a CSS class or JS state that controls initial visibility
+   - Save debug panel state to localStorage so it remembers user preference
+
+3. **CLI evaluate colors** (F-043) — Update `evaluations/runner.py`:
+   - Use ANSI colors in terminal output: green for pass, red for fail, yellow for warnings
+   - Show summary: "6/9 scenarios passed" with colored status per scenario
+   - Show which principles were tested and whether they held
+   - Add `--verbose` flag for detailed output, default is summary
+
+4. **Update backlog** — Mark F-042, F-043, B-013 as Complete (Sprint 16)
+
+Acceptance Criteria
+- README.md has Quick Start, API Reference, Architecture sections
+- Debug panel hidden on page load, toggled via button, state persisted
+- `afterburner-bot evaluate` shows colored pass/fail output

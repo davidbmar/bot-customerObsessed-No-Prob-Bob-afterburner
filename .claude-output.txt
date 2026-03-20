@@ -1,22 +1,19 @@
-`★ Insight ─────────────────────────────────────`
-- **Theme via CSS custom properties**: Because the existing code already used `var(--bg)`, `var(--text)`, etc. everywhere, adding a light theme was just defining an `html.light` class with different values — zero changes to individual component styles. This is the power of CSS custom properties for theming.
-- **Search with snippet extraction**: Rather than just filtering, the search extracts a context snippet around the match and highlights it with `<mark>`, giving the user visual confirmation of *where* the keyword appeared in the conversation.
-`─────────────────────────────────────────────────`
-
----
+All tasks complete.
 
 ## Summary
 
-**Files changed:**
-- `bot/chat_ui.html` — Added all three features (delete, search, theme toggle)
-- `docs/project-memory/backlog/README.md` — Marked F-036, F-037, F-038 as Complete (Sprint 15)
-- `docs/project-memory/sessions/S-2026-03-20-0640-sprint15-chat-ux.md` — Session doc
+### Files changed
+- **README.md** (new) — comprehensive docs with Quick Start, Architecture diagram, API Reference (all 20 endpoints), Configuration, Evaluation guide, CLI commands, Tech Stack, Contributing
+- **bot/chat_ui.html** — added explicit `else` branch in debug panel localStorage restore to force collapsed state for new users (B-013 fix)
+- **evaluations/runner.py** — added ANSI color helpers with `isatty()` detection, `print_results()` function with summary and verbose modes, principles summary
+- **cli.py** — added `--verbose/-v` flag to evaluate subparser, switched to `print_results()`
+- **docs/project-memory/backlog/README.md** — marked B-013, F-042, F-043 as Complete (Sprint 16)
+- **docs/project-memory/sessions/S-2026-03-20-0654-sprint16-docs-and-polish.md** (new) — session doc
 
-**Commands run:**
-- `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — 271 passed
-- `git commit` + `git push -u origin HEAD`
+### Commands run
+- `pytest tests/ -v` — 363 passed
+- `cli.py evaluate --verbose` — 9/9 scenarios passed with colored output
 
-**Notes / follow-on work:**
-- The brief mentioned "long-press on mobile" for delete — the current implementation uses a confirm dialog which works universally including mobile. A dedicated long-press gesture could be added later if desired.
-- Light theme colors are GitHub-inspired. Could be fine-tuned based on user feedback.
+### Notes / follow-on work
+- The debug panel fix (B-013) is minimal — the existing code was nearly correct; the explicit `else` branch makes the default-hidden behavior bulletproof for first-time users
+- The README references screenshots but none exist yet; a follow-on task could capture actual screenshots of the web chat UI

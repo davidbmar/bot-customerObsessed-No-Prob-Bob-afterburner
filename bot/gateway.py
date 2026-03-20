@@ -18,6 +18,13 @@ from .tools import execute_tool, set_config
 
 log = logging.getLogger(__name__)
 
+SYNTHESIS_THRESHOLD = 5
+SYNTHESIS_PROMPT_SUFFIX = (
+    "\n\nYou have had enough exchanges. In your next response, synthesize the "
+    "conversation into a structured summary with sections: Problem, Users, "
+    "Use Cases, Success Criteria. Present this as a formatted summary."
+)
+
 
 @dataclass
 class GatewayResponse:
@@ -60,6 +67,8 @@ class Gateway:
             self.llm = OllamaClient(model=model, base_url=ollama_url)
 
         self.memory = ConversationMemory()
+        self._exchange_counts: dict[str, int] = {}
+        self._synthesis_triggered: dict[str, bool] = {}
         self.config = config
         if config:
             set_config(config)
@@ -94,21 +103,32 @@ class Gateway:
 
         log.info("Switched LLM provider to %s (model=%s)", provider_id, resolved_model)
 
+    def _get_system_prompt(self, chat_id: str) -> str:
+        """Return the system prompt, appending synthesis instruction if threshold reached."""
+        count = self._exchange_counts.get(chat_id, 0)
+        if count >= SYNTHESIS_THRESHOLD and not self._synthesis_triggered.get(chat_id, False):
+            self._synthesis_triggered[chat_id] = True
+            return self.system_prompt + SYNTHESIS_PROMPT_SUFFIX
+        return self.system_prompt
+
     def process_message(self, chat_id: str, text: str) -> GatewayResponse:
         """Process a user message and return the bot's response.
 
         This is the main entry point — all transports call this.
         """
         self.memory.add(chat_id, "user", text)
+        self._exchange_counts[chat_id] = self._exchange_counts.get(chat_id, 0) + 1
 
         # Build context from conversation history
         history = self.memory.get_history(chat_id, limit=20)
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
+        system_prompt = self._get_system_prompt(chat_id)
+
         # Call LLM
         llm_resp = self.llm.chat(
             messages=messages,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt,
             tools=TOOL_DEFINITIONS,
         )
 
@@ -143,10 +163,12 @@ class Gateway:
         Falls back to non-streaming for clients without chat_stream().
         """
         self.memory.add(chat_id, "user", text)
+        self._exchange_counts[chat_id] = self._exchange_counts.get(chat_id, 0) + 1
 
         history = self.memory.get_history(chat_id, limit=20)
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
+        system_prompt = self._get_system_prompt(chat_id)
         start = time.monotonic()
 
         # Check if the LLM client supports streaming
@@ -154,7 +176,7 @@ class Gateway:
             # Fallback: non-streaming, yield full response as one chunk
             llm_resp = self.llm.chat(
                 messages=messages,
-                system_prompt=self.system_prompt,
+                system_prompt=system_prompt,
                 tools=TOOL_DEFINITIONS,
             )
             tools_called: list[dict[str, Any]] = []
@@ -167,7 +189,7 @@ class Gateway:
             # Streaming path
             gen = self.llm.chat_stream(
                 messages=messages,
-                system_prompt=self.system_prompt,
+                system_prompt=system_prompt,
                 tools=TOOL_DEFINITIONS,
             )
             full_content = ""

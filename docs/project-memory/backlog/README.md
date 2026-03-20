@@ -22,7 +22,7 @@ Track bugs and feature requests here.
 | B-014 | No PROJECT_STATUS docs exist — sprint-merge.sh never ran (all 11 sprints merged manually or via sprint-run.sh that crashed) | High | Complete (Sprint 12) |
 | B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Open |
 | B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
-| B-017 | `python3 bot/server.py` fails with relative import error — must use `python3 -m bot.server` (F-022 regression) | Medium | Open |
+| B-017 | `python3 bot/server.py` fails with relative import error — must use `python3 -m bot.server` (F-022 regression) | Medium | Complete (Sprint 13) |
 | B-018 | Token count inflated — shows 1378 out tokens for a 20-word response, likely counting thinking tokens or misreporting | Low | Open |
 | B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — Sprint 12 may have changed provider naming | Low | Open |
 | B-020 | Sprint 12 agent done markers not written — sprint-launch.sh done detection broken (related to B-008) | Medium | Open |
@@ -63,5 +63,5 @@ Track bugs and feature requests here.
 | F-030 | Token cost display — show estimated cost per message when using paid providers (Claude/ChatGPT) | Low | Open |
 | F-031 | Auto-scroll to bottom when new messages arrive or text streams in | Medium | Open |
 | F-032 | Conversation list sidebar — see past conversations and switch between them | Medium | Open |
-| F-033 | Export conversation as seed doc — "Save as seed" button that calls save_discovery from the UI | High | Open |
-| F-034 | Bot synthesis step — after 5-7 exchanges, bot auto-generates Problem/Users/Use Cases/Success Criteria summary | High | Open |
+| F-033 | Export conversation as seed doc — "Save as seed" button that calls save_discovery from the UI | High | Complete (Sprint 13) |
+| F-034 | Bot synthesis step — after 5-7 exchanges, bot auto-generates Problem/Users/Use Cases/Success Criteria summary | High | Complete (Sprint 13) |

@@ -1,74 +1,55 @@
-agentA-final-polish — Sprint 18
+agentB-markdown-and-dates — Sprint 19
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 17: provider label fix, PROJECT_STATUS docs for 12-16, typing dots animation. 445 tests pass.
-- Debug panel still visible on fresh page load (even after localStorage.clear()) — CSS default is wrong
-- Sidebar shows on desktop by default — takes up space before user has conversations to browse
-- Light theme defaults regardless of system preference
-- 16 PROJECT_STATUS docs — Sprint 17 is missing
-- Conversation title editing (F-041) is the last open feature
+- Sprint 18: debug panel CSS fix, sidebar collapse, system theme detection, conversation title editing. 470 tests pass.
+- Bot messages render as plain text — no markdown formatting even when the LLM outputs **bold** or `code`
+- save_discovery writes raw text — no structured format with Problem/Users/Use Cases sections
+- All timestamps show "HH:MM AM" with no date grouping — older messages have no date context
+- 17 PROJECT_STATUS docs (Sprint 18 missing)
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix debug panel CSS so it's truly hidden by default — the CSS must start it as hidden, not rely on JS (B-022)
-- Collapse sidebar by default on first visit — only show when user clicks hamburger (B-023)
-- Detect system color preference with prefers-color-scheme media query (B-024)
-- Add conversation title editing — click title in sidebar to rename (F-041)
-- Generate PROJECT_STATUS doc for Sprint 17 so dashboard stays current
+- Render markdown in bot messages — bold, italic, code blocks, lists, headers (F-044)
+- Export full conversation as structured seed doc with Problem/Users/Use Cases sections (F-047)
+- Group message timestamps by date — "Today", "Yesterday", "Mar 19" (F-045)
+- Generate PROJECT_STATUS doc for Sprint 18
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- Single agent — all changes are in interconnected UI files
+- agentA owns bot/server.py, bot/gateway.py, bot/tools.py, scripts/, docs/PROJECT_STATUS_*, tests/ — agentB MUST NOT touch these
+- agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
 
 
 Objective
-- Fix all first-use experience issues and add conversation title editing
+- Render markdown in bot messages, add date grouping to timestamps
 
 Tasks
-1. **Fix debug panel CSS default** (B-022):
-   - The debug panel container in chat_ui.html must have `display: none` in its CSS by default
-   - The "Debug" button click should toggle it to `display: block`
-   - Do NOT rely on JavaScript or localStorage to hide it initially — the CSS must hide it
-   - On page load, if localStorage says debug was open, JS sets `display: block`
-   - This way, even without JS, the panel is hidden
+1. **Markdown rendering** (F-044):
+   - Bot messages should render markdown: **bold**, *italic*, `inline code`, ```code blocks```, - lists, ## headers
+   - Use a lightweight markdown-to-HTML converter — either:
+     - A simple regex-based converter (no dependency) for basic markdown
+     - Or include a small inline markdown library (marked.js minified is ~30KB)
+   - Apply to bot message content before inserting into DOM
+   - User messages remain plain text (they're the user's input, not markdown)
+   - Code blocks should have a dark background and monospace font
+   - Sanitize HTML output to prevent XSS (no raw HTML passthrough)
 
-2. **Collapse sidebar by default** (B-023):
-   - Sidebar container should start with `display: none` or `transform: translateX(-100%)`
-   - Hamburger (☰) click toggles it open
-   - Once opened, save preference to localStorage
-   - On subsequent visits, respect the saved preference
+2. **Date grouping** (F-045):
+   - Before each message group from a different date, show a date separator
+   - Format: "Today", "Yesterday", or "Mon, Mar 19" for older dates
+   - Separator is a centered line with the date text (like chat apps)
+   - Apply to both restored conversations (from localStorage) and new messages
+   - CSS: `text-align: center; color: #888; font-size: 0.8em; margin: 1em 0;`
 
-3. **System color preference** (B-024):
-   - Add `@media (prefers-color-scheme: dark)` in CSS
-   - If no localStorage theme preference, use the system preference
-   - If localStorage has a saved preference, use that instead
-   - This means: first visit on macOS dark mode → dark theme; first visit on light mode → light theme
-
-4. **Conversation title editing** (F-041):
-   - In sidebar, clicking the conversation title text makes it editable (contenteditable or input)
-   - Press Enter or blur saves the new title to localStorage
-   - Default title remains the truncated first message
-
-5. **Generate PROJECT_STATUS for Sprint 17**:
-   - Run or extend `scripts/generate_sprint_history.py` to include Sprint 17
-   - Verify with `ls docs/PROJECT_STATUS_*.md | wc -l` → 17
-
-6. **Write tests**:
-   - Test debug panel default hidden state
-   - Test sidebar default collapsed state
-   - Test title editing saves to localStorage
-   - Target: 455+ total tests
-
-7. **Update backlog** — Mark B-022, B-023, B-024, F-041 as Complete (Sprint 18)
+3. **Update backlog** — Mark F-044, F-045 as Complete (Sprint 19)
 
 Acceptance Criteria
-- Clear localStorage, reload → debug panel hidden, sidebar collapsed
-- System in dark mode → dark theme on first visit
-- Click conversation title → editable, saves on Enter
-- `ls docs/PROJECT_STATUS_*.md | wc -l` returns 17
-- `.venv/bin/python3 -m pytest tests/ -v` — 455+ tests, 0 failures
+- Bot message with "**bold** and `code`" renders with bold text and inline code styling
+- Code blocks render with dark background and monospace font
+- Messages from different dates show date separators
+- User messages remain plain text (no markdown rendering)

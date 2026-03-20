@@ -51,9 +51,9 @@ Track bugs and feature requests here.
 | F-022 | `python3 bot/server.py` should work without -m flag (add __main__.py entry point) | Medium | Complete (Sprint 10) |
 | F-023 | Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus) + ChatGPT, runtime switching | High | Complete (Sprint 11) |
 | F-024 | Generate PROJECT_STATUS docs retroactively for Sprints 1-11 so dashboard shows sprint history | High | Complete (Sprint 12) |
-| F-025 | Streaming responses — show bot text as it generates instead of waiting for full response | High | Open |
+| F-025 | Streaming responses — show bot text as it generates instead of waiting for full response | High | Complete (Sprint 12) |
 | F-026 | Keyboard shortcut: Enter to send message (currently requires clicking Send button) | Medium | Open |
 | F-027 | Mobile-responsive web chat — UI is desktop-only, needs viewport meta + responsive CSS | Medium | Open |
-| F-028 | Conversation persistence across page reloads — currently loses chat on refresh | Medium | Open |
-| F-029 | Error handling in web chat — show user-friendly message when LLM is unreachable | Medium | Open |
+| F-028 | Conversation persistence across page reloads — currently loses chat on refresh | Medium | Complete (Sprint 12) |
+| F-029 | Error handling in web chat — show user-friendly message when LLM is unreachable | Medium | Complete (Sprint 12) |
 | F-030 | Token cost display — show estimated cost per message when using paid providers (Claude/ChatGPT) | Low | Open |

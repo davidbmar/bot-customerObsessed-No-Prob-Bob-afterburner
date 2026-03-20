@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — No Problem Bob!  Customer Obsessed Agent</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+  <div id="auth-wall" style="display:none">
+    <div class="auth-overlay">
+      <div class="auth-box">
+        <h2>No Problem Bob!  Customer Obsessed Agent</h2>
+        <p>Enter password to view documentation</p>
+        <input type="password" id="auth-password" placeholder="Password" autofocus>
+        <button onclick="checkAuth()">Enter</button>
+        <p id="auth-error" style="color:#e74c3c;display:none">Incorrect password</p>
+      </div>
+    </div>
+  </div>
+  <div id="site-content">
+    <nav class="site-nav">
+      <div class="site-nav-title">No Problem Bob!  Customer Obsessed Agent</div>
+      <a href="index.html" class="site-nav-link ">Home</a>
+      <a href="vision.html" class="site-nav-link ">Vision</a>
+      <a href="plan.html" class="site-nav-link ">Plan</a>
+      <a href="roadmap.html" class="site-nav-link ">Roadmap</a>
+      <a href="use-cases.html" class="site-nav-link ">Use Cases</a>
+      <a href="sprints.html" class="site-nav-link ">Sprints</a>
+      <a href="sessions.html" class="site-nav-link ">Sessions</a>
+      <a href="backlog.html" class="site-nav-link ">Backlog</a>
+      <a href="getting-started.html" class="site-nav-link nav-active">Getting Started</a>
+    </nav>
+    <main class="site-main">
+      <h1>Getting Started</h1>
+<p>Conversational AI agent that guides customer discovery interviews, extracts insights, and saves structured seed documents to <a href="https://github.com/davidbmar/traceable-searchable-adr-memory-index">Afterburner</a> projects.</p>
+<p>Built across 16 sprints with 38+ features, 9 evaluation scenarios, and 363 passing tests.</p>
+<h2>Features</h2>
+<ul><li><strong>Customer discovery conversations</strong> with personality-driven prompts and principles</li><li><strong>Multi-provider LLM</strong> — Ollama (Qwen 3.5), Claude (Haiku/Sonnet/Opus), ChatGPT, with runtime switching</li><li><strong>Streaming responses</strong> via Server-Sent Events</li><li><strong>Web chat UI</strong> — dark/light theme, conversation sidebar, search, per-message debug panel</li><li><strong>Seed document export</strong> — save discoveries as structured docs to Afterburner projects</li><li><strong>Evaluation framework</strong> — YAML scenario tests with pass/fail criteria</li><li><strong>Telegram integration</strong> — optional polling transport</li><li><strong>Personality framework</strong> — hot-reloadable personality configs with principles</li><li><strong>Conversation memory</strong> — persistence, export, multi-conversation management</li><li><strong>CLI</strong> — start server, interactive chat, evaluate scenarios, export conversations</li></ul>
+<h2>Quick Start</h2>
+<pre><code class="lang-bash"># Clone and enter the project
+git clone https://github.com/davidbmar/bot-customerObsessed-No-Prob-Bob-afterburner.git
+cd bot-customerObsessed-No-Prob-Bob-afterburner
+
+# Create virtual environment and install
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e &quot;.[dev]&quot;
+
+# Start the server (default port 1203)
+afterburner-bot start
+# Or: python3 cli.py start
+
+# Open web chat
+open http://127.0.0.1:1203/chat</code></pre>
+<h3>Prerequisites</h3>
+<ul><li>Python 3.11+</li><li>An LLM provider:</li><li><strong>Ollama</strong> (default, free) — install from <a href="https://ollama.com">ollama.com</a>, then <code>ollama pull qwen3:4b</code></li><li><strong>Claude</strong> — set <code>ANTHROPIC_API_KEY</code> in <code>.env</code></li><li><strong>ChatGPT</strong> — set <code>OPENAI_API_KEY</code> in <code>.env</code></li></ul>
+<h2>Architecture</h2>
+<pre><code class="lang-">┌────────────────────────────────────────────────┐
+│                  Web Chat UI                    │
+│          (bot/chat_ui.html — single-file SPA)   │
+└───────────────────┬────────────────────────────┘
+                    │ HTTP / SSE
+┌───────────────────▼────────────────────────────┐
+│              HTTP Server (bot/server.py)         │
+│         BaseHTTPRequestHandler, port 1203        │
+└───────────────────┬────────────────────────────┘
+                    │
+┌───────────────────▼────────────────────────────┐
+│              Gateway (bot/gateway.py)            │
+│  • Loads personality + principles                │
+│  • Manages conversation memory                   │
+│  • Orchestrates LLM calls + tool execution       │
+│  • Triggers synthesis after N exchanges          │
+└──────┬────────────┬───────────────┬────────────┘
+       │            │               │
+  ┌────▼───┐  ┌─────▼─────┐  ┌─────▼─────┐
+  │  LLM   │  │  Memory   │  │  Tools    │
+  │ Client │  │ (memory.py)│  │(tools.py) │
+  └────────┘  └───────────┘  └───────────┘</code></pre>
+<p><strong>Gateway pattern</strong>: All transports (web, CLI, Telegram) go through <code>Gateway.process_message()</code>, which handles personality injection, memory retrieval, LLM call, tool execution, and fact extraction in a single pipeline.</p>
+<p><strong>Personality framework</strong>: Personalities are Markdown files in <code>personalities/</code> with sections for role, principles, and behavioral guidelines. The gateway injects the active personality into every LLM prompt. Personalities can be hot-reloaded at runtime.</p>
+<p><strong>Memory</strong>: Conversations are stored as JSON in <code>~/.local/share/afterburner-bot/conversations/</code>. The gateway tracks message history per conversation ID and includes recent context in LLM prompts.</p>
+<h2>API Reference</h2>
+<h3>GET endpoints</h3>
+<div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Description</th></tr></thead><tbody><tr><td><code>GET /chat</code></td><td>Serve the web chat UI</td></tr><tr><td><code>GET /api/health</code></td><td>Health check — returns LLM status, model, personality</td></tr><tr><td><code>GET /api/personality</code></td><td>Current personality info</td></tr><tr><td><code>GET /api/personalities</code></td><td>List available personalities</td></tr><tr><td><code>GET /api/config</code></td><td>Current bot configuration</td></tr><tr><td><code>GET /api/history?chat_id=ID</code></td><td>Conversation message history</td></tr><tr><td><code>GET /api/conversations/export?id=ID</code></td><td>Export conversation as markdown</td></tr><tr><td><code>GET /api/projects</code></td><td>List registered Afterburner projects</td></tr><tr><td><code>GET /api/llm/providers</code></td><td>List available LLM providers and active provider</td></tr><tr><td><code>GET /api/llm/config?provider_id=ID</code></td><td>Get saved config for a provider</td></tr></tbody></table></div>
+<h3>POST endpoints</h3>
+<div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Body</th><th>Description</th></tr></thead><tbody><tr><td><code>POST /api/chat</code></td><td><code>{message, conversation_id}</code></td><td>Send message, get full response</td></tr><tr><td><code>POST /api/chat/stream</code></td><td><code>{message, conversation_id}</code></td><td>Send message, get SSE stream</td></tr><tr><td><code>POST /api/config</code></td><td><code>{personality}</code></td><td>Update bot configuration</td></tr><tr><td><code>POST /api/conversations/new</code></td><td>—</td><td>Create new conversation</td></tr><tr><td><code>POST /api/personality/reload</code></td><td>—</td><td>Hot-reload personality from disk</td></tr><tr><td><code>POST /api/projects/switch</code></td><td><code>{slug}</code></td><td>Switch active Afterburner project</td></tr><tr><td><code>POST /api/llm/switch</code></td><td><code>{provider_id, model}</code></td><td>Switch LLM provider at runtime</td></tr><tr><td><code>POST /api/llm/config</code></td><td><code>{provider_id, base_url, model, api_key}</code></td><td>Save provider configuration</td></tr><tr><td><code>POST /api/tools/save_discovery</code></td><td><code>{conversation_id, project_slug}</code></td><td>Save conversation as seed doc</td></tr></tbody></table></div>
+<h3>Streaming format (SSE)</h3>
+<p><code>POST /api/chat/stream</code> returns Server-Sent Events:</p>
+<pre><code class="lang-">data: {&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;Hello&quot;}
+data: {&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot; there&quot;}
+data: {&quot;type&quot;: &quot;done&quot;, &quot;personality&quot;: &quot;...&quot;, &quot;principles_active&quot;: [...], &quot;tokens&quot;: {&quot;input&quot;: N, &quot;output&quot;: N}, &quot;duration_ms&quot;: N}
+data: {&quot;type&quot;: &quot;error&quot;, &quot;error&quot;: &quot;message&quot;}</code></pre>
+<h2>Configuration</h2>
+<p>Config file: <code>~/.config/afterburner-bots/config.json</code></p>
+<pre><code class="lang-json">{
+  &quot;personality&quot;: &quot;customer-discovery&quot;,
+  &quot;llm&quot;: {
+    &quot;provider&quot;: &quot;ollama&quot;,
+    &quot;model&quot;: &quot;qwen3:4b&quot;,
+    &quot;baseUrl&quot;: &quot;http://localhost:11434&quot;
+  },
+  &quot;telegram&quot;: {
+    &quot;botToken&quot;: &quot;&quot;,
+    &quot;enabled&quot;: false
+  },
+  &quot;server&quot;: {
+    &quot;port&quot;: 1203,
+    &quot;host&quot;: &quot;127.0.0.1&quot;
+  },
+  &quot;projects&quot;: {},
+  &quot;active_project&quot;: &quot;&quot;
+}</code></pre>
+<h3>Environment variables</h3>
+<p>Create a <code>.env</code> file in the project root:</p>
+<pre><code class="lang-bash">ANTHROPIC_API_KEY=sk-ant-...    # For Claude providers
+OPENAI_API_KEY=sk-...           # For ChatGPT provider</code></pre>
+<h3>Personalities</h3>
+<p>Personality files live in <code>personalities/</code>. The default is <code>customer-discovery.md</code>, which guides the bot to ask probing questions, avoid jumping to solutions, and synthesize discoveries.</p>
+<p>To create a custom personality, add a new <code>.md</code> file to <code>personalities/</code> and switch via the Settings panel or <code>POST /api/config</code>.</p>
+<h2>Evaluation</h2>
+<p>The evaluation framework tests bot behavior against YAML scenarios in <code>evaluations/scenarios/</code>.</p>
+<pre><code class="lang-bash"># Run all 9 scenarios
+afterburner-bot evaluate
+# Or: python3 cli.py evaluate
+
+# Run with verbose output
+afterburner-bot evaluate --verbose</code></pre>
+<p>Each scenario defines:</p>
+<ul><li><code>input</code> — a customer message to send</li><li><code>pass_criteria</code> — conditions the response must meet</li><li><code>fail_criteria</code> — conditions that cause failure</li><li><code>principles_tested</code> — which personality principles are being verified</li></ul>
+<h3>Adding scenarios</h3>
+<p>Create a YAML file in <code>evaluations/scenarios/</code>:</p>
+<pre><code class="lang-yaml">name: my-scenario
+principles_tested:
+  - ask-why
+  - no-solution-jumping
+input: &quot;I need a caching layer for my API&quot;
+pass_criteria:
+  - &quot;response asks about why caching is needed&quot;
+  - &quot;response does NOT immediately propose Redis&quot;
+fail_criteria:
+  - &quot;response proposes implementation details&quot;</code></pre>
+<h2>CLI Commands</h2>
+<pre><code class="lang-bash">afterburner-bot start              # Start web server (default port 1203)
+afterburner-bot start -p base      # Start with a different personality
+afterburner-bot start --port 8080  # Use custom port
+afterburner-bot start --telegram   # Enable Telegram polling
+afterburner-bot chat               # Interactive CLI chat
+afterburner-bot status             # Show server status, personality, conversations
+afterburner-bot evaluate           # Run evaluation scenarios
+afterburner-bot export &lt;conv-id&gt;   # Export conversation as markdown</code></pre>
+<h2>Tech Stack</h2>
+<ul><li><strong>Python 3.11+</strong> with <code>httpx</code>, <code>pyyaml</code></li><li><strong>Single-file HTML/CSS/JS</strong> web chat (no build step, no framework)</li><li><strong>BaseHTTPRequestHandler</strong> for the API server</li><li><strong>Ollama / Anthropic / OpenAI</strong> APIs for LLM inference</li><li><strong>pytest</strong> for testing (363 tests across 15 sprints)</li></ul>
+<h2>Contributing</h2>
+<pre><code class="lang-bash"># Install dev dependencies
+pip install -e &quot;.[dev]&quot;
+
+# Run tests
+python3 -m pytest tests/ -v
+
+# Run evaluations
+python3 cli.py evaluate</code></pre>
+<h3>Commit conventions</h3>
+<p>This project uses <a href="docs/project-memory/">Afterburner project memory</a>. Every commit includes a <code>Session: S-YYYY-MM-DD-HHMM-slug</code> reference in the body. See <code>CLAUDE.md</code> for full conventions.</p>
+<h2>License</h2>
+<p>Private repository.</p>
+    </main>
+    <footer class="site-footer">
+      <p>Generated by Afterburner</p>
+    </footer>
+  </div>
+</body>
+</html>

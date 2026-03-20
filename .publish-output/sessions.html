@@ -30,10 +30,47 @@
       <a href="sprints.html" class="site-nav-link ">Sprints</a>
       <a href="sessions.html" class="site-nav-link nav-active">Sessions</a>
       <a href="backlog.html" class="site-nav-link ">Backlog</a>
+      <a href="getting-started.html" class="site-nav-link ">Getting Started</a>
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">14 development sessions logged</p>
+<p class="section-intro">16 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0655-sprint16-e2e-pipeline</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0655-sprint16-e2e-pipeline Title: Sprint 16 — E2E integration pipeline tests Date: 2026-03-20 Author: agentA</p>
+<h2>Goal</h2>
+<p>Prove the end-to-end value loop: discovery conversation -&gt; save seed doc -&gt; verify seed doc exists in an Afterburner project (F-039).</p>
+<h2>Context</h2>
+<p>Sprint 15 reached 363 tests but no automated test proved the full loop: chat -&gt; synthesis -&gt; save seed -&gt; file appears in target project. The save_discovery tool existed (Sprint 13) but lacked graceful error handling for invalid paths.</p>
+<h2>Plan</h2>
+<ol><li>Fix save_discovery to handle OSError from invalid filesystem paths</li><li>Create tests/test_e2e_pipeline.py with 6 test classes covering the full pipeline</li><li>Add edge case tests for save_discovery (empty content, unicode, large content, invalid paths)</li><li>Mark F-039 as Complete in the backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li><code>bot/tools.py</code>: Wrapped file operations in try/except OSError for graceful error handling</li><li><code>tests/test_e2e_pipeline.py</code>: Created 36 new tests across 8 test classes</li><li><code>docs/project-memory/backlog/README.md</code>: Marked F-039 as Complete (Sprint 16)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Kept save_discovery&#x27;s existing behavior of creating docs/seed/ with mkdir(parents=True) — it already handled the missing directory case correctly</li><li>Added OSError handling for truly invalid paths (e.g., /dev/null/foo) that would raise NotADirectoryError</li><li>Tests mock _find_project_root rather than _resolve_project_root to match existing test patterns</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>See branch agentA-e2e-integration</li></ul>
+<p>PRs:</p>
+<ul><li>TBD (sprint merge)</li></ul></div><hr>
+<div class="session-entry"><h3>S-2026-03-20-0654-sprint16-docs-and-polish</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0654-sprint16-docs-and-polish Title: Sprint 16 — README, debug panel fix, CLI evaluate colors Date: 2026-03-20 Author: agentB</p>
+<h2>Goal</h2>
+<p>Write comprehensive README, fix debug panel default visibility (B-013), add colored CLI evaluate output (F-043), update backlog.</p>
+<h2>Context</h2>
+<p>Sprint 16, agentB branch. README.md did not exist. Debug panel bug B-013 open since Sprint 12. CLI evaluate output was plain text.</p>
+<h2>Plan</h2>
+<ol><li>Write README.md with Quick Start, Architecture, API Reference, Configuration, Evaluation, CLI, Tech Stack, Contributing</li><li>Fix debug panel to explicitly ensure collapsed state on page load (else branch in localStorage restore)</li><li>Add ANSI color helpers to evaluations/runner.py, add print_results function, add --verbose flag to CLI</li><li>Update backlog: F-042, F-043, B-013 → Complete (Sprint 16)</li></ol>
+<h2>Changes Made</h2>
+<ul><li>Created README.md — full getting-started guide, architecture diagram, API reference (all endpoints), config, eval, CLI, tech stack, contributing</li><li>bot/chat_ui.html — added explicit else branch in debug panel localStorage restore to force collapsed state for new users</li><li>evaluations/runner.py — added ANSI color helpers (_green, _red, _yellow, _bold, _dim), isatty detection, print_results() with verbose/summary modes and principles summary</li><li>cli.py — added --verbose/-v flag to evaluate subparser, switched to print_results()</li><li>docs/project-memory/backlog/README.md — marked B-013, F-042, F-043 as Complete (Sprint 16)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used raw ANSI escape codes (no external dependency) with isatty() check for color safety</li><li>README uses ASCII-art architecture diagram rather than Mermaid (wider tool support)</li><li>Debug panel fix is minimal (explicit else branch) — the existing code was 95% correct, just needed explicit default</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0641-sprint15-eval-expansion</h3><h1>Session</h1>
 <p>Session-ID: S-2026-03-20-0641-sprint15-eval-expansion Title: Sprint 15 — Expand evaluation scenarios from 3 to 9 Date: 2026-03-20 Author: agentA</p>
 <h2>Goal</h2>

@@ -1,10 +1,10 @@
-# Sprint 16 — Agent Notes
+# Sprint 17 — Agent Notes
 
-*Started: 2026-03-20 06:49 UTC*
+*Started: 2026-03-20 07:04 UTC*
 
 Phase 1 Agents: 2
-- agentA-e2e-integration
-- agentB-docs-and-polish
+- agentA-provider-and-history
+- agentB-ui-fixes
 
 Phase 2 Agents: 0
 (none)
@@ -13,49 +13,60 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-docs-and-polish
+## agentB-ui-fixes
 
-*Completed: 2026-03-20 06:54 UTC*
+*Completed: 2026-03-20 07:08 UTC*
 
 ### Files changed
-- **README.md** (new) — comprehensive docs with Quick Start, Architecture diagram, API Reference (all 20 endpoints), Configuration, Evaluation guide, CLI commands, Tech Stack, Contributing
-- **bot/chat_ui.html** — added explicit `else` branch in debug panel localStorage restore to force collapsed state for new users (B-013 fix)
-- **evaluations/runner.py** — added ANSI color helpers with `isatty()` detection, `print_results()` function with summary and verbose modes, principles summary
-- **cli.py** — added `--verbose/-v` flag to evaluate subparser, switched to `print_results()`
-- **docs/project-memory/backlog/README.md** — marked B-013, F-042, F-043 as Complete (Sprint 16)
-- **docs/project-memory/sessions/S-2026-03-20-0654-sprint16-docs-and-polish.md** (new) — session doc
+- **`bot/chat_ui.html`** — Added inline typing dots CSS (`@keyframes pulse`, `.typing-dots-inline`) and modified `sendMessageStream()` to show pulsing dots inside the bot message bubble before tokens arrive, removing them on first token
+- **`docs/project-memory/backlog/README.md`** — Marked B-022 and F-040 as Complete (Sprint 17)
 
 ### Commands run
-- `pytest tests/ -v` — 363 passed
-- `cli.py evaluate --verbose` — 9/9 scenarios passed with colored output
+- `git pull origin main` — already up to date
+- `.venv/bin/python3 -m pytest tests/ -v` — 389 passed, 9 failed (pre-existing, missing optional deps), 1 skipped
+- `git push -u origin HEAD` — pushed to `agentB-ui-fixes`
 
 ### Notes / follow-on work
-- The debug panel fix (B-013) is minimal — the existing code was nearly correct; the explicit `else` branch makes the default-hidden behavior bulletproof for first-time users
-- The README references screenshots but none exist yet; a follow-on task could capture actual screenshots of the web chat UI
+- **B-022 (debug panel)**: The code already correctly defaults to hidden on first visit (init checks `localStorage.getItem('debugPanelVisible') === 'true'`). This was fixed in a prior sprint. Verified and confirmed working.
+- **F-040 (typing dots)**: Three pulsing dots appear inside the bot message bubble during streaming, removed on first token arrival. Uses CSS-only animation (no JS timers).
+- The 9 test failures are pre-existing — they require `anthropic` and `openai` packages which are optional dependencies not installed in the test venv.
 
 
 ---
 
-## agentA-e2e-integration
+## agentA-provider-and-history
 
-*Completed: 2026-03-20 06:56 UTC*
+*Completed: 2026-03-20 07:09 UTC*
 
-## Files changed
+```
+All tasks complete.
+
+---
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `tests/test_e2e_pipeline.py` | **Created** — 36 new tests across 8 test classes proving the full discovery-to-seed-doc pipeline |
-| `bot/tools.py` | **Modified** — Added `try/except OSError` around file operations in `tool_save_discovery` for graceful error handling |
-| `docs/project-memory/backlog/README.md` | **Modified** — Marked F-039 as Complete (Sprint 16) |
-| `docs/project-memory/sessions/S-2026-03-20-0655-sprint16-e2e-pipeline.md` | **Created** — Session doc |
+| `bot/gateway.py` | Default `_provider_id` to `"qwen-3.5"`, fix `health_check()` fallback |
+| `bot/server.py` | Add `active_label` field to `/api/llm/providers` response |
+| `scripts/generate_sprint_history.py` | Accept CLI args, auto-discover sprint range, updated docstring |
+| `tests/test_sprint17_provider_and_history.py` | **New** — 46 tests for B-019 and B-021 |
+| `tests/test_sprint14_conversations_tokens.py` | Updated assertion to match fixed behavior |
+| `docs/PROJECT_STATUS_2026-03-20-sprint{12..16}.md` | **New** — 5 generated status docs |
+| `docs/project-memory/backlog/README.md` | B-019 and B-021 marked Complete (Sprint 17) |
+| `docs/project-memory/sessions/S-2026-03-20-0708-sprint17-provider-and-history.md` | **New** session doc |
 
-## Commands run
+## Commands Run
 
-- `python3 -m pytest tests/ -v` — **399 tests pass, 0 failures** (was 363)
-- `git push -u origin HEAD` — pushed to `agentA-e2e-integration`
+- `.venv/bin/python3 -m pytest tests/ -q` — **445 passed**, 0 failures
+- `.venv/bin/python3 scripts/generate_sprint_history.py 12 16` — generated 5 docs
+- `ls docs/PROJECT_STATUS_*.md | wc -l` — returns **16**
+- `git push -u origin HEAD`
 
-## Notes / follow-on work
+## Notes / Follow-on Work
 
-- The `test_multiple_saves_create_separate_files` test uses a 1.1s `time.sleep()` to ensure different timestamps — if test speed becomes a concern, this could be refactored to mock `datetime.now`
-- The HTTP endpoint tests validate the tool logic directly rather than making actual HTTP requests (the server test infra uses `port=0` but doesn't bind). A future improvement could add actual HTTP client tests using `urllib.request` against the running server.
+- **F-040 (typing indicator)** is assigned to agentB per the brief — not implemented here
+- **B-022 (debug panel default visibility)** is also agentB's scope (chat_ui.html)
+- After sprint merge, run `build-sprint-data.sh` to rebuild dashboard data so sprints 12-16 appear
+```
 

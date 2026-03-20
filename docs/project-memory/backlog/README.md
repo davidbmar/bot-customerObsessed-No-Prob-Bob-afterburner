@@ -40,3 +40,8 @@ Track bugs and feature requests here.
 | F-015 | generate_vision tool — bot generates Vision doc from discovery conversation | High | Complete (Sprint 8) |
 | F-016 | Conversation export — download chat as markdown | Low | Complete (Sprint 9) |
 | F-017 | Bot personality hot-reload — change personality without restarting server | Medium | Complete (Sprint 9) |
+| F-018 | Welcome message — bot greets user on first load instead of empty chat | High | Planned |
+| F-019 | Debug panel default hidden — toggle on, not always visible | Medium | Planned |
+| F-020 | New Conversation button in main chat header (not just settings) | Medium | Planned |
+| F-021 | Progress indicator — show token streaming or progress bar instead of "Thinking..." | Medium | Planned |
+| F-022 | `python3 bot/server.py` should work without -m flag (add __main__.py entry point) | Medium | Planned |

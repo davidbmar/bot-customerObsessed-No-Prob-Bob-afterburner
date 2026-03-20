@@ -1,21 +1,20 @@
-# Sprint 17
+# Sprint 18
 
 Goal
-- Generate PROJECT_STATUS docs for Sprints 12-16 so dashboard shows all sprints (B-021)
-- Fix provider label in health endpoint and header — should show "Qwen 3.5" not "ollama" (B-019)
-- Fix debug panel defaulting to visible — should be hidden unless user opens it (B-022)
-- Add typing indicator animation while bot is streaming (F-040)
+- Fix debug panel CSS so it's truly hidden by default — the CSS must start it as hidden, not rely on JS (B-022)
+- Collapse sidebar by default on first visit — only show when user clicks hamburger (B-023)
+- Detect system color preference with prefers-color-scheme media query (B-024)
+- Add conversation title editing — click title in sidebar to rename (F-041)
+- Generate PROJECT_STATUS doc for Sprint 17 so dashboard stays current
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- agentA owns bot/server.py, bot/llm.py, bot/gateway.py, scripts/, docs/PROJECT_STATUS_*, tests/ — agentB MUST NOT touch these
-- agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
+- Single agent — all changes are in interconnected UI files
 
 Merge Order
-1. agentA-provider-and-history
-2. agentB-ui-fixes
+1. agentA-final-polish
 
 Merge Verification
 ```bash
@@ -25,66 +24,58 @@ ls docs/PROJECT_STATUS_*.md | wc -l
 ```
 
 Previous Sprint
-- Sprint 16: e2e integration tests (discovery→seed doc pipeline proven), comprehensive README, CLI evaluate colors. 399 tests pass.
-- Dashboard shows 11 sprints (Sprints 1-11 only) — Sprints 12-16 have no PROJECT_STATUS docs
-- Health endpoint returns provider_label: "ollama" instead of "Qwen 3.5" — chat_ui.html header shows this wrong label
-- Debug panel visible by default despite previous fix attempts — localStorage debug-panel state may override
-- scripts/generate_sprint_history.py already exists and generates docs from sprint briefs
+- Sprint 17: provider label fix, PROJECT_STATUS docs for 12-16, typing dots animation. 445 tests pass.
+- Debug panel still visible on fresh page load (even after localStorage.clear()) — CSS default is wrong
+- Sidebar shows on desktop by default — takes up space before user has conversations to browse
+- Light theme defaults regardless of system preference
+- 16 PROJECT_STATUS docs — Sprint 17 is missing
+- Conversation title editing (F-041) is the last open feature
 
-## agentA-provider-and-history
-
-Objective
-- Generate PROJECT_STATUS docs for Sprints 12-16, fix provider label in health endpoint
-
-Tasks
-1. **Generate PROJECT_STATUS docs for Sprints 12-16**:
-   - Run `scripts/generate_sprint_history.py` or extend it to handle Sprints 12-16
-   - Sprint briefs are in `.sprint/history/sprint-{12..16}-brief.md`
-   - If briefs aren't archived yet, check SPRINT_BRIEF.md or git history
-   - Each doc should follow the same format as Sprints 1-11 docs
-
-2. **Fix provider label in health endpoint** (B-019):
-   - In `bot/server.py`, the `/api/health` handler returns `provider_label`
-   - Currently it returns the raw provider key ("ollama") instead of the display label from LLM_PROVIDERS
-   - Fix: look up the active provider in LLM_PROVIDERS and return its `label` field (e.g., "Qwen 3.5")
-   - Also fix the `/api/llm/providers` response to include an `active_label` field
-
-3. **Write tests**:
-   - Test health endpoint returns correct provider_label for each provider
-   - Test PROJECT_STATUS docs exist for Sprints 12-16
-   - Target: 410+ total tests
-
-4. **Update backlog** — Mark B-019, B-021 as Complete (Sprint 17)
-
-Acceptance Criteria
-- `ls docs/PROJECT_STATUS_*.md | wc -l` returns 16
-- `curl http://localhost:1203/api/health | jq .provider_label` returns "Qwen 3.5" (not "ollama")
-- `.venv/bin/python3 -m pytest tests/ -v` — 410+ tests, 0 failures
-
-## agentB-ui-fixes
+## agentA-final-polish
 
 Objective
-- Fix debug panel default state and add typing indicator animation
+- Fix all first-use experience issues and add conversation title editing
 
 Tasks
-1. **Fix debug panel default state** (B-022):
-   - On first visit (no localStorage key), debug panel should be hidden
-   - Check the initialization code — if `localStorage.getItem('debug-panel')` is null, default to hidden
-   - Current bug: the panel shows because the code defaults to visible when no preference is saved
-   - Fix: change the default from `true`/visible to `false`/hidden
-   - Preserve existing behavior: if user explicitly opened it, keep it open on reload
+1. **Fix debug panel CSS default** (B-022):
+   - The debug panel container in chat_ui.html must have `display: none` in its CSS by default
+   - The "Debug" button click should toggle it to `display: block`
+   - Do NOT rely on JavaScript or localStorage to hide it initially — the CSS must hide it
+   - On page load, if localStorage says debug was open, JS sets `display: block`
+   - This way, even without JS, the panel is hidden
 
-2. **Typing indicator animation** (F-040):
-   - While streaming, show a pulsing dot animation in the bot message bubble
-   - Three dots that pulse sequentially (CSS animation, no JS timer needed)
-   - Replace "Streaming..." text with the animated dots
-   - After streaming completes, dots disappear and full text is shown
-   - CSS keyframes: `@keyframes pulse { 0%, 80%, 100% { opacity: 0.3 } 40% { opacity: 1 } }`
-   - Each dot delays slightly: `.dot:nth-child(2) { animation-delay: 0.2s }` etc.
+2. **Collapse sidebar by default** (B-023):
+   - Sidebar container should start with `display: none` or `transform: translateX(-100%)`
+   - Hamburger (☰) click toggles it open
+   - Once opened, save preference to localStorage
+   - On subsequent visits, respect the saved preference
 
-3. **Update backlog** — Mark B-022, F-040 as Complete (Sprint 17)
+3. **System color preference** (B-024):
+   - Add `@media (prefers-color-scheme: dark)` in CSS
+   - If no localStorage theme preference, use the system preference
+   - If localStorage has a saved preference, use that instead
+   - This means: first visit on macOS dark mode → dark theme; first visit on light mode → light theme
+
+4. **Conversation title editing** (F-041):
+   - In sidebar, clicking the conversation title text makes it editable (contenteditable or input)
+   - Press Enter or blur saves the new title to localStorage
+   - Default title remains the truncated first message
+
+5. **Generate PROJECT_STATUS for Sprint 17**:
+   - Run or extend `scripts/generate_sprint_history.py` to include Sprint 17
+   - Verify with `ls docs/PROJECT_STATUS_*.md | wc -l` → 17
+
+6. **Write tests**:
+   - Test debug panel default hidden state
+   - Test sidebar default collapsed state
+   - Test title editing saves to localStorage
+   - Target: 455+ total tests
+
+7. **Update backlog** — Mark B-022, B-023, B-024, F-041 as Complete (Sprint 18)
 
 Acceptance Criteria
-- On fresh page load (clear localStorage first), debug panel is hidden
-- While bot is streaming, three animated dots pulse in the message bubble
-- Dots disappear when streaming completes
+- Clear localStorage, reload → debug panel hidden, sidebar collapsed
+- System in dark mode → dark theme on first visit
+- Click conversation title → editable, saves on Enter
+- `ls docs/PROJECT_STATUS_*.md | wc -l` returns 17
+- `.venv/bin/python3 -m pytest tests/ -v` — 455+ tests, 0 failures

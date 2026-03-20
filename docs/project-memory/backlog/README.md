@@ -27,7 +27,9 @@ Track bugs and feature requests here.
 | B-019 | Header shows `ollama · qwen3:4b` instead of `qwen-3.5 · qwen3.5:latest` — health endpoint returns provider_label: "ollama" not "Qwen 3.5" | Low | Complete (Sprint 17) |
 | B-020 | Sprint 12 agent done markers not written — sprint-launch.sh done detection broken (related to B-008) | Medium | Open |
 | B-021 | Dashboard only shows Sprints 1-11 — Sprints 12-16 need PROJECT_STATUS docs generated | Medium | Complete (Sprint 17) |
-| B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Complete (Sprint 17) |
+| B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Reopened |
+| B-023 | Sidebar visible by default on desktop — should be collapsed on first visit, user opens when needed | Low | Open |
+| B-024 | Light theme is now the default after clearing localStorage — should detect system preference with prefers-color-scheme | Low | Open |
 
 ## Features
 

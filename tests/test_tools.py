@@ -9,6 +9,8 @@ from unittest.mock import patch
 import pytest
 
 from bot.tools import (
+    _extract_section,
+    _format_structured_discovery,
     add_to_backlog,
     execute_tool,
     generate_vision,
@@ -462,3 +464,196 @@ def test_tool_registration_includes_feedback_on_sprint() -> None:
 
     tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
     assert "feedback_on_sprint" in tool_names
+
+
+# -- structured seed doc export tests (F-047) --
+
+
+SAMPLE_MESSAGES_WITH_SYNTHESIS = [
+    {"role": "user", "content": "I need a tool to track restaurant inventory"},
+    {"role": "assistant", "content": "Tell me more about the problem."},
+    {"role": "user", "content": "We waste a lot of food because we can't track expiry dates."},
+    {"role": "assistant", "content": "Who are the main users?"},
+    {"role": "user", "content": "Restaurant managers and kitchen staff."},
+    {
+        "role": "assistant",
+        "content": (
+            "## Problem\nRestaurants waste food due to poor expiry tracking.\n\n"
+            "## Users\nRestaurant managers and kitchen staff.\n\n"
+            "## Use Cases\n- Track expiry dates of inventory items\n"
+            "- Get alerts before items expire\n\n"
+            "## Success Criteria\n- 30% reduction in food waste\n"
+            "- Staff can check inventory in under 1 minute\n"
+        ),
+    },
+]
+
+SAMPLE_MESSAGES_NO_SYNTHESIS = [
+    {"role": "user", "content": "I need help with project planning"},
+    {"role": "assistant", "content": "What kind of project are you working on?"},
+    {"role": "user", "content": "A mobile app for dog walkers."},
+]
+
+
+def test_extract_section_finds_problem() -> None:
+    """_extract_section extracts ## Problem content from markdown."""
+    text = "## Problem\nSomething is broken.\n\n## Users\nEveryone."
+    assert _extract_section(text, "Problem") == "Something is broken."
+
+
+def test_extract_section_finds_multiline() -> None:
+    """_extract_section handles multi-line section content."""
+    text = "## Use Cases\n- Case 1\n- Case 2\n- Case 3\n\n## Success Criteria\nDone."
+    result = _extract_section(text, "Use Cases")
+    assert "Case 1" in result
+    assert "Case 3" in result
+
+
+def test_extract_section_case_insensitive() -> None:
+    """_extract_section is case-insensitive for heading match."""
+    text = "## success criteria\n- 50% improvement\n"
+    assert "50% improvement" in _extract_section(text, "Success Criteria")
+
+
+def test_extract_section_returns_empty_for_missing() -> None:
+    """_extract_section returns empty string when heading not found."""
+    assert _extract_section("## Other\nStuff.", "Problem") == ""
+
+
+def test_extract_section_returns_empty_for_empty_content() -> None:
+    """_extract_section returns empty string when section has no content."""
+    assert _extract_section("## Problem\n\n## Users\nSomeone.", "Problem") == ""
+
+
+def test_format_structured_discovery_with_synthesis() -> None:
+    """_format_structured_discovery produces sections when bot synthesized them."""
+    doc = _format_structured_discovery(SAMPLE_MESSAGES_WITH_SYNTHESIS, provider="claude")
+
+    assert doc.startswith("# Discovery: I need a tool to track restaurant inventory")
+    assert "Date:" in doc
+    assert "Provider: claude" in doc
+    assert "Messages: 6" in doc
+    assert "## Problem" in doc
+    assert "poor expiry tracking" in doc
+    assert "## Users" in doc
+    assert "kitchen staff" in doc
+    assert "## Use Cases" in doc
+    assert "Track expiry dates" in doc
+    assert "## Success Criteria" in doc
+    assert "30% reduction" in doc
+    assert "## Raw Conversation" in doc
+
+
+def test_format_structured_discovery_without_synthesis() -> None:
+    """_format_structured_discovery uses placeholders when no synthesis occurred."""
+    doc = _format_structured_discovery(SAMPLE_MESSAGES_NO_SYNTHESIS, provider="ollama")
+
+    assert "# Discovery: I need help with project planning" in doc
+    assert "Provider: ollama" in doc
+    assert "Messages: 3" in doc
+    assert "## Problem" in doc
+    assert "[Not yet extracted from conversation]" in doc
+    assert "## Raw Conversation" in doc
+    assert "dog walkers" in doc
+
+
+def test_format_structured_discovery_empty_messages() -> None:
+    """_format_structured_discovery handles empty message list."""
+    doc = _format_structured_discovery([])
+    assert "# Discovery: Untitled Discovery" in doc
+    assert "Messages: 0" in doc
+
+
+def test_format_structured_discovery_title_truncation() -> None:
+    """_format_structured_discovery truncates long titles to 80 chars."""
+    long_msg = "A" * 200
+    messages = [{"role": "user", "content": long_msg}]
+    doc = _format_structured_discovery(messages)
+    # Title line should have truncated content
+    title_line = doc.splitlines()[0]
+    # "# Discovery: " is 14 chars, plus 80 chars of content = 94 max
+    assert len(title_line) <= 100
+
+
+def test_format_structured_discovery_no_provider() -> None:
+    """_format_structured_discovery defaults provider to 'unknown'."""
+    doc = _format_structured_discovery(SAMPLE_MESSAGES_NO_SYNTHESIS)
+    assert "Provider: unknown" in doc
+
+
+def test_save_discovery_structured_writes_sections(tmp_project: Path) -> None:
+    """save_discovery with structured=True creates doc with Problem/Users/Use Cases sections."""
+    tmp_project.mkdir(parents=True)
+
+    with patch("bot.tools._find_project_root", return_value=tmp_project):
+        result = tool_save_discovery(
+            slug="test-project",
+            structured=True,
+            messages=SAMPLE_MESSAGES_WITH_SYNTHESIS,
+            provider="claude",
+        )
+
+    assert "saved" in result.lower() or "Discovery" in result
+
+    seed_dir = tmp_project / "docs" / "seed"
+    seed_files = list(seed_dir.glob("discovery-*.md"))
+    assert len(seed_files) == 1
+
+    content = seed_files[0].read_text()
+    assert "## Problem" in content
+    assert "poor expiry tracking" in content
+    assert "## Users" in content
+    assert "## Use Cases" in content
+    assert "## Success Criteria" in content
+    assert "## Raw Conversation" in content
+
+
+def test_save_discovery_structured_false_writes_raw(tmp_project: Path) -> None:
+    """save_discovery with structured=False writes raw content (backward compat)."""
+    tmp_project.mkdir(parents=True)
+
+    raw = "# Just some raw notes\nHello world."
+    with patch("bot.tools._find_project_root", return_value=tmp_project):
+        result = tool_save_discovery(slug="test-project", content=raw)
+
+    seed_files = list((tmp_project / "docs" / "seed").glob("discovery-*.md"))
+    assert len(seed_files) == 1
+    assert seed_files[0].read_text() == raw
+
+
+def test_save_discovery_structured_without_messages_writes_content(tmp_project: Path) -> None:
+    """save_discovery structured=True but no messages falls back to content."""
+    tmp_project.mkdir(parents=True)
+
+    raw = "# Fallback content"
+    with patch("bot.tools._find_project_root", return_value=tmp_project):
+        result = tool_save_discovery(slug="test-project", content=raw, structured=True)
+
+    seed_files = list((tmp_project / "docs" / "seed").glob("discovery-*.md"))
+    assert seed_files[0].read_text() == raw
+
+
+def test_execute_tool_save_discovery_structured(tmp_project: Path) -> None:
+    """execute_tool routes structured save_discovery correctly."""
+    tmp_project.mkdir(parents=True)
+
+    with patch("bot.tools._find_project_root", return_value=tmp_project):
+        result = execute_tool("save_discovery", {
+            "slug": "test",
+            "content": "",
+            "structured": True,
+            "messages": SAMPLE_MESSAGES_WITH_SYNTHESIS,
+            "provider": "test-provider",
+        })
+
+    assert "saved" in result.lower() or "Discovery" in result
+
+
+def test_extract_section_target_audience_fallback() -> None:
+    """_format_structured_discovery falls back to 'Target Audience' for Users."""
+    messages = [
+        {"role": "user", "content": "Build me an app"},
+        {"role": "assistant", "content": "## Target Audience\nDevelopers and designers.\n"},
+    ]
+    doc = _format_structured_discovery(messages)
+    assert "Developers and designers" in doc.split("## Users")[1].split("##")[0]

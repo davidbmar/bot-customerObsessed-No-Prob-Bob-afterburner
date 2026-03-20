@@ -81,4 +81,4 @@ Track bugs and feature requests here.
 | F-044 | Markdown rendering in bot messages — support **bold**, *italic*, `code`, lists, headers | High | Open |
 | F-045 | Message timestamp grouping — group messages by date ("Today", "Yesterday", "Mar 19") | Medium | Open |
 | F-046 | Notification sound on bot response (optional, toggleable) | Low | Open |
-| F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Open |
+| F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Complete (Sprint 19) |

@@ -1,21 +1,23 @@
+All tasks complete. Here's the summary:
+
 ---
 
-## Summary
+## Files Changed
+| File | Change |
+|------|--------|
+| `bot/tools.py` | Added `structured`, `messages`, `provider` params to `tool_save_discovery`; added `_format_structured_discovery()` and `_extract_section()` helpers |
+| `bot/server.py` | Updated `_handle_save_discovery` to pass `structured=True` with parsed messages and provider |
+| `tests/test_tools.py` | Added 15 new tests for structured export (extract_section, format_structured_discovery, save_discovery with structured=True) |
+| `tests/test_sprint18_ui_polish.py` | Updated PROJECT_STATUS count assertion from 17 → 18 |
+| `docs/PROJECT_STATUS_2026-03-20-sprint18.md` | Generated Sprint 18 status doc |
+| `docs/project-memory/backlog/README.md` | Marked F-047 as Complete (Sprint 19) |
 
-### Files changed
-- `bot/chat_ui.html` — CSS + JS changes for all 4 UI tasks
-- `docs/PROJECT_STATUS_2026-03-20-sprint17.md` — new (generated)
-- `docs/project-memory/backlog/README.md` — B-022, B-023, B-024, F-041 marked Complete
-- `tests/test_sprint18_ui_polish.py` — new (24 tests)
-- `tests/test_sprint14_conversations_tokens.py` — updated sidebar test assertion
-- `tests/test_sprint17_provider_and_history.py` — updated doc count (16→17)
+## Commands Run
+- `git pull origin main` — sync with main
+- `python3 scripts/generate_sprint_history.py 18 18` — generate Sprint 18 PROJECT_STATUS
+- `pytest tests/ -v` — **485 passed, 0 failures**
+- `git push -u origin HEAD` — pushed to remote
 
-### Commands run
-- `python3 scripts/generate_sprint_history.py 17` — generated Sprint 17 PROJECT_STATUS
-- `.venv/bin/python3 -m pytest tests/ -v` — **470 passed, 0 failures**
-- `git push -u origin HEAD`
-
-### Notes / follow-on work
-- The `prefers-color-scheme` CSS uses a `:not(.light):not(.dark)` selector so it only applies when no JS class has been set — this provides a pure CSS fallback for no-JS scenarios
-- Title editing uses single-click (not double-click) per the brief's "click title" wording; if double-click is preferred, change `addEventListener('click', ...)` to `addEventListener('dblclick', ...)`
-- The `.venv` was recreated in the worktree since it doesn't exist in git; the main repo's venv may differ
+## Notes / Follow-on Work
+- The structured export extracts sections from bot synthesis messages via regex. If the bot hasn't triggered synthesis yet (< 5 exchanges), placeholder text `[Not yet extracted from conversation]` is used — the raw conversation is always included.
+- agentB owns `chat_ui.html` for F-044 (markdown rendering) and F-045 (date grouping) — those were not touched here.

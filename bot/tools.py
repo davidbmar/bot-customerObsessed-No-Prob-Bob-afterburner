@@ -64,11 +64,24 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         return f"Tool error: {exc}"
 
 
-def tool_save_discovery(slug: str = "", content: str = "") -> str:
-    """Write a seed document into a project's docs/seed/ directory."""
+def tool_save_discovery(
+    slug: str = "",
+    content: str = "",
+    structured: bool = False,
+    messages: list[dict[str, str]] | None = None,
+    provider: str = "",
+) -> str:
+    """Write a seed document into a project's docs/seed/ directory.
+
+    When structured=True, formats the output with Problem/Users/Use Cases/
+    Success Criteria sections extracted from the conversation messages.
+    """
     project_root = _resolve_project_root(slug or None)
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
+
+    if structured and messages:
+        content = _format_structured_discovery(messages, provider=provider)
 
     try:
         seed_dir = project_root / "docs" / "seed"
@@ -84,6 +97,74 @@ def tool_save_discovery(slug: str = "", content: str = "") -> str:
 
     log.info("Saved discovery doc to %s", filepath)
     return f"Discovery notes saved to {filepath}"
+
+
+def _format_structured_discovery(
+    messages: list[dict[str, str]],
+    provider: str = "",
+) -> str:
+    """Format conversation messages into a structured seed document.
+
+    Extracts Problem/Users/Use Cases/Success Criteria sections from the
+    conversation if the bot has already synthesized them; otherwise creates
+    placeholder sections and includes the raw conversation.
+    """
+    # Build title from first user message
+    first_user_msg = ""
+    for msg in messages:
+        if msg.get("role") == "user":
+            first_user_msg = msg.get("content", "").strip()
+            break
+    title = first_user_msg[:80].rstrip(".!? ") if first_user_msg else "Untitled Discovery"
+
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    msg_count = len(messages)
+
+    # Combine all assistant messages to search for synthesized sections
+    assistant_text = "\n".join(
+        msg.get("content", "")
+        for msg in messages
+        if msg.get("role") == "assistant"
+    )
+
+    sections = {
+        "Problem": _extract_section(assistant_text, "Problem"),
+        "Users": _extract_section(assistant_text, "Users")
+        or _extract_section(assistant_text, "Target Audience")
+        or _extract_section(assistant_text, "Target Users"),
+        "Use Cases": _extract_section(assistant_text, "Use Cases"),
+        "Success Criteria": _extract_section(assistant_text, "Success Criteria"),
+    }
+
+    # Build the document
+    lines = [
+        f"# Discovery: {title}",
+        f"Date: {date_str}",
+        f"Provider: {provider or 'unknown'}",
+        f"Messages: {msg_count}",
+        "",
+        "## Problem",
+        sections["Problem"] or "[Not yet extracted from conversation]",
+        "",
+        "## Users",
+        sections["Users"] or "[Not yet extracted from conversation]",
+        "",
+        "## Use Cases",
+        sections["Use Cases"] or "[Not yet extracted from conversation]",
+        "",
+        "## Success Criteria",
+        sections["Success Criteria"] or "[Not yet extracted from conversation]",
+        "",
+        "## Raw Conversation",
+    ]
+
+    for msg in messages:
+        role = msg.get("role", "unknown").title()
+        content = msg.get("content", "")
+        lines.append(f"**{role}:** {content}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def tool_get_project_summary(slug: str = "") -> str:
@@ -464,6 +545,24 @@ def feedback_on_sprint(project_root: Path) -> str:
 
     summary_parts.append(f"\nDoes this match what you expected from Sprint {sprint_num}?")
     return "\n".join(summary_parts)
+
+
+def _extract_section(text: str, heading: str) -> str:
+    """Extract content under a markdown ## heading from text.
+
+    Returns the text between the heading and the next ## heading (or end),
+    stripped of leading/trailing whitespace. Returns empty string if not found.
+    """
+    pattern = re.compile(
+        rf"^##\s*{re.escape(heading)}\s*\n(.*?)(?=^##\s|\Z)",
+        re.DOTALL | re.IGNORECASE | re.MULTILINE,
+    )
+    match = pattern.search(text)
+    if match:
+        content = match.group(1).strip()
+        if content:
+            return content
+    return ""
 
 
 # Public alias for tool dispatch compatibility

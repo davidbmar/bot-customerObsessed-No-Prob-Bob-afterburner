@@ -565,6 +565,11 @@
     </h2>
 
     <div class="settings-group">
+      <label>Active Project</label>
+      <select id="settingsProject"><option>Loading...</option></select>
+    </div>
+
+    <div class="settings-group">
       <label>Personality</label>
       <select id="settingsPersonality"><option>Loading...</option></select>
     </div>
@@ -1040,6 +1045,24 @@ function openSettings() {
       document.getElementById('settingsOllamaUrl').value = cfg.ollama_url || '';
     })
     .catch(function() {});
+
+  // Refresh projects list
+  fetch(API + '/api/projects')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var sel = document.getElementById('settingsProject');
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      (data.projects || []).forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        sel.appendChild(opt);
+      });
+      if (data.active_project) {
+        sel.value = data.active_project;
+      }
+    })
+    .catch(function() {});
 }
 
 function closeSettings() {
@@ -1050,6 +1073,16 @@ function applySettings() {
   var personality = document.getElementById('settingsPersonality').value;
   var model = document.getElementById('settingsModel').value.trim();
   var ollamaUrl = document.getElementById('settingsOllamaUrl').value.trim();
+  var project = document.getElementById('settingsProject').value;
+
+  // Switch project if changed
+  if (project) {
+    fetch(API + '/api/projects/switch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({slug: project})
+    }).catch(function() {});
+  }
 
   var payload = {};
   if (personality) payload.personality = personality;

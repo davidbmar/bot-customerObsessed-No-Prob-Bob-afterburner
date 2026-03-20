@@ -49,6 +49,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_get_personalities()
         elif path == "/api/config":
             self._handle_get_config()
+        elif path == "/api/projects":
+            self._handle_get_projects()
         else:
             self.send_error(404)
 
@@ -62,6 +64,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_post_config()
         elif path == "/api/conversations/new":
             self._handle_new_conversation()
+        elif path == "/api/projects/switch":
+            self._handle_switch_project()
         else:
             self.send_error(404)
 
@@ -144,6 +148,41 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         """Create a new conversation and return its ID."""
         conversation_id = f"web-{uuid.uuid4().hex[:12]}"
         self._json_response({"conversation_id": conversation_id})
+
+    def _handle_get_projects(self) -> None:
+        """List registered projects and the active project."""
+        config = getattr(self.gateway, "config", None)
+        if not config:
+            self._json_response({"projects": [], "active_project": ""})
+            return
+        self._json_response({
+            "projects": config.list_projects(),
+            "active_project": config.active_project,
+        })
+
+    def _handle_switch_project(self) -> None:
+        """Switch the active project."""
+        body = self._read_body()
+        if body is None:
+            return
+        slug = body.get("slug", "").strip()
+        if not slug:
+            self._json_response({"error": "Missing 'slug'"}, status=400)
+            return
+        config = getattr(self.gateway, "config", None)
+        if not config:
+            self._json_response({"error": "No config available"}, status=500)
+            return
+        if config.switch_project(slug):
+            self._json_response({
+                "active_project": config.active_project,
+                "projects": config.list_projects(),
+            })
+        else:
+            self._json_response(
+                {"error": f"Project '{slug}' not registered"},
+                status=404,
+            )
 
     def _serve_chat_ui(self) -> None:
         """Serve the self-contained chat UI HTML."""

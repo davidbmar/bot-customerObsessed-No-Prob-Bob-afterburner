@@ -18,6 +18,10 @@ Track bugs and feature requests here.
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
 | B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Fixed (Sprint 9) |
 | B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Fixed (Sprint 9) |
+| B-013 | Debug panel visible by default on page load — F-019 (Sprint 10) may not have fully landed | Low | Open |
+| B-014 | No PROJECT_STATUS docs exist — sprint-merge.sh never ran (all 11 sprints merged manually or via sprint-run.sh that crashed) | High | Complete (Sprint 12) |
+| B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Open |
+| B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
 
 ## Features
 
@@ -45,3 +49,11 @@ Track bugs and feature requests here.
 | F-020 | New Conversation button in main chat header (not just settings) | Medium | Complete (Sprint 10) |
 | F-021 | Progress indicator — animated dots + elapsed time counter | Medium | Complete (Sprint 10) |
 | F-022 | `python3 bot/server.py` should work without -m flag (add __main__.py entry point) | Medium | Complete (Sprint 10) |
+| F-023 | Multi-provider LLM — Ollama + Claude (Haiku/Sonnet/Opus) + ChatGPT, runtime switching | High | Complete (Sprint 11) |
+| F-024 | Generate PROJECT_STATUS docs retroactively for Sprints 1-11 so dashboard shows sprint history | High | Complete (Sprint 12) |
+| F-025 | Streaming responses — show bot text as it generates instead of waiting for full response | High | Open |
+| F-026 | Keyboard shortcut: Enter to send message (currently requires clicking Send button) | Medium | Open |
+| F-027 | Mobile-responsive web chat — UI is desktop-only, needs viewport meta + responsive CSS | Medium | Open |
+| F-028 | Conversation persistence across page reloads — currently loses chat on refresh | Medium | Open |
+| F-029 | Error handling in web chat — show user-friendly message when LLM is unreachable | Medium | Open |
+| F-030 | Token cost display — show estimated cost per message when using paid providers (Claude/ChatGPT) | Low | Open |

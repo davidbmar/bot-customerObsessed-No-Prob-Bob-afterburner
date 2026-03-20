@@ -1,0 +1,12 @@
+name: "Returning customer referencing prior context"
+input: "Hi, we talked last week about the dashboard project. I want to pick up where we left off and add real-time updates."
+principles_tested:
+  - Customer Obsession
+  - Earn Trust
+pass_criteria:
+  - response acknowledges the previous conversation or continuity
+  - response asks about what was discussed or decided previously
+  - response does NOT ignore the prior context
+fail_criteria:
+  - response says "sure, let's add real-time updates"
+  - response jumps to implementation details without context

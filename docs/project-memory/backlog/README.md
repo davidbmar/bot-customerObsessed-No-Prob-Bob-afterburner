@@ -65,7 +65,7 @@ Track bugs and feature requests here.
 | F-032 | Conversation list sidebar — see past conversations and switch between them | Medium | Complete (Sprint 14) |
 | F-033 | Export conversation as seed doc — "Save as seed" button that calls save_discovery from the UI | High | Complete (Sprint 13) |
 | F-034 | Bot synthesis step — after 5-7 exchanges, bot auto-generates Problem/Users/Use Cases/Success Criteria summary | High | Complete (Sprint 13) |
-| F-035 | Expand evaluation scenarios from 3 to 8+ with diverse customer types | Medium | Open |
+| F-035 | Expand evaluation scenarios from 3 to 8+ with diverse customer types | Medium | Complete (Sprint 15) |
 | F-036 | Delete conversation from sidebar | Medium | Open |
 | F-037 | Search conversations by keyword in sidebar | Medium | Open |
 | F-038 | Dark/light theme toggle with CSS custom properties | Low | Open |

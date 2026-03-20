@@ -136,6 +136,54 @@ def _criterion_matches(response: str, criterion: str) -> bool:
         if "?" in response:
             return True
 
+    # Check for "acknowledges" criteria (empathy/recognition)
+    if "acknowledges" in criterion:
+        empathy_words = [
+            "understand", "hear you", "sounds", "frustrat", "difficult",
+            "sorry", "appreciate", "recognize", "makes sense", "i see",
+            "that must", "challenging",
+        ]
+        if any(w in response for w in empathy_words):
+            return True
+
+    # Check for "captures" criteria (records/notes requirements)
+    if "captures" in criterion:
+        capture_words = [
+            "compliance", "security", "audit", "soc2", "sso",
+            "requirement", "note", "important", "non-functional",
+        ]
+        if any(w in response for w in capture_words):
+            return True
+
+    # Check for "ignores" / "ignore" negation (does NOT ignore)
+    if "does not ignore" in criterion or "not ignore" in criterion:
+        # If the criterion says "does NOT ignore X", check that response mentions related terms
+        if "compliance" in criterion or "security" in criterion:
+            security_words = ["compliance", "security", "audit", "soc2", "sso", "requirement"]
+            if any(w in response for w in security_words):
+                return True
+        if "prior" in criterion or "context" in criterion:
+            context_words = ["previous", "last time", "before", "prior", "earlier", "discussed"]
+            if any(w in response for w in context_words):
+                return True
+        # Generic: if response has a question, it's not ignoring
+        if "?" in response:
+            return True
+
+    # Check for "priority" or "urgent" criteria
+    if "priority" in criterion or "urgent" in criterion or "impactful" in criterion:
+        priority_words = ["priority", "prioritize", "urgent", "important", "which", "most", "first"]
+        if any(w in response for w in priority_words):
+            return True
+        if "?" in response:
+            return True
+
+    # Check for "solve all" or "address all" negation
+    if ("solve all" in criterion or "address all" in criterion
+            or "multiple problems" in criterion or "all three" in criterion):
+        all_words = ["all three", "address all", "solve all", "let me handle all", "tackle all"]
+        return any(w in response for w in all_words)
+
     return False
 
 

@@ -1,0 +1,12 @@
+name: "Technical customer with jargon"
+input: "We need a REST API with OAuth2 and rate limiting, probably deployed on Kubernetes with a service mesh"
+principles_tested:
+  - Customer Obsession
+  - Dive Deep
+pass_criteria:
+  - response asks about the users of the API or who will consume it
+  - response does NOT jump to implementation details
+  - response contains a question about the problem or use case
+fail_criteria:
+  - response says "sure, let's design the API"
+  - response discusses Kubernetes or service mesh architecture

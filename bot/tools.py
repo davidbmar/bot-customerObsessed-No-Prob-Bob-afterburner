@@ -70,13 +70,18 @@ def tool_save_discovery(slug: str = "", content: str = "") -> str:
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
 
-    seed_dir = project_root / "docs" / "seed"
-    seed_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        seed_dir = project_root / "docs" / "seed"
+        seed_dir.mkdir(parents=True, exist_ok=True)
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    filename = f"discovery-{ts}.md"
-    filepath = seed_dir / filename
-    filepath.write_text(content)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        filename = f"discovery-{ts}.md"
+        filepath = seed_dir / filename
+        filepath.write_text(content)
+    except OSError as exc:
+        log.error("Failed to write discovery doc to %s: %s", project_root, exc)
+        return f"Failed to save discovery doc: {exc}"
+
     log.info("Saved discovery doc to %s", filepath)
     return f"Discovery notes saved to {filepath}"
 

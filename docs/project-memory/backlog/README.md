@@ -69,7 +69,7 @@ Track bugs and feature requests here.
 | F-036 | Delete conversation from sidebar | Medium | Complete (Sprint 15) |
 | F-037 | Search conversations by keyword in sidebar | Medium | Complete (Sprint 15) |
 | F-038 | Dark/light theme toggle with CSS custom properties | Low | Complete (Sprint 15) |
-| F-039 | End-to-end integration test: discovery conversation → save seed → verify in Afterburner project | High | Open |
+| F-039 | End-to-end integration test: discovery conversation → save seed → verify in Afterburner project | High | Complete (Sprint 16) |
 | F-040 | Typing indicator shows bot avatar animation while streaming (pulse or dots) | Low | Open |
 | F-041 | Conversation title editing — click title in sidebar to rename | Low | Open |
 | F-042 | README with getting-started guide, screenshots, and API reference | High | Open |

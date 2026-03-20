@@ -1,18 +1,17 @@
-agentA-fixes-and-polish — Sprint 9
+agentA-ux-polish — Sprint 10
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 8: multi-project support, generate_vision tool, feedback_on_sprint tool — 129 tests pass
-- Bugs found: B-011 (CLI status crashes on projects.json format), B-012 (tool naming inconsistency)
-- generate_vision and feedback_on_sprint both exist and work, but CLI status can't load config
+- Sprint 9: fixed CLI crash, added conversation export and personality hot-reload — 144 tests pass
+- Live Playwright test: bot works end-to-end, responds with customer discovery principles
+- UX issues found: empty chat on load (no welcome), debug panel always visible, no new conversation button in header, "Thinking..." is too simple for 20s waits
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix CLI status crash (B-011) and tool naming inconsistency (B-012)
-- Add conversation export (F-016) and personality hot-reload (F-017)
-- Harden the bot for real usage
+- UX polish from live testing: welcome message, debug panel default hidden, new conversation button, better loading state
+- Fix server entry point so it can run directly
 
 Constraints
 - Use the project venv: .venv/bin/python3
@@ -22,41 +21,42 @@ Constraints
 
 
 Objective
-- Fix crashes, add conversation export, personality hot-reload
+- Fix all UX issues found during live testing
 
 Tasks
-1. Fix `bot/config.py` `_auto_discover_projects()` (B-011):
-   - The function reads dashboard projects.json but expects dict entries where projects.json has a different format
-   - Read the actual projects.json format: it's a list of objects with `slug`, `name`, `rootPath` fields
-   - Parse correctly: `{slug: rootPath}` mapping
-   - Make it graceful: if projects.json doesn't exist or is malformed, return empty dict instead of crashing
-   - Test: `python3 cli.py status` must work without crashing
+1. Welcome message (F-018):
+   - When chat UI loads, show an initial bot message: "Hi! I'm the Customer Discovery Agent. Tell me about what you're building or a problem you're trying to solve, and I'll help you understand it deeply."
+   - Style it as a bot message with timestamp
+   - Don't save to conversation memory — it's just UI decoration
 
-2. Normalize tool naming (B-012):
-   - Ensure all tool functions follow `verb_noun` pattern consistently
-   - Current tools: save_discovery, get_project_summary, add_to_backlog, get_sprint_status, generate_vision, feedback_on_sprint
-   - These are fine — just make sure exports and TOOL_DEFINITIONS use consistent names
-   - Add `feedback_on_sprint` to the `__all__` or ensure it's importable
+2. Debug panel default hidden (F-019):
+   - On page load, debug panel should be collapsed/hidden
+   - Debug button toggles it open/closed
+   - When visible, it slides in from the right
+   - Remember preference in localStorage
 
-3. Add conversation export (F-016):
-   - New endpoint: `GET /api/conversations/export?conversation_id=X` — returns full conversation as markdown
-   - Format: `# Conversation {id}\n\n**User:** message\n\n**Bot:** response\n\n---\n\n` for each exchange
-   - Add "Export" button to chat UI that downloads the markdown file
-   - Add `export` subcommand to cli.py: `python3 cli.py export <conversation_id>` — prints markdown to stdout
+3. New Conversation button (F-020):
+   - Add a "+" or "New Chat" button in the chat header next to the settings gear
+   - Clicking it clears the chat messages, generates a new conversation_id, shows welcome message again
+   - Keep it simple — no confirmation dialog needed
 
-4. Add personality hot-reload (F-017):
-   - New endpoint: `POST /api/personality/reload` — re-reads personality files without restarting server
-   - Gateway stores personality loader reference, reload method re-reads from disk
-   - Add "Reload Personality" button to settings panel in chat UI
-   - Useful when editing personality docs while bot is running
+4. Better loading indicator (F-021):
+   - Replace "Thinking..." with an animated typing indicator (three dots bouncing)
+   - Add elapsed time counter that updates every second: "Thinking... (5s)"
+   - If response takes >30s, show "Still thinking — local models can take a moment..."
 
-5. Write tests for all new features — target 140+ tests total
+5. Server entry point (F-022):
+   - Add `bot/__main__.py` that calls the server start function
+   - `python3 -m bot` should start the server on port 1203
+   - Also make `python3 bot/server.py` work by adding `if __name__` block that handles relative imports
 
-6. Update backlog: mark B-011, B-012, F-016, F-017 as Complete (Sprint 9)
+6. Update backlog: mark F-018 through F-022 as Complete (Sprint 10)
 
 Acceptance Criteria
-- `python3 cli.py status` works without crashing
-- `GET /api/conversations/export?conversation_id=test` returns markdown
-- `POST /api/personality/reload` re-reads personality files
-- `.venv/bin/python3 -m pytest tests/ -v` — 140+ tests, 0 failures
+- Chat UI shows welcome message on load
+- Debug panel hidden by default, toggleable
+- New Chat button in header works
+- Loading shows animated dots + elapsed time
+- `python3 -m bot` starts the server
+- `.venv/bin/python3 -m pytest tests/ -v` — 144+ tests, 0 failures
 - Backlog updated

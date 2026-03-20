@@ -13,8 +13,12 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .gateway import Gateway
-from .personality import PersonalityLoader
+try:
+    from .gateway import Gateway
+    from .personality import PersonalityLoader
+except ImportError:
+    from gateway import Gateway  # type: ignore[no-redef]
+    from personality import PersonalityLoader  # type: ignore[no-redef]
 
 log = logging.getLogger(__name__)
 
@@ -318,3 +322,32 @@ def start_server(gateway: Gateway, port: int = PORT) -> ThreadedHTTPServer:
 
     log.info("Bot web server started at http://%s:%d/chat", HOST, port)
     return server
+
+
+if __name__ == "__main__":
+    import signal as _sig
+    import sys as _sys
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+
+    try:
+        from config import BotConfig  # type: ignore[no-redef]
+    except ImportError:
+        from bot.config import BotConfig  # type: ignore[no-redef,assignment]
+
+    cfg = BotConfig.load()
+    gw = Gateway(
+        personality_name=cfg.personality_name,
+        model=cfg.model_name,
+        ollama_url=cfg.ollama_url,
+    )
+    srv = start_server(gw, port=cfg.server_port)
+
+    def _shutdown(sig, frame):  # type: ignore[no-untyped-def]
+        logging.info("Shutting down...")
+        srv.shutdown()
+        _sys.exit(0)
+
+    _sig.signal(_sig.SIGINT, _shutdown)
+    _sig.signal(_sig.SIGTERM, _shutdown)
+    _sig.pause()

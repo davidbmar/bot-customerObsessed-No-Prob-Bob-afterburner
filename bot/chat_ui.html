@@ -510,6 +510,7 @@
 <div class="header">
   <h1>Customer Discovery Agent</h1>
   <div class="header-actions">
+    <button class="btn-small" onclick="newConversation()" title="New Chat">+ New Chat</button>
     <button class="btn-small" onclick="openSettings()" title="Settings">&#9881;</button>
     <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panels">Debug</button>
     <div class="header-meta">
@@ -650,7 +651,20 @@ function init() {
     })
     .catch(function() {});
 
+  // Restore debug panel preference from localStorage
+  var savedDebug = localStorage.getItem('debugPanelVisible');
+  if (savedDebug === 'true') {
+    debugVisible = true;
+    document.getElementById('debugToggle').classList.add('active');
+    document.getElementById('debugPanel').classList.remove('collapsed');
+  }
+
+  showWelcomeMessage();
   document.getElementById('input').focus();
+}
+
+function showWelcomeMessage() {
+  addMessage('assistant', "Hi! I'm the Customer Discovery Agent. Tell me about what you're building or a problem you're trying to solve, and I'll help you understand it deeply.");
 }
 
 function formatTime(date) {
@@ -875,6 +889,7 @@ function addDebugRow(parent, key, val) {
 
 function toggleDebug() {
   debugVisible = !debugVisible;
+  localStorage.setItem('debugPanelVisible', debugVisible);
   var btn = document.getElementById('debugToggle');
   btn.classList.toggle('active', debugVisible);
 
@@ -888,6 +903,9 @@ function toggleDebug() {
     panels[i].classList.toggle('hidden', !debugVisible);
   }
 }
+
+var typingTimer = null;
+var typingStartTime = null;
 
 function showTyping() {
   var existing = document.getElementById('typingIndicator');
@@ -907,15 +925,30 @@ function showTyping() {
   el.appendChild(dots);
 
   var txt = document.createElement('span');
+  txt.id = 'typingText';
   txt.textContent = 'Thinking...';
   el.appendChild(txt);
 
   var container = document.getElementById('messages');
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
+
+  typingStartTime = Date.now();
+  typingTimer = setInterval(function() {
+    var elapsed = Math.floor((Date.now() - typingStartTime) / 1000);
+    var textEl = document.getElementById('typingText');
+    if (!textEl) { clearInterval(typingTimer); return; }
+    if (elapsed > 30) {
+      textEl.textContent = 'Still thinking \u2014 local models can take a moment... (' + elapsed + 's)';
+    } else {
+      textEl.textContent = 'Thinking... (' + elapsed + 's)';
+    }
+  }, 1000);
 }
 
 function hideTyping() {
+  if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+  typingStartTime = null;
   var el = document.getElementById('typingIndicator');
   if (el) el.remove();
 }
@@ -1001,6 +1034,7 @@ function newConversation() {
       document.getElementById('debugTools').textContent = 'none';
       document.getElementById('debugTokens').textContent = '\u2014';
       document.getElementById('debugLatency').textContent = '\u2014';
+      showWelcomeMessage();
       document.getElementById('input').focus();
       closeSettings();
     })
@@ -1009,6 +1043,7 @@ function newConversation() {
       clearContainer(document.getElementById('messages'));
       document.getElementById('debugConvId').textContent = conversationId;
       document.getElementById('settingsConvId').textContent = conversationId;
+      showWelcomeMessage();
       document.getElementById('input').focus();
       closeSettings();
     });

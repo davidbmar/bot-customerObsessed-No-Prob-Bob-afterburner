@@ -1,27 +1,24 @@
+All tasks complete. Here's the summary:
+
 ---
 
-## Files changed
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `bot/gateway.py` | Fixed imports: `OllamaLLM` → `OllamaClient`, `Personality` → `PersonalityLoader` |
-| `bot/polling.py` | Added `/start` command with welcome message |
-| `bot/tools.py` | `save_discovery` now writes `discovery-{timestamp}.md` instead of fixed filename |
-| `cli.py` | Added `--telegram` flag, wires up `TelegramPoller` in `cmd_start` |
-| `tests/test_tools.py` | **New** — 7 tests for save_discovery and tool registration |
-| `tests/test_llm_webchat.py` | Fixed 5 broken tests from Sprint 1 merge (model name, API field names) |
-| `docs/project-memory/backlog/README.md` | Marked B-001 Fixed, F-001/F-002 Complete |
-| `docs/project-memory/sessions/S-2026-03-20-0006-telegram-tools.md` | Session doc |
+| `bot/tools.py` | Added `save_discovery = tool_save_discovery` alias at module level |
+| `tests/test_llm_webchat.py` | Renamed test to `test_api_chat_uses_conversation_id`, fixed assertion |
+| `docs/project-memory/backlog/README.md` | B-006, B-007 → Fixed (Sprint 3); F-002 → Complete |
+| `docs/project-memory/sessions/S-2026-03-20-0024-fix-tools-tests.md` | New session doc |
 
-## Commands run
+## Commands Run
 
-- `python3 -m venv .venv` + `pip install httpx pytest pyyaml`
-- `.venv/bin/python3 -m pytest tests/ -v` — **51 passed, 0 failed**
-- `git push -u origin HEAD`
+- `python3.12 -m venv .venv` + `pip install -e ".[dev]"` — created working venv
+- `.venv/bin/python3 -c "from bot.tools import save_discovery; print(...)"` — verified import works
+- `.venv/bin/python3 -m pytest tests/ -v` — **51 passed, 0 failures**
+- `git push -u origin HEAD` — pushed branch
 
-## Notes / follow-on work
+## Notes / Follow-on Work
 
-- **B-002** (config field naming) may still need attention — the default model in `BotConfig` is `qwen3:4b` while `llm.py` defaults to `qwen3.5:latest`. Currently gateway uses config defaults.
-- **B-003** (server.py cascading import error) is now fixed by the gateway import fix.
-- **B-004** (pytest not in venv) — recreated venv with pytest installed. The `.venv` is gitignored so other agents may need to recreate it.
-- Telegram polling requires a valid `telegram.botToken` in config — without it, `--telegram` prints a warning and continues with web-only mode.
+- The `.venv` was recreated with Python 3.12 (system python3 is 3.9.6, too old for `requires-python = ">=3.11"`). The `.venv` directory is gitignored so this doesn't affect the commit.
+- B-008 (sprint-run.sh zsh `local -A` error) remains open — outside this sprint's scope.

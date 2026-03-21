@@ -13,7 +13,7 @@ Track bugs and feature requests here.
 | B-005 | .venv stale path from project rename | Medium | Fixed |
 | B-006 | save_discovery not exported from bot/tools.py | High | Fixed (Sprint 3) |
 | B-007 | test uses chat_id but server uses conversation_id | Medium | Fixed (Sprint 3) |
-| B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Open |
+| B-008 | sprint-run.sh crashes with `local -A` on zsh — agents run but merge/polling dies | High | Complete (Sprint 32) |
 | B-009 | Dashboard shows 0 for sprints/sessions/ADRs — no PROJECT_STATUS docs built | Medium | Fixed (Sprint 12) |
 | B-010 | GitHub not configured in dashboard project entry | Low | Open |
 | B-011 | CLI status crashes — _auto_discover_projects expects dict but gets strings from projects.json | High | Fixed (Sprint 9) |
@@ -48,8 +48,11 @@ Track bugs and feature requests here.
 | B-040 | Stop speaking doesn't pause mic — "Stop speaking" banner button cancels TTS but VAD re-triggers instantly, picking up background audio as new user input | High | Complete (Sprint 31) |
 | B-041 | Hands-free auto-starts on page load — VAD begins listening immediately when page loads without user opting in, causing unintended voice captures | Medium | Complete (Sprint 31) |
 | B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Complete (Sprint 31) |
-| B-043 | Missing PROJECT_STATUS docs for Sprints 30-31 — dashboard only shows up to Sprint 29, needs generation | Medium | Open |
-| B-044 | B-029 marked Complete but ONNX warnings still fire — 10 console warnings on every page load from Silero VAD WASM | Low | Open |
+| B-043 | Missing PROJECT_STATUS docs for Sprints 30-31 — dashboard only shows up to Sprint 29, needs generation | Medium | Complete (Sprint 32) |
+| B-044 | ONNX warnings still fire despite ort.env.logLevel='error' — WASM compilation warnings happen before JS config takes effect | Low | Open |
+| B-045 | Active Project dropdown in Settings panel is empty — shows blank combobox, no projects listed | Low | Open |
+| B-046 | Bot reports Sprint 29 as "latest" when Sprints 30-31 exist — dashboard API returns stale data until rebuild runs | Medium | Open |
+| B-047 | Missing PROJECT_STATUS doc for Sprint 32 — dashboard shows 31 sprints but Sprint 32 was completed | Medium | Open |
 
 ## Features
 
@@ -127,4 +130,6 @@ Track bugs and feature requests here.
 | F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Complete (Sprint 30) |
 | F-071 | Unified play/pause toggle for hands-free — single button that stops TTS AND pauses VAD on pause, resumes VAD on play; clear visual state (mic icon vs pause icon) | High | Complete (Sprint 31) |
 | F-072 | Hands-free opt-in — require explicit user tap to activate hands-free mode instead of auto-starting on page load | Medium | Complete (Sprint 31) |
-| F-073 | Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent sprint history | Medium | Open |
+| F-073 | Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent sprint history | Medium | Complete (Sprint 32) |
+| F-074 | Auto-rebuild dashboard data after sprint merge — sprint-run.sh should call /api/rebuild-data so dashboard is always current | High | Open |
+| F-075 | Active Project selector in Settings should list all registered Afterburner projects from /api/projects | Medium | Open |

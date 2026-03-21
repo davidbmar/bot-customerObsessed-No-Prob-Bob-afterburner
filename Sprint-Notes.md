@@ -1,10 +1,10 @@
-# Sprint 30 — Agent Notes
+# Sprint 31 — Agent Notes
 
-*Started: 2026-03-21 19:43 UTC*
+*Started: 2026-03-21 20:47 UTC*
 
 Phase 1 Agents: 2
-- agentA-conv-summary
-- agentB-docs-summary
+- agentA-pause-play
+- agentB-backlog-tools
 
 Phase 2 Agents: 0
 (none)
@@ -13,55 +13,66 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-docs-summary
+## agentB-backlog-tools
 
-*Completed: 2026-03-21 19:47 UTC*
+*Completed: 2026-03-21 20:51 UTC*
 
-### Files changed
-- **`docs/PROJECT_STATUS_2026-03-21-sprint29.md`** — New Sprint 29 status doc (input filter B-038, discard button F-069)
-- **`bot/server.py`** — Added `GET /api/conversations/{id}/summary` endpoint and `_handle_conversation_summary` handler
-- **`tests/test_sprint30_summary.py`** — 6 new tests for the summary endpoint
+```
+---
 
-### Commands run
-- `git pull origin main` — already up to date
-- `.venv/bin/python3 -m pytest tests/ -v` — **715 tests passed**
-- `git commit` + `git push -u origin HEAD`
+## Summary
 
-### Notes / follow-on work
-- **Backlog verified**: B-038 and F-069 already marked Complete (Sprint 29), F-070 is Open — no changes needed
-- The summary endpoint uses a simple approach (first user message, truncated to 120 chars) — agentA's UI can call this to show conversation summaries
-- B-029 (ONNX warnings) is listed as a Sprint 30 goal in the brief but assigned to agentA's scope
+### Files Changed
+
+**This repo (`bot-customerObsessed-No-Prob-Bob-afterburner`):**
+- `bot/tools.py` — Added friendly error messages and logging to `tool_get_sprint_status` and `tool_feedback_on_sprint` when dashboard API is unreachable (B-042)
+- `docs/project-memory/sessions/S-2026-03-21-2050-sprint31-backlog-tools.md` — Session doc
+
+**Afterburner repo (`traceable-searchable-adr-memory-index`):**
+- `scripts/build-sprint-data.sh` — Fixed backlog file path to check `backlog/README.md` first; added table-format parser for `| B-NNN |` / `| F-NNN |` rows (B-015)
+
+### Commands Run
+- `python3 -m pytest tests/ -x -q` — 726 passed
+- `build-sprint-data.sh` — 42 bugs + 72 features parsed (was 0)
+- `git push -u origin HEAD`
+
+### Acceptance Criteria Verification
+- `backlog.json` contains 42 bugs and 72 features after rebuild
+- `tool_get_sprint_status("nonexistent")` returns `"Dashboard unavailable, using local data — but project 'nonexistent' not found locally either."` instead of a stack trace
+- All 726 tests pass
+
+### Notes / Follow-on Work
+- The `build-sprint-data.sh` commit is on `main` in the afterburner repo (not on a feature branch) since it was committed directly there. The sprint-merge process should handle pushing that.
+- `_find_project_root` in `bot/tools.py` has a pre-existing bug where it crashes if `projects.json` contains strings instead of dicts (seen during manual testing) — not in scope for this sprint but could be a future B-item.
+```
 
 
 ---
 
-## agentA-conv-summary
+## agentA-pause-play
 
-*Completed: 2026-03-21 19:47 UTC*
+*Completed: 2026-03-21 20:51 UTC*
 
 ### Files changed
-- **`bot/chat_ui.html`** — Added conversation summary banner (F-070) + ONNX warning suppression (B-029)
-- **`docs/project-memory/backlog/README.md`** — Marked F-070 and B-029 as Complete (Sprint 30)
-- **`docs/project-memory/sessions/S-2026-03-21-1947-conv-summary-onnx-fix.md`** — Session doc
+- `bot/chat_ui.html` — all pause/play/VAD fixes
 
 ### Commands run
-- `python3 -m pytest tests/ -v` — **709 passed**, 3 warnings
+- `git pull origin main`
+- `python3 -m pytest tests/ -x -q` — 726 passed
 - `git commit` + `git push -u origin HEAD`
 
-### What was implemented
-
-**F-070 — Conversation summary banner:**
-- Collapsible banner appears at top of chat when conversation exceeds 10 messages
-- Shows `"Summary: [first user question] — [extracted topics]"`
-- Click to expand shows message counts and full topic list
-- Auto-updates on each new message via `addMessage()` hook
-- Subtle styling (muted background, small text, collapsed by default)
-
-**B-029 — Suppress ONNX warnings:**
-- Added inline `<script>` after ONNX import that sets `ort.env.logSeverityLevel = 3` (error-only)
-- Eliminates 10+ console warnings on every page load
+### What was done
+| Bug/Feature | Fix |
+|---|---|
+| B-039, B-040 | Pause button now stops TTS **and** pauses VAD mic |
+| B-041 | Page load defaults to paused — no auto-listening |
+| F-071 | Visual "Paused" / "Listening..." indicator (already existed, now correctly shown) |
+| Escape key | Also pauses VAD |
+| Stop speaking button | Also pauses VAD |
+| TTS ended/error | No longer overrides user's explicit pause |
+| Barge-in | Still works — uses `stopAgentSpeakingOnly()` |
 
 ### Notes / follow-on work
-- Topic extraction uses a simple heuristic (capitalized words > 4 chars). A more sophisticated NLP approach could be added later if needed.
-- The ONNX suppression script checks `typeof ort !== 'undefined'` as a safety guard since the script loads synchronously right after the ONNX import.
+- The `toggleHandsfree()` button deliberately sets `vadPaused = false` (user explicitly activating), while page-load auto-restore keeps `vadPaused = true` and re-pauses after the toggle
+- Consider adding a UI test for the pause/play state transitions (e.g., Playwright-based)
 

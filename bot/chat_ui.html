@@ -1660,7 +1660,7 @@ TELEGRAM_BOT_TOKEN=123:ABC...</pre>
         <li><a href="https://d3gb25yycyv0d9.cloudfront.net" target="_blank" style="color:var(--accent)">Published Dashboard</a></li>
       </ul>
 
-      <p style="margin:16px 0 0;color:var(--text-muted);font-size:11px">Built across 21 sprints · 636 tests · 59 features · 9 eval scenarios</p>
+      <p id="docsStats" style="margin:16px 0 0;color:var(--text-muted);font-size:11px">Built across 21 sprints · 636 tests · 59 features · 9 eval scenarios</p>
     </div>
   </div>
 </div>
@@ -2808,6 +2808,17 @@ function clearHistory() {
 
 function openDocs() {
   document.getElementById('docsOverlay').classList.add('open');
+  fetch('/api/stats').then(function(r){ return r.json(); }).then(function(d){
+    var el = document.getElementById('docsStats');
+    if(el && d){
+      var parts = [];
+      if(d.sprints !== undefined) parts.push(d.sprints + ' sprints');
+      if(d.tests !== undefined) parts.push(d.tests + ' tests');
+      if(d.features !== undefined) parts.push(d.features + ' features');
+      if(d.eval_scenarios !== undefined) parts.push(d.eval_scenarios + ' eval scenarios');
+      if(parts.length) el.textContent = 'Built across ' + parts.join(' \u00b7 ');
+    }
+  }).catch(function(){});
 }
 function closeDocs() {
   document.getElementById('docsOverlay').classList.remove('open');

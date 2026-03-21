@@ -43,6 +43,7 @@ class TestScrollToBottomFAB:
         # Common patterns: down arrow unicode, SVG arrow, or arrow-down class
         has_indicator = bool(
             re.search(r'[↓⬇▼⏬🔽]', html)
+            or re.search(r'&#x2193;', html)
             or re.search(r'arrow.?down', html, re.IGNORECASE)
             or re.search(r'chevron.?down', html, re.IGNORECASE)
         )

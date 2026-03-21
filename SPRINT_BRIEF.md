@@ -1,10 +1,9 @@
-# Sprint 22
+# Sprint 23
 
 Goal
-- Fix conversation restore — clicking saved conversation shows only welcome message, not history (B-030)
-- Fix new conversations not saving to sidebar (B-031, F-058)
-- Update Docs panel stats from hardcoded "20 sprints" to dynamic counts (B-032)
-- Fix Active Project dropdown empty in Settings (B-028)
+- Fix paragraph spacing in restored bot messages — old conversations saved as textContent lose line breaks (B-034)
+- Add notification sound on bot response with toggle in settings (F-046)
+- Add code block syntax highlighting in bot messages (F-059)
 
 Constraints
 - Use the project venv: .venv/bin/python3
@@ -14,8 +13,8 @@ Constraints
 - agentB owns bot/server.py, tests/ — agentA MUST NOT touch these
 
 Merge Order
-1. agentB-server-api
-2. agentA-conversation-fixes
+1. agentB-server-polish
+2. agentA-chat-polish
 
 Merge Verification
 ```bash
@@ -24,66 +23,82 @@ cd /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner
 ```
 
 Previous Sprint
-- Sprint 21: favicon, localhost auth bypass, copy button on all messages, Escape key, voice waveform, send button paste fix
-- 636 tests pass
-- Conversation persistence broken: old conversations don't restore from sidebar, new conversations don't appear in sidebar
-- Docs panel stats hardcoded, Active Project dropdown empty
+- Sprint 22: conversation persistence fixed (save markdown, sidebar refresh), /api/projects endpoint, Active Project dropdown wired, Docs stats updated
+- 643 tests pass
+- Hotfix: tool result format fixed for Claude API (B-033)
+- Restored old conversations lose paragraph spacing (B-034)
 
-## agentA-conversation-fixes
-
-Objective
-- Fix conversation save/restore so switching between conversations works correctly
-- Fix sidebar refresh so new conversations appear immediately
-
-Tasks
-1. **Fix saveConversation() to preserve markdown source** (B-030):
-   - In `saveConversation()` (~line 2813), change how assistant message content is extracted
-   - Currently: `var content = bodyEl ? bodyEl.textContent : ''` — this loses markdown
-   - Fix: For assistant messages, prefer `bodyEl.dataset.markdown` (set at line 2041) over `textContent`
-   - Updated line: `var content = bodyEl ? (bodyEl.dataset.markdown || bodyEl.textContent) : ''`
-   - This preserves the original markdown for proper re-rendering on restore
-
-2. **Fix sidebar refresh after conversation changes** (B-031, F-058):
-   - In `newConversation()` (~line 2526): after `showWelcomeMessage()`, call `refreshConversationList()`
-   - In `saveConversation()` (~line 2813): after successful save to localStorage, call `refreshConversationList()`
-   - BUT: avoid infinite loops — `refreshConversationList` should not trigger `saveConversation`
-   - Simple approach: add `refreshConversationList()` call at the end of `saveConversation()` (after the try/catch), and at the end of `newConversation()` (both success and catch paths)
-
-3. **Update Docs panel stats** (B-032):
-   - Find the hardcoded line "Built across 20 sprints · 631 tests · 57 features" in the Docs panel HTML (~search for "Built across")
-   - Update to: "Built across 21 sprints · 636 tests · 59 features · 9 eval scenarios"
-   - Or better: add `id="docsStats"` to the element so it can be updated dynamically later
-
-4. **Update backlog** — Mark B-030, B-031, B-032 as Complete (Sprint 22)
-
-Acceptance Criteria
-- Create a new chat, send a message → conversation appears in sidebar immediately
-- Switch away and back → conversation restores with all messages and formatting
-- Bot messages show proper markdown (bold, italic, paragraphs) after restore
-- Docs panel shows updated sprint/test/feature counts
-
-## agentB-server-api
+## agentA-chat-polish
 
 Objective
-- Fix Active Project dropdown to show available projects
-- Write tests for conversation-related API endpoints
+- Fix paragraph spacing in restored conversations
+- Add notification sound toggle
+- Add code syntax highlighting
 
 Tasks
-1. **Fix Active Project dropdown** (B-028):
-   - In `bot/server.py`, find how the `/api/health` or settings data is returned
-   - Add a `/api/projects` endpoint (or extend health) that returns the list of available Afterburner projects
-   - Read from `~/.config/afterburner/registry.json` if it exists, or return a single entry for the current project
-   - Response format: `{"projects": [{"slug": "noprobbob", "name": "No Prob Bob"}]}`
-   - The frontend (agentA's territory) already has the dropdown — it just needs data. agentA will wire it up.
+1. **Fix paragraph spacing in restored conversations** (B-034):
+   - In `saveConversation()` (~line 2821), for assistant messages: already using `bodyEl.dataset.markdown || bodyEl.textContent`
+   - The issue is that OLD conversations were saved with `textContent` which has no paragraph breaks
+   - Add a one-time migration in `restoreConversation()` and `switchToConversation()`:
+     - When loading messages from localStorage, if the content has no newlines but has patterns like `.A` or `?A` or `!A` (period/question/exclamation followed immediately by capital letter with no space), insert `\n\n` before the capital letter
+   - This heuristic fixes "understand.So" → "understand.\n\nSo" and "else?I'm" → "else?\n\nI'm"
+   - Apply the fix: `content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2')`
+   - Only apply when content has NO existing newlines (old format), so new markdown content is untouched
 
-2. **Write tests for API endpoints**:
-   - Test GET `/api/projects` returns valid JSON with at least one project
-   - Test GET `/api/health` returns 200 with expected fields
-   - Test POST `/api/conversations/new` returns a valid conversation_id
+2. **Add notification sound on bot response** (F-046):
+   - Add a subtle notification sound when the bot finishes a response (not during streaming, only on completion)
+   - Use the Web Audio API to generate a short, pleasant chime — no external audio files needed
+   - Example: two short sine wave tones (440Hz then 554Hz, 80ms each) with quick fade
+   - Add a toggle in the Settings panel: "Notification sound" checkbox, default OFF
+   - Save preference in localStorage (`notifySound`)
+   - Play sound in the streaming `done` event handler, only if `notifySound` is enabled and tab is not focused (`!document.hasFocus()`)
+   - Do NOT play if TTS is about to speak (the voice IS the notification)
 
-3. **Update backlog** — Mark B-028, F-058 as Complete (Sprint 22)
+3. **Add code block syntax highlighting** (F-059):
+   - In `renderMarkdownToDOM()`, when rendering `<pre><code>` blocks:
+   - Add a lightweight syntax highlighter — not a full library, just basic token coloring:
+     - Keywords (function, const, let, var, if, else, return, import, class, def, for, while, try, catch) → accent color
+     - Strings (single/double quoted, backtick) → green
+     - Comments (// and #) → muted color
+     - Numbers → orange
+   - Apply via CSS classes on `<span>` elements inside `<code>`
+   - Add corresponding CSS rules using `var(--accent)` and other theme variables
+   - Keep it simple — ~30 lines of JS, no external dependencies
+
+4. **Update backlog** — Mark B-034, F-046, F-059 as Complete (Sprint 23)
 
 Acceptance Criteria
-- GET `/api/projects` returns JSON list of projects
-- All existing + new tests pass
+- Old restored conversations show proper paragraph breaks (no "word.Next")
+- Settings has "Notification sound" toggle
+- Sound plays when bot responds (only when tab not focused, sound enabled, TTS not active)
+- Code blocks in bot messages have colored keywords/strings/comments
 - `.venv/bin/python3 -m pytest tests/ -v` — all pass
+
+## agentB-server-polish
+
+Objective
+- Add server-side tests and polish
+
+Tasks
+1. **Add test for tool result formatting** (B-033 regression guard):
+   - In `tests/`, add a test that verifies `ToolCall.id` is stored and that `_handle_tool_calls` formats messages correctly for both Anthropic (with id) and OpenAI (without id) cases
+   - Mock the LLM response to return a ToolCall with `id="test-123"` and verify the messages list has the correct Anthropic format
+   - Also test with `id=""` and verify the OpenAI format is used
+
+2. **Test conversation new endpoint robustness**:
+   - Test POST `/api/conversations/new` multiple times returns unique IDs
+   - Test that conversation IDs follow expected format
+
+3. **Update Docs panel sprint count** (via server):
+   - Add a `/api/stats` endpoint that returns `{"sprints": N, "tests": N, "features": N}` by counting:
+     - Sprints: count `docs/PROJECT_STATUS_*.md` files
+     - Tests: run `pytest --co -q 2>/dev/null | tail -1` and parse count (or hardcode for now)
+     - Features: count lines matching `| F-` in `docs/project-memory/backlog/README.md`
+   - This lets the frontend Docs panel auto-update stats in a future sprint
+
+4. **Update backlog** — Mark items as Complete (Sprint 23)
+
+Acceptance Criteria
+- Tool result format test passes for both Anthropic and OpenAI paths
+- `/api/stats` returns valid JSON with sprint/test/feature counts
+- All existing + new tests pass

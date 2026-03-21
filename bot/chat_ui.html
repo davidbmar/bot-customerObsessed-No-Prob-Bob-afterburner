@@ -826,6 +826,42 @@
   }
   .vad-transcript-preview.visible { display: block; }
 
+  /* Voice transcription preview / discard (F-069) */
+  .input-area.voice-preview { border-top: 2px solid var(--accent); }
+  .input-area.voice-preview-warn { border-top: 2px solid var(--warning); }
+
+  .voice-discard-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+  }
+  .voice-discard-btn:hover { color: var(--error); background: rgba(239,68,68,0.1); }
+
+  .voice-countdown {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .voice-countdown-bar {
+    height: 2px;
+    background: var(--accent);
+    transition: width 1s linear;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+  }
+
   /* Silence threshold slider in settings */
   .settings-group input[type="range"] {
     width: 100%;
@@ -1415,7 +1451,7 @@
     </button>
     <div class="input-area" id="inputArea">
       <textarea id="input" placeholder="Type a message..." rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();if(voicePreviewTimer){confirmVoicePreview()}else{sendMessage()}}"></textarea>
       <div class="voice-controls">
         <button class="btn-talk" id="talkBtn" title="Hold to talk — press and hold to record, release to send">&#x1F3A4;</button>
         <button class="btn-handsfree" id="handsfreeBtn" onclick="toggleHandsfree()" title="Toggle hands-free voice mode">&#x1F3A7; Hands-free</button>
@@ -1425,6 +1461,8 @@
           <canvas class="vad-waveform" id="vadWaveform" width="48" height="20"></canvas>
         </div>
       </div>
+      <button class="voice-discard-btn" id="voiceDiscardBtn" onclick="discardVoicePreview()" title="Discard transcription" style="display:none">&#x2715;</button>
+      <span class="voice-countdown" id="voiceCountdown" style="display:none"></span>
       <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
     </div>
     <div class="word-count-indicator" id="wordCountIndicator"></div>
@@ -2407,6 +2445,7 @@ var streamAborted = false;
 var vadPaused = false;
 
 function sendMessage() {
+  clearVoicePreviewUI();
   var input = document.getElementById('input');
   var text = input.value.trim();
   if (!text) return;
@@ -3832,7 +3871,8 @@ function stopAgentSpeaking() {
 // Escape key stops bot speaking or generating (works even when typing)
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    if (isBotSpeaking) { e.preventDefault(); stopAgentSpeaking(); }
+    if (voicePreviewTimer) { e.preventDefault(); discardVoicePreview(); }
+    else if (isBotSpeaking) { e.preventDefault(); stopAgentSpeaking(); }
     else if (isStreaming) { e.preventDefault(); stopGenerating(); }
   }
 });
@@ -3847,6 +3887,119 @@ function showTranscriptionPreview(text) {
 
 function hideTranscriptionPreview() {
   document.getElementById('transcriptionPreview').style.display = 'none';
+}
+
+// --- F-069: Voice transcription preview with discard ---
+var voicePreviewTimer = null;
+var voicePreviewCountdown = 0;
+var voicePreviewCountdownInterval = null;
+
+function isGarbledTranscription(text) {
+  // Heuristic: very short (< 3 chars), no real words (all single chars), or mostly non-alpha
+  if (text.length < 3) return true;
+  var words = text.split(/\s+/);
+  var realWords = words.filter(function(w) { return w.length > 1; });
+  if (realWords.length === 0) return true;
+  var alphaChars = text.replace(/[^a-zA-Z]/g, '').length;
+  if (alphaChars / text.length < 0.4) return true;
+  return false;
+}
+
+function showVoicePreview(text) {
+  cancelVoicePreview();
+  var input = document.getElementById('input');
+  var inputArea = document.getElementById('inputArea');
+  var discardBtn = document.getElementById('voiceDiscardBtn');
+  var countdownEl = document.getElementById('voiceCountdown');
+
+  input.value = text;
+  input.focus();
+
+  // Detect garbled transcription
+  var garbled = isGarbledTranscription(text);
+  inputArea.classList.remove('voice-preview', 'voice-preview-warn');
+  inputArea.classList.add(garbled ? 'voice-preview-warn' : 'voice-preview');
+
+  discardBtn.style.display = '';
+  countdownEl.style.display = '';
+
+  // Start countdown
+  voicePreviewCountdown = 3;
+  countdownEl.textContent = 'Sending in ' + voicePreviewCountdown + '...';
+
+  voicePreviewCountdownInterval = setInterval(function() {
+    voicePreviewCountdown--;
+    if (voicePreviewCountdown > 0) {
+      countdownEl.textContent = 'Sending in ' + voicePreviewCountdown + '...';
+    } else {
+      countdownEl.textContent = 'Sending...';
+    }
+  }, 1000);
+
+  voicePreviewTimer = setTimeout(function() {
+    confirmVoicePreview();
+  }, 3000);
+
+  // Listen for user edits — cancel auto-send if they type
+  input.addEventListener('input', onVoicePreviewEdit);
+
+  updateSendButton();
+}
+
+function onVoicePreviewEdit() {
+  // User is editing the transcription — cancel auto-send but keep text
+  if (voicePreviewTimer) {
+    clearTimeout(voicePreviewTimer);
+    voicePreviewTimer = null;
+  }
+  if (voicePreviewCountdownInterval) {
+    clearInterval(voicePreviewCountdownInterval);
+    voicePreviewCountdownInterval = null;
+  }
+  var countdownEl = document.getElementById('voiceCountdown');
+  countdownEl.textContent = 'Editing...';
+  // Keep the discard button visible so they can still discard
+}
+
+function confirmVoicePreview() {
+  var input = document.getElementById('input');
+  input.removeEventListener('input', onVoicePreviewEdit);
+  clearVoicePreviewUI();
+  if (input.value.trim()) {
+    sendMessage();
+  }
+}
+
+function discardVoicePreview() {
+  var input = document.getElementById('input');
+  input.removeEventListener('input', onVoicePreviewEdit);
+  input.value = '';
+  clearVoicePreviewUI();
+  if (handsfreeActive) {
+    setVadState('listening');
+  }
+  updateSendButton();
+}
+
+function cancelVoicePreview() {
+  if (voicePreviewTimer) {
+    clearTimeout(voicePreviewTimer);
+    voicePreviewTimer = null;
+  }
+  if (voicePreviewCountdownInterval) {
+    clearInterval(voicePreviewCountdownInterval);
+    voicePreviewCountdownInterval = null;
+  }
+  var input = document.getElementById('input');
+  input.removeEventListener('input', onVoicePreviewEdit);
+}
+
+function clearVoicePreviewUI() {
+  cancelVoicePreview();
+  var inputArea = document.getElementById('inputArea');
+  inputArea.classList.remove('voice-preview', 'voice-preview-warn');
+  document.getElementById('voiceDiscardBtn').style.display = 'none';
+  document.getElementById('voiceCountdown').style.display = 'none';
 }
 
 // Persistent audio element — unlocked on first user gesture (iOS Safari requirement).
@@ -4057,15 +4210,12 @@ function sendVoiceToServer(audioB64, sampleRate) {
       return;
     }
 
-    // Show transcribed text in preview bar briefly
+    // F-069: Show transcribed text in input with discard option
     showTranscriptionPreview(text);
-
-    // Inject transcribed text into the chat as if the user typed it
     hideTyping();
-    document.getElementById('input').value = text;
-    sendMessage();
+    showVoicePreview(text);
 
-    // Hide preview after a short delay (message is now in chat)
+    // Hide old-style preview after a short delay
     setTimeout(hideTranscriptionPreview, 1500);
   })
   .catch(function(err) {
@@ -4445,9 +4595,8 @@ function sendVADToServer(audioB64, sampleRate) {
     preview.classList.add('visible');
     setTimeout(function() { preview.classList.remove('visible'); }, 3000);
 
-    // Send as chat message
-    document.getElementById('input').value = text;
-    sendMessage();
+    // F-069: Show in input with discard option instead of auto-sending
+    showVoicePreview(text);
     setVadState('listening');
   })
   .catch(function(err) {

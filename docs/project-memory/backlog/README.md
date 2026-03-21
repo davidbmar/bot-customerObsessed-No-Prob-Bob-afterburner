@@ -117,3 +117,4 @@ Track bugs and feature requests here.
 | F-066 | Scroll-to-bottom FAB — floating button appears when scrolled up in long conversations, click to jump to latest message | Medium | Complete (Sprint 26) |
 | F-067 | Message character/word count — show approximate token usage before sending long messages | Low | Complete (Sprint 27) |
 | F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |
+| F-069 | Voice transcription discard button — show transcription preview with discard/confirm before auto-sending | High | Complete (Sprint 29) |

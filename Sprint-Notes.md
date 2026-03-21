@@ -1,10 +1,10 @@
-# Sprint 27 — Agent Notes
+# Sprint 28 — Agent Notes
 
-*Started: 2026-03-21 18:43 UTC*
+*Started: 2026-03-21 19:03 UTC*
 
 Phase 1 Agents: 2
-- agentA-word-count
-- agentB-deps-docs
+- agentA-voice-personality
+- agentB-docs-stats
 
 Phase 2 Agents: 0
 (none)
@@ -13,47 +13,44 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-word-count
+## agentA-voice-personality
 
-*Completed: 2026-03-21 18:45 UTC*
+*Completed: 2026-03-21 19:07 UTC*
 
-## Files changed
-- `bot/chat_ui.html` — Added `.word-count-indicator` CSS, HTML element, and `updateWordCount()` JS function
-- `docs/project-memory/backlog/README.md` — Marked F-067 as Complete (Sprint 27)
-- `docs/project-memory/sessions/S-2026-03-21-1845-word-count-indicator.md` — Session doc (new)
-- `AGENT_BRIEF.md` — Already tracked as modified
+### Files changed
+- `personalities/customer-discovery.md` — added `## Capabilities` section with voice awareness
+- `personalities/base.md` — added same `## Capabilities` section (all personalities inherit voice awareness)
+- `bot/chat_ui.html` — added `id="docsStats"` to stats paragraph; updated `openDocs()` to fetch `/api/stats` dynamically with hardcoded fallback
+- `docs/project-memory/backlog/README.md` — marked B-037 as Complete (Sprint 28)
+- `docs/project-memory/sessions/S-2026-03-21-1906-voice-personality-dynamic-stats.md` — new session doc
 
-## Commands run
-- `git pull origin main` — up to date
-- `python3 -m pytest tests/ -v` — 689 passed
-- `git push -u origin HEAD` — pushed
+### Commands run
+- `git pull origin main` — already up to date
+- `pytest tests/ -v` — 693 tests passed
+- `git push -u origin HEAD` — branch pushed
 
-## Notes / follow-on work
-- Token estimate uses `words × 1.3` heuristic as specified. If more accurate tokenization is needed later, a proper tokenizer library (e.g. tiktoken) could be integrated server-side.
-- The indicator appears below the input area, right-aligned, in 11px muted text — disappears when input is empty.
+### Notes / follow-on work
+- The Capabilities section is in both `base.md` and `customer-discovery.md`. Since customer-discovery extends base, it's slightly redundant — but explicit is better than implicit for system prompt instructions that affect user experience.
+- The `/api/stats` endpoint (F-060, Sprint 23) must be running for dynamic stats to work; the hardcoded fallback covers offline/dev scenarios.
 
 
 ---
 
-## agentB-deps-docs
+## agentB-docs-stats
 
-*Completed: 2026-03-21 18:47 UTC*
+*Completed: 2026-03-21 19:07 UTC*
 
-**Files changed (6):**
-- `pyproject.toml` — Added `providers` extra group; updated `dev` and `all` groups with anthropic, openai, google-auth[requests]
-- `scripts/start.sh` — Added `pip install -q -e ".[dev]"` after venv activation
-- `tests/test_sprint27_deps.py` — 4 import tests (anthropic, openai, google.oauth2.id_token, google.auth.transport.requests)
-- `docs/PROJECT_STATUS_2026-03-21-sprint26.md` — Sprint 26 status doc
-- `docs/project-memory/backlog/README.md` — B-035, B-036 marked Complete (Sprint 27)
-- `docs/project-memory/sessions/S-2026-03-21-1846-sprint27-deps-docs.md` — Session doc
+### Files changed
+- `docs/PROJECT_STATUS_2026-03-21-sprint27.md` — **new** — Sprint 27 status doc covering deps fix (B-035, B-036) and word count indicator (F-067)
+- `tests/test_personality.py` — **modified** — added `test_personality_knows_about_voice` asserting voice/speech/hear keywords present and text-only/can't hear absent (B-037)
+- `docs/project-memory/sessions/S-2026-03-21-1906-sprint28-docs-voice-test.md` — **new** — session doc
 
-**Commands run:**
-- `python3.12 -m venv .venv && pip install -e ".[dev]"` — created venv with Python 3.12
-- `python3 -c "import anthropic; ..."` — verified imports work
-- `pytest tests/ -v` — 693 tests passing
-- `git push -u origin HEAD` — pushed to `agentB-deps-docs`
+### Commands run
+- `git pull origin main` — already up to date
+- `python3 -m pytest tests/ -v` — **694 passed** in 27s
+- `git push -u origin HEAD` — pushed to `agentB-docs-stats`
 
-**Notes / follow-on work:**
-- agentA owns F-067 (message word count) and chat_ui.html — not touched here
-- The `AGENT_BRIEF.md` is still modified (expected — sprint infrastructure file)
+### Notes / follow-on work
+- The voice awareness test currently passes because "hearing" naturally appears in customer-discovery.md's conversation flow section. Once agentA adds explicit voice/STT/TTS capability text to the personality (B-037 fix), the test will serve as a stronger regression guard.
+- Backlog was already up to date — B-035, B-036, F-067 all correctly marked Complete (Sprint 27).
 

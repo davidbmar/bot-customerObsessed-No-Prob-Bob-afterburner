@@ -1,4 +1,4 @@
-agentA-project-fix — Sprint 34
+agentA-ui-polish — Sprint 35
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -77,28 +77,24 @@ Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent hi
 Sprint-Level Context
 
 Goal
-- Fix Active Project dropdown to show registered projects (B-045)
-- Fix sprint-config.sh to use venv python for test verification (B-048)
-- Generate PROJECT_STATUS doc for Sprint 33 (B-049)
+- Fix sprint-config.sh to use venv python so sprint-run.sh verification passes (B-048)
+- Generate PROJECT_STATUS docs for Sprints 33-34 so dashboard shows all sprints (B-049)
 
 Constraints
-- agentA owns `bot/chat_ui.html` and `bot/config.py` exclusively
+- agentA owns `bot/chat_ui.html` exclusively
 - agentB owns `.sprint/scripts/` and `docs/` files
 - No two agents may modify the same files
 
 
 Objective
-- Fix Active Project dropdown to correctly discover and display registered projects (B-045)
+- Minor UI polish: ensure the Active Project dropdown pre-selects the current active project correctly
 
 Tasks
-- In `bot/config.py`, fix `_auto_discover_projects()` to handle the `projects.json` format which is `{"projects": [...], "activeProject": "slug"}` — currently expects a plain list
-- The function should extract the `projects` array from the dict, then iterate over entries extracting `slug` and `rootPath`
-- Also try the dashboard API at `http://127.0.0.1:1201/api/projects` as a discovery source — the dashboard is usually running
-- In `bot/chat_ui.html`, ensure the Active Project dropdown fetches from the bot server's `/api/projects` endpoint on Settings panel open
-- If projects are found, populate the dropdown with `{slug}: {name}` entries
-- Pre-select the active project
+- In `bot/chat_ui.html`, when populating the Active Project dropdown from `/api/projects`, set the `selected` attribute on the option matching `active_project` from the response
+- If no active project is set, default to the first project in the list
+- After user selects a project and clicks "Save & Switch", the dropdown should reflect the new selection on next Settings open
 
 Acceptance Criteria
-- Settings panel Active Project dropdown shows registered Afterburner projects (not "No projects registered")
-- Bot config correctly discovers projects from dashboard projects.json or API
-- Existing tests pass
+- Active Project dropdown pre-selects the currently active project
+- Changing active project persists across Settings panel opens
+- No regressions in existing Settings panel behavior

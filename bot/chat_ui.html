@@ -6,6 +6,10 @@
 <title>Customer Discovery Agent</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
+<script>
+// B-029: Suppress ONNX runtime warnings (severity 3 = error only)
+if (typeof ort !== 'undefined') { ort.env.logSeverityLevel = 3; }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js" defer></script>
 <style>
   :root {
@@ -1258,6 +1262,49 @@
 
   .seed-doc-bar.visible { display: flex; align-items: center; gap: 10px; }
 
+  /* F-070: Conversation summary banner */
+  .conv-summary-banner {
+    display: none;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .conv-summary-banner.visible { display: block; }
+  .conv-summary-banner .summary-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .conv-summary-banner .summary-toggle {
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .conv-summary-banner.expanded .summary-toggle {
+    transform: rotate(90deg);
+  }
+  .conv-summary-banner .summary-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .conv-summary-banner .summary-detail {
+    display: none;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    white-space: normal;
+  }
+  .conv-summary-banner.expanded .summary-detail { display: block; }
+
   .btn-seed {
     background: var(--bg-tertiary);
     color: var(--accent);
@@ -1433,6 +1480,13 @@
   </div>
 
   <div class="chat-area">
+    <div class="conv-summary-banner" id="convSummaryBanner" onclick="toggleConvSummary()">
+      <div class="summary-header">
+        <span class="summary-toggle">&#x25B6;</span>
+        <span class="summary-text" id="convSummaryText"></span>
+      </div>
+      <div class="summary-detail" id="convSummaryDetail"></div>
+    </div>
     <div class="messages" id="messages"></div>
     <button class="scroll-fab" id="scrollFab" onclick="scrollToBottom()" title="Scroll to bottom">&#x2193;</button>
     <div class="seed-doc-bar" id="seedDocBar">
@@ -2372,6 +2426,7 @@ function addMessage(role, text, debugData, msgDate) {
   container.appendChild(group);
   container.scrollTop = container.scrollHeight;
   updateSeedButtonVisibility();
+  updateConvSummary(); // F-070: Update conversation summary banner
 }
 
 function addDebugRow(parent, key, val) {
@@ -3197,6 +3252,71 @@ function scrollToBottom() {
   }
   msgEl.addEventListener('scroll', updateFab);
 })();
+
+// -- F-070: Conversation Summary Banner --
+
+var SUMMARY_THRESHOLD = 10; // show summary after this many messages
+
+function updateConvSummary() {
+  var msgs = document.querySelectorAll('.message');
+  var banner = document.getElementById('convSummaryBanner');
+  if (msgs.length < SUMMARY_THRESHOLD) {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  // Extract first user message
+  var firstUserMsg = '';
+  var topics = [];
+  var userMsgCount = 0;
+  var botMsgCount = 0;
+  for (var i = 0; i < msgs.length; i++) {
+    var m = msgs[i];
+    var bodyEl = m.querySelector('.body');
+    var text = bodyEl ? (bodyEl.dataset.markdown || bodyEl.textContent || '') : '';
+    if (m.classList.contains('user')) {
+      userMsgCount++;
+      if (!firstUserMsg && text.trim()) firstUserMsg = text.trim();
+      // Extract topic keywords from user messages
+      extractTopics(text, topics);
+    } else if (m.classList.contains('assistant')) {
+      botMsgCount++;
+    }
+  }
+
+  // Build summary text
+  var shortQuestion = firstUserMsg.length > 80 ? firstUserMsg.substring(0, 77) + '...' : firstUserMsg;
+  var topicStr = topics.length > 0 ? ' \u2014 ' + topics.slice(0, 4).join(', ') : '';
+  var summaryText = '\uD83D\uDCCB Summary: ' + shortQuestion + topicStr;
+
+  // Build detail
+  var detail = userMsgCount + ' user messages, ' + botMsgCount + ' bot responses';
+  if (topics.length > 0) {
+    detail += '\nTopics: ' + topics.join(', ');
+  }
+
+  document.getElementById('convSummaryText').textContent = summaryText;
+  document.getElementById('convSummaryDetail').textContent = detail;
+  banner.classList.add('visible');
+}
+
+function extractTopics(text, topics) {
+  // Simple keyword extraction: find capitalized multi-word phrases and key nouns
+  var words = text.split(/\s+/);
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i].replace(/[^a-zA-Z0-9-]/g, '');
+    if (w.length > 4 && w[0] === w[0].toUpperCase() && w[0] !== w[0].toLowerCase()) {
+      if (topics.indexOf(w) === -1 && topics.length < 8) {
+        topics.push(w);
+      }
+    }
+  }
+}
+
+function toggleConvSummary() {
+  var banner = document.getElementById('convSummaryBanner');
+  banner.classList.toggle('expanded');
+}
 
 // -- Save as Seed Doc --
 

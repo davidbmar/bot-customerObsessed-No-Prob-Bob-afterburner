@@ -34,7 +34,7 @@ Track bugs and feature requests here.
 | B-026 | No favicon — browser shows 404 for `/favicon.ico` on every page load | Low | Complete (Sprint 21) |
 | B-027 | Copy button only appears on first bot message, not on subsequent bot messages | Medium | Complete (Sprint 21) |
 | B-028 | Active Project dropdown in Settings panel is empty — should list available projects or be hidden when only one project exists | Low | Complete (Sprint 22) |
-| B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Open |
+| B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Complete (Sprint 30) |
 | B-037 | Bot says "I'm text-only" and "I can't hear audio" when user speaks via voice — personality system prompt doesn't mention STT/TTS voice capabilities | High | Complete (Sprint 28) |
 | B-038 | Input filter lets TV/movie audio through — hands-free mode transcribes background media and sends full movie scenes to LLM as user messages | Medium | Complete (Sprint 29) |
 | B-035 | pyproject.toml [dev] group missing anthropic, openai, google-auth — venv rebuild breaks login and LLM providers | High | Complete (Sprint 27) |
@@ -118,4 +118,4 @@ Track bugs and feature requests here.
 | F-067 | Message character/word count — show approximate token usage before sending long messages | Low | Complete (Sprint 27) |
 | F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |
 | F-069 | Voice transcription discard button — show transcription preview with discard/confirm before auto-sending | High | Complete (Sprint 29) |
-| F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Open |
+| F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Complete (Sprint 30) |

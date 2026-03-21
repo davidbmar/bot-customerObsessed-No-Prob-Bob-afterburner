@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Discovery Agent</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js" defer></script>
 <style>
   :root {
     --bg: #0d1117;
@@ -597,6 +599,95 @@
     color: var(--success);
   }
 
+  /* Hands-free VAD mode */
+  .btn-handsfree {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .btn-handsfree:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-handsfree.active {
+    background: rgba(63, 185, 80, 0.15);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .vad-status {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 0;
+  }
+
+  .vad-status.visible { display: flex; }
+
+  .vad-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: vad-pulse 2s infinite;
+  }
+
+  .vad-dot.recording { background: var(--error); animation: pulse-record 1s infinite; }
+  .vad-dot.processing { background: var(--warning); animation: none; }
+  .vad-dot.speaking { background: var(--accent); animation: none; }
+
+  @keyframes vad-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* Input area border states for hands-free mode */
+  .input-area.vad-listening { border-top: 2px solid var(--success); }
+  .input-area.vad-recording { border-top: 2px solid var(--error); }
+  .input-area.vad-processing { border-top: 2px solid var(--warning); }
+  .input-area.vad-speaking { border-top: 2px solid var(--accent); }
+  .input-area.vad-filtered {
+    border-top: 2px solid var(--text-muted);
+    animation: filter-flash 0.5s;
+  }
+
+  @keyframes filter-flash {
+    0% { border-top-color: var(--text-muted); }
+    50% { border-top-color: transparent; }
+    100% { border-top-color: var(--text-muted); }
+  }
+
+  /* Transcription preview */
+  .vad-transcript-preview {
+    display: none;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 4px 20px 0;
+    background: var(--bg-secondary);
+  }
+  .vad-transcript-preview.visible { display: block; }
+
+  /* Silence threshold slider in settings */
+  .settings-group input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
   @keyframes pulse-record {
     0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); }
     50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
@@ -1150,11 +1241,17 @@
       <button class="btn-seed" id="seedDocBtn" onclick="saveAsSeedDoc()">Save as Seed Doc</button>
       <span style="font-size:12px;color:var(--text-muted)">Export this conversation as a discovery seed document</span>
     </div>
-    <div class="input-area">
+    <div class="vad-transcript-preview" id="vadTranscriptPreview"></div>
+    <div class="input-area" id="inputArea">
       <textarea id="input" placeholder="Type a message..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
       <div class="voice-controls">
         <button class="btn-talk" id="talkBtn" title="Hold to speak">&#x1F3A4;</button>
+        <button class="btn-handsfree" id="handsfreeBtn" onclick="toggleHandsfree()" title="Toggle hands-free voice mode">&#x1F3A7; Hands-free</button>
+        <div class="vad-status" id="vadStatus">
+          <span class="vad-dot" id="vadDot"></span>
+          <span id="vadLabel">Listening...</span>
+        </div>
       </div>
       <button id="sendBtn" onclick="sendMessage()">Send</button>
     </div>
@@ -1232,6 +1329,17 @@
     <div class="settings-group">
       <label>Personality</label>
       <select id="settingsPersonality"><option>Loading...</option></select>
+    </div>
+
+    <div class="settings-group">
+      <label>Silence Threshold</label>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">How long to wait after you stop speaking</p>
+      <input type="range" id="settingsSilenceThreshold" min="0.5" max="3.0" step="0.1" value="1.5" oninput="updateSilenceLabel(this.value)">
+      <div class="range-labels">
+        <span>0.5s</span>
+        <span id="silenceThresholdValue">1.5s</span>
+        <span>3.0s</span>
+      </div>
     </div>
 
     <div class="settings-group">
@@ -3345,6 +3453,16 @@ function sendVoiceToServer(audioB64, sampleRate) {
       return;
     }
 
+    // Handle filtered responses from server (input quality filter)
+    if (data.filtered) {
+      hideTyping();
+      var debugMode = localStorage.getItem('debugPanelVisible') === 'true';
+      if (debugMode) {
+        showToast('Filtered: ' + (data.reason || 'low quality input'));
+      }
+      return;
+    }
+
     var text = (data.text || '').trim();
     if (!text) {
       hideTyping();
@@ -3429,9 +3547,246 @@ function speakResponse(text) {
   });
 }
 
+// ==========================================================================
+// HANDS-FREE VAD — Continuous speech mode with Silero VAD
+// ==========================================================================
+
+var vadInstance = null;
+var handsfreeActive = false;
+var vadIsSpeaking = false; // true while TTS is playing (echo cancellation)
+
+function toggleHandsfree() {
+  handsfreeActive = !handsfreeActive;
+  var btn = document.getElementById('handsfreeBtn');
+  var talkBtn = document.getElementById('talkBtn');
+  var vadStatus = document.getElementById('vadStatus');
+  var inputArea = document.getElementById('inputArea');
+
+  if (handsfreeActive) {
+    btn.classList.add('active');
+    talkBtn.style.display = 'none';
+    vadStatus.classList.add('visible');
+    localStorage.setItem('handsfreeMode', 'true');
+    startVAD();
+  } else {
+    btn.classList.remove('active');
+    talkBtn.style.display = '';
+    vadStatus.classList.remove('visible');
+    inputArea.className = 'input-area';
+    localStorage.setItem('handsfreeMode', 'false');
+    stopVAD();
+  }
+}
+
+function getSilenceThreshold() {
+  return parseFloat(localStorage.getItem('silenceThreshold') || '1.5');
+}
+
+function updateSilenceLabel(val) {
+  document.getElementById('silenceThresholdValue').textContent = val + 's';
+  localStorage.setItem('silenceThreshold', val);
+}
+
+function setVadState(state, label) {
+  var dot = document.getElementById('vadDot');
+  var lbl = document.getElementById('vadLabel');
+  var inputArea = document.getElementById('inputArea');
+
+  // Remove all vad- classes from inputArea
+  inputArea.className = 'input-area';
+
+  dot.className = 'vad-dot';
+  if (state === 'listening') {
+    inputArea.classList.add('vad-listening');
+    lbl.textContent = label || 'Listening...';
+  } else if (state === 'recording') {
+    dot.classList.add('recording');
+    inputArea.classList.add('vad-recording');
+    lbl.textContent = label || 'Hearing speech...';
+  } else if (state === 'processing') {
+    dot.classList.add('processing');
+    inputArea.classList.add('vad-processing');
+    lbl.textContent = label || 'Transcribing...';
+  } else if (state === 'speaking') {
+    dot.classList.add('speaking');
+    inputArea.classList.add('vad-speaking');
+    lbl.textContent = label || 'Bot speaking...';
+  } else if (state === 'filtered') {
+    inputArea.classList.add('vad-filtered');
+    lbl.textContent = label || 'Filtered';
+    setTimeout(function() {
+      if (handsfreeActive && !vadIsSpeaking) setVadState('listening');
+    }, 1000);
+  }
+}
+
+function startVAD() {
+  if (vadInstance) return;
+  if (typeof vad === 'undefined' || !vad.MicVAD) {
+    console.error('[vad] vad-web library not loaded');
+    showToast('VAD library not loaded. Check your connection.');
+    toggleHandsfree(); // revert
+    return;
+  }
+
+  var threshold = getSilenceThreshold();
+  var redemptionFrames = Math.round(threshold / 0.064);
+
+  vad.MicVAD.new({
+    positiveSpeechThreshold: 0.8,
+    negativeSpeechThreshold: 0.3,
+    redemptionFrames: redemptionFrames,
+    minSpeechFrames: 5,
+    onSpeechStart: function() {
+      console.log('[vad] speech start');
+      setVadState('recording');
+    },
+    onSpeechEnd: function(audio) {
+      console.log('[vad] speech end, samples:', audio.length);
+      setVadState('processing');
+      processVADAudio(audio);
+    },
+    onVADMisfire: function() {
+      console.log('[vad] misfire (too short)');
+      if (handsfreeActive && !vadIsSpeaking) setVadState('listening');
+    }
+  }).then(function(micVAD) {
+    vadInstance = micVAD;
+    vadInstance.start();
+    setVadState('listening');
+    console.log('[vad] started with redemptionFrames:', redemptionFrames);
+  }).catch(function(err) {
+    console.error('[vad] init failed:', err);
+    showToast('VAD init failed: ' + err.message);
+    toggleHandsfree(); // revert
+  });
+}
+
+function stopVAD() {
+  if (vadInstance) {
+    vadInstance.pause();
+    vadInstance.destroy();
+    vadInstance = null;
+    console.log('[vad] stopped');
+  }
+}
+
+function processVADAudio(float32Audio) {
+  // Convert Float32Array (from VAD, typically 16kHz) to PCM int16 base64
+  var pcmInt16 = new Int16Array(float32Audio.length);
+  for (var i = 0; i < float32Audio.length; i++) {
+    var s = Math.max(-1, Math.min(1, float32Audio[i]));
+    pcmInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+
+  var bytes = new Uint8Array(pcmInt16.buffer);
+  var binary = '';
+  for (var j = 0; j < bytes.length; j++) {
+    binary += String.fromCharCode(bytes[j]);
+  }
+  var b64 = btoa(binary);
+
+  sendVADToServer(b64, 16000);
+}
+
+function sendVADToServer(audioB64, sampleRate) {
+  console.log('[vad] sending to server, base64 length:', audioB64.length);
+
+  fetch(API + '/api/voice/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ audio: audioB64, sample_rate: sampleRate, format: 'pcm' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      setVadState('listening');
+      showToast('STT error: ' + data.error);
+      return;
+    }
+
+    // Handle filtered responses from server (input quality filter)
+    if (data.filtered) {
+      console.log('[vad] filtered:', data.reason || 'low quality');
+      var debugMode = localStorage.getItem('debugPanelVisible') === 'true';
+      if (debugMode) {
+        showToast('Filtered: ' + (data.reason || 'low quality input'));
+      }
+      setVadState('filtered', 'Filtered: ' + (data.reason || 'noise'));
+      return;
+    }
+
+    var text = (data.text || '').trim();
+    if (!text) {
+      setVadState('listening');
+      return;
+    }
+
+    // Show transcription preview briefly
+    var preview = document.getElementById('vadTranscriptPreview');
+    preview.textContent = '"' + text + '"';
+    preview.classList.add('visible');
+    setTimeout(function() { preview.classList.remove('visible'); }, 3000);
+
+    // Send as chat message
+    document.getElementById('input').value = text;
+    sendMessage();
+    setVadState('listening');
+  })
+  .catch(function(err) {
+    setVadState('listening');
+    showToast('Transcription failed: ' + err.message);
+  });
+}
+
+// Echo cancellation — pause VAD while TTS is playing
+ttsAudioEl.addEventListener('play', function() {
+  vadIsSpeaking = true;
+  if (vadInstance && handsfreeActive) {
+    vadInstance.pause();
+    setVadState('speaking');
+    console.log('[vad] paused for TTS echo cancellation');
+  }
+});
+
+ttsAudioEl.addEventListener('ended', function() {
+  vadIsSpeaking = false;
+  if (vadInstance && handsfreeActive) {
+    vadInstance.start();
+    setVadState('listening');
+    console.log('[vad] resumed after TTS ended');
+  }
+});
+
+ttsAudioEl.addEventListener('error', function() {
+  vadIsSpeaking = false;
+  if (vadInstance && handsfreeActive) {
+    vadInstance.start();
+    setVadState('listening');
+  }
+});
+
+// Restore hands-free preference and silence threshold from localStorage
+function restoreHandsfreePrefs() {
+  var savedThreshold = localStorage.getItem('silenceThreshold');
+  if (savedThreshold) {
+    document.getElementById('settingsSilenceThreshold').value = savedThreshold;
+    document.getElementById('silenceThresholdValue').textContent = savedThreshold + 's';
+  }
+
+  var savedHandsfree = localStorage.getItem('handsfreeMode');
+  if (savedHandsfree === 'true') {
+    // Delay to ensure VAD library is loaded
+    setTimeout(function() {
+      if (!handsfreeActive) toggleHandsfree();
+    }, 1500);
+  }
+}
+
 restoreTheme();
 initAuth();
 init();
+restoreHandsfreePrefs();
 </script>
 </body>
 </html>

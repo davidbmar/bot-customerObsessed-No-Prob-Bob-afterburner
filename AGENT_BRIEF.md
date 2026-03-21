@@ -1,4 +1,4 @@
-agentA-input-filter-fastpath — Sprint 20
+agentB-hands-free-vad — Sprint 20
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -30,49 +30,67 @@ Constraints
 
 
 Objective
-- Port input quality filter and fast path from voice-calendar-scheduler, wire into server
+- Add hands-free continuous speech mode with browser-side VAD and echo cancellation
 
 Tasks
-1. **Create `bot/input_filter.py`** — Port from `~/src/voice-calendar-scheduler-FSM/engine-repo/engine/input_filter.py`:
-   - Copy the file and adapt imports (no external dependencies needed, just `re` and `logging`)
-   - `InputQuality` enum: VALID, GARBAGE, LOW_QUALITY
-   - `classify(text, no_speech_prob, avg_logprob, audio_duration_s)` function
-   - Keep the garbage word list, hallucination patterns, and all thresholds
-   - Add discovery-specific garbage words if needed (but don't remove greetings — "hi" is valid for a discovery bot)
+1. **Add Silero VAD to `bot/chat_ui.html`**:
+   - Load @ricky0123/vad-web from CDN: `https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js`
+   - Also needs ONNX runtime WASM: `https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd.wasm`
+   - Initialize VAD with `MicVAD.new({ onSpeechEnd: (audio) => { ... } })`
+   - VAD callbacks:
+     - `onSpeechStart`: show recording indicator (red border)
+     - `onSpeechEnd(audio)`: convert Float32Array to PCM int16, send to `/api/voice/transcribe`
+     - `onVADMisfire`: short speech segment, ignore (accidental noise)
+   - VAD config:
+     - `positiveSpeechThreshold: 0.8` (high = less false triggers)
+     - `negativeSpeechThreshold: 0.3`
+     - `redemptionFrames: 8` (~480ms of silence before end-of-speech)
+     - `minSpeechFrames: 5` (~300ms minimum speech to trigger)
 
-2. **Create `bot/fast_path.py`** — Simplified version of `~/src/voice-calendar-scheduler-FSM/engine-repo/engine/fast_path.py`:
-   - `try_fast_path(text) -> Optional[str]`
-   - Fast paths for the discovery bot context:
-     - "help" / "what can you do" → describe the bot's purpose
-     - "reset" / "start over" → clear conversation, return welcome message
-     - "who are you" / "what are you" → personality description
-   - Do NOT port the time/date fast paths (not relevant for discovery bot)
-   - Return None for anything that should go to the LLM
+2. **Hands-free toggle button**:
+   - Add a toggle button next to the mic button: "Hands-free" or a headphone icon
+   - When ON:
+     - Hide the push-to-talk mic button
+     - Show a "Listening..." indicator with a pulsing green dot
+     - VAD continuously listens and auto-sends speech segments
+     - The silence threshold (redemptionFrames) determines when speech "ends"
+   - When OFF (default):
+     - Show the push-to-talk mic button (existing behavior)
+     - VAD is not loaded/running (saves resources)
+   - Save preference to localStorage
 
-3. **Wire into `bot/server.py`** — Update the voice transcribe handler and chat endpoints:
-   - After STT transcription, run `classify()` on the result
-   - If GARBAGE or LOW_QUALITY, return `{"text": "", "filtered": true, "reason": "garbage"}` with 200 status (not an error — just silently filtered)
-   - Before sending to gateway, run `try_fast_path()` — if it returns a response, send that directly without LLM
-   - Add `audio_duration_s` to the transcribe response (calculate from audio_bytes length / sample_rate)
-   - Update `/api/voice/transcribe` response to include `{"filtered": bool, "quality": "valid|garbage|low", "duration_s": float}`
+3. **Echo cancellation** (F-050):
+   - When TTS audio is playing (bot speaking), pause the VAD
+   - Listen for the audio element's `play` and `ended` events
+   - On `play`: call `vad.pause()` and show "Bot speaking..." indicator
+   - On `ended`: call `vad.start()` and show "Listening..." indicator
+   - This prevents the mic from picking up the bot's own voice
 
-4. **Write tests** in `tests/test_input_filter.py` and `tests/test_fast_path.py`:
-   - Test garbage words are filtered ("um", "uh", "the")
-   - Test greetings are NOT filtered ("hello", "hi", "hey")
-   - Test short audio (< 0.6s) is filtered
-   - Test high no_speech_prob is filtered
-   - Test hallucination patterns are filtered
-   - Test fast path responses for "help", "reset", "who are you"
-   - Test fast path returns None for real questions
-   - Target: 510+ total tests
+4. **Silence threshold setting** (F-051):
+   - In the Settings panel (⚙), add a "Silence threshold" slider
+   - Range: 0.5s to 3.0s (default 1.5s)
+   - Maps to VAD `redemptionFrames`: `Math.round(threshold_seconds / 0.064)`
+   - Label: "How long to wait after you stop speaking"
+   - Save to localStorage, apply on next VAD init
 
-5. **Update backlog** — Mark F-048, F-052 as Complete (Sprint 20)
+5. **Visual feedback**:
+   - Hands-free active: pulsing green border on the input area
+   - Speech detected: border turns red (recording)
+   - Processing STT: border turns yellow
+   - Bot speaking: border turns blue, mic paused
+   - Filtered (garbage): brief gray flash, no message sent
+   - Show transcription text briefly before sending (so user sees what was heard)
+
+6. **Handle filtered responses from server**:
+   - When `/api/voice/transcribe` returns `filtered: true`, show a brief toast: "Filtered: [reason]" in debug mode, or silently ignore in normal mode
+   - Don't send filtered text to the chat
+
+7. **Update backlog** — Mark F-049, F-050, F-051 as Complete (Sprint 20)
 
 Acceptance Criteria
-- `from bot.input_filter import classify, InputQuality` works
-- `classify("um", 0.0, 0.0, 1.0)` returns GARBAGE
-- `classify("We need better reporting", 0.0, -0.5, 3.0)` returns VALID
-- `try_fast_path("help")` returns a help message
-- `try_fast_path("We need a dashboard")` returns None
-- STT endpoint returns `filtered: true` for garbage input
-- `.venv/bin/python3 -m pytest tests/ -v` — 510+ tests, 0 failures
+- Toggle "Hands-free" → mic listens continuously, sends speech segments automatically
+- Speak naturally → text appears in chat after 1.5s silence
+- Bot speaks back → mic pauses, resumes after TTS ends
+- Garbage speech ("um") → filtered, nothing sent to LLM
+- Silence threshold slider in settings → changing it affects when speech "ends"
+- Push-to-talk still works when hands-free is OFF

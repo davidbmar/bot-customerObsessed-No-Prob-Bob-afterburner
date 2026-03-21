@@ -82,8 +82,8 @@ Track bugs and feature requests here.
 | F-045 | Message timestamp grouping — group messages by date ("Today", "Yesterday", "Mar 19") | Medium | Complete (Sprint 19) |
 | F-046 | Notification sound on bot response (optional, toggleable) | Low | Open |
 | F-048 | Input quality filter — drop garbage STT before hitting LLM (port from voice-calendar-scheduler) | High | Complete (Sprint 20) |
-| F-049 | Hands-free continuous speech mode with browser-side VAD (Silero VAD WASM) | High | Open |
-| F-050 | Echo cancellation — mute mic while TTS is playing to prevent feedback loop | High | Open |
-| F-051 | Configurable silence threshold for hands-free mode (1-3 seconds) | Medium | Open |
+| F-049 | Hands-free continuous speech mode with browser-side VAD (Silero VAD WASM) | High | Complete (Sprint 20) |
+| F-050 | Echo cancellation — mute mic while TTS is playing to prevent feedback loop | High | Complete (Sprint 20) |
+| F-051 | Configurable silence threshold for hands-free mode (1-3 seconds) | Medium | Complete (Sprint 20) |
 | F-052 | Fast path — instant answers for simple queries without LLM ("help", "what can you do") | Medium | Complete (Sprint 20) |
 | F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Complete (Sprint 19) |

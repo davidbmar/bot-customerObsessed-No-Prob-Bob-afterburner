@@ -289,6 +289,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    position: relative;
   }
 
   .messages {
@@ -296,6 +297,77 @@
     overflow-y: auto;
     padding: 20px;
   }
+
+  /* Scroll-to-bottom floating action button (F-066) */
+  .scroll-fab {
+    position: absolute;
+    bottom: 120px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 36px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    transform: translateY(8px);
+    z-index: 50;
+  }
+  .scroll-fab.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .scroll-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  /* Keyboard shortcuts popover (F-068) */
+  .shortcuts-popover {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-width: 220px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    z-index: 200;
+    font-size: 13px;
+  }
+  .shortcuts-popover.visible { display: block; }
+  .shortcuts-popover h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .shortcuts-popover dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+  }
+  .shortcuts-popover dt {
+    font-family: monospace;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .shortcuts-popover dd { margin: 0; color: var(--text-muted); }
 
   .message-group {
     margin-bottom: 20px;
@@ -1279,6 +1351,17 @@
     <button class="btn-small" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:16px;padding:4px 8px;line-height:1">&#9790;</button>
     <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panels">Debug</button>
     <button class="btn-small" onclick="openDocs()" title="Developer Docs" style="font-size:14px;padding:4px 8px">Docs</button>
+    <div style="position:relative;display:inline-block">
+      <button class="btn-small" id="shortcutsBtn" onclick="toggleShortcuts()" title="Keyboard shortcuts" style="font-size:16px;padding:4px 8px;line-height:1">&#9000;</button>
+      <div class="shortcuts-popover" id="shortcutsPopover">
+        <h4>Keyboard Shortcuts</h4>
+        <dl>
+          <dt>Enter</dt><dd>Send message</dd>
+          <dt>Shift+Enter</dt><dd>New line</dd>
+          <dt>Escape</dt><dd>Stop speaking / Stop generating</dd>
+        </dl>
+      </div>
+    </div>
     <div class="user-badge" id="userBadge" style="display:none">
       <img id="topbarAvatar" src="" alt="">
       <span id="topbarName"></span>
@@ -1307,6 +1390,7 @@
 
   <div class="chat-area">
     <div class="messages" id="messages"></div>
+    <button class="scroll-fab" id="scrollFab" onclick="scrollToBottom()" title="Scroll to bottom">&#x2193;</button>
     <div class="seed-doc-bar" id="seedDocBar">
       <button class="btn-seed" id="seedDocBtn" onclick="saveAsSeedDoc()">Save as Seed Doc</button>
       <span style="font-size:12px;color:var(--text-muted)">Export this conversation as a discovery seed document</span>
@@ -3039,8 +3123,21 @@ function clearConversationStorage() {
 // -- Auto-scroll helper --
 function scrollToBottom() {
   var container = document.getElementById('messages');
-  container.scrollTop = container.scrollHeight;
+  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
 }
+
+// -- Scroll-to-bottom FAB (F-066) --
+(function() {
+  var msgEl = document.getElementById('messages');
+  var fab = document.getElementById('scrollFab');
+  function updateFab() {
+    if (isStreaming) { fab.classList.remove('visible'); return; }
+    var atBottom = msgEl.scrollTop + msgEl.clientHeight >= msgEl.scrollHeight - 100;
+    if (atBottom) { fab.classList.remove('visible'); }
+    else { fab.classList.add('visible'); }
+  }
+  msgEl.addEventListener('scroll', updateFab);
+})();
 
 // -- Save as Seed Doc --
 
@@ -3107,6 +3204,20 @@ function showToast(message, type) {
 }
 
 // -- Mobile debug toggle --
+
+// -- Keyboard shortcuts popover (F-068) --
+function toggleShortcuts() {
+  var pop = document.getElementById('shortcutsPopover');
+  pop.classList.toggle('visible');
+}
+// Close shortcuts popover when clicking outside
+document.addEventListener('click', function(e) {
+  var pop = document.getElementById('shortcutsPopover');
+  var btn = document.getElementById('shortcutsBtn');
+  if (pop && pop.classList.contains('visible') && !pop.contains(e.target) && e.target !== btn) {
+    pop.classList.remove('visible');
+  }
+});
 
 function toggleDebug() {
   debugVisible = !debugVisible;
@@ -3689,11 +3800,11 @@ function stopAgentSpeaking() {
   setAgentSpeaking(false);
 }
 
-// Escape key stops bot speaking (works even when typing)
+// Escape key stops bot speaking or generating (works even when typing)
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape' && isBotSpeaking) {
-    e.preventDefault();
-    stopAgentSpeaking();
+  if (e.key === 'Escape') {
+    if (isBotSpeaking) { e.preventDefault(); stopAgentSpeaking(); }
+    else if (isStreaming) { e.preventDefault(); stopGenerating(); }
   }
 });
 

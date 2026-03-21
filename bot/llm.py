@@ -231,6 +231,18 @@ TOOL_DEFINITIONS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_projects",
+            "description": "List all registered Afterburner projects. Call this when the user asks what projects exist, wants to see all projects, or needs to pick a project.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
 ]
 
 

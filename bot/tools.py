@@ -53,6 +53,7 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         "get_sprint_status": tool_get_sprint_status,
         "generate_vision": tool_generate_vision,
         "feedback_on_sprint": tool_feedback_on_sprint,
+        "list_projects": tool_list_projects,
     }
     fn = dispatch.get(name)
     if not fn:
@@ -406,6 +407,27 @@ def list_project_slugs() -> list[str]:
     except (httpx.HTTPError, ValueError):
         pass
     return []
+
+
+def tool_list_projects() -> str:
+    """List all registered Afterburner projects with slugs and names."""
+    try:
+        resp = httpx.get(f"{DASHBOARD_URL}/api/projects", timeout=5.0)
+        if resp.status_code == 200:
+            data = resp.json()
+            projects = data.get("projects", [])
+            if not projects:
+                return "No projects registered in the dashboard."
+            lines = ["Registered projects:"]
+            for p in projects:
+                slug = p.get("slug", "unknown")
+                name = p.get("name", slug)
+                lines.append(f"  - {name} (slug: {slug})")
+            return "\n".join(lines)
+    except httpx.HTTPError as exc:
+        log.warning("Dashboard unavailable for list_projects: %s", exc)
+        return "Dashboard unavailable. Cannot list projects right now."
+    return "No projects found."
 
 
 def tool_get_sprint_status(slug: str = "") -> str:

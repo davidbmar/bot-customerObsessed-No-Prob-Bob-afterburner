@@ -50,11 +50,11 @@ Track bugs and feature requests here.
 | B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Complete (Sprint 31) |
 | B-043 | Missing PROJECT_STATUS docs for Sprints 30-31 — dashboard only shows up to Sprint 29, needs generation | Medium | Complete (Sprint 32) |
 | B-044 | ONNX warnings still fire despite ort.env.logLevel='error' — WASM compilation warnings happen before JS config takes effect | Low | Open |
-| B-045 | Active Project dropdown shows "No projects registered" — _auto_discover_projects() can't parse projects.json dict format (expects list, gets {projects:[...]}) | Medium | Open |
+| B-045 | Active Project dropdown shows "No projects registered" — _auto_discover_projects() can't parse projects.json dict format (expects list, gets {projects:[...]}) | Medium | Complete (hotfix post-Sprint 34) |
 | B-046 | Bot reports Sprint 29 as "latest" when Sprints 30-32 exist — feedback_on_sprint reads stale sprints.json, needs rebuild after each sprint | Medium | Complete (Sprint 33, F-074 auto-rebuild) |
 | B-047 | Missing PROJECT_STATUS doc for Sprint 32 — dashboard shows 31 sprints but Sprint 32 was completed | Medium | Complete (Sprint 33) |
 | B-048 | sprint-config.sh DEFAULT_TEST_CMD uses system python3 instead of .venv/bin/python3 — sprint-run.sh verification fails on macOS | Medium | Open |
-| B-049 | Missing PROJECT_STATUS doc for Sprint 33 — needs generation for dashboard to show Sprint 33 | Medium | Open |
+| B-049 | Missing PROJECT_STATUS docs for Sprints 33-34 — needs generation for dashboard to show recent sprints | Medium | Open |
 
 ## Features
 
@@ -133,5 +133,5 @@ Track bugs and feature requests here.
 | F-071 | Unified play/pause toggle for hands-free — single button that stops TTS AND pauses VAD on pause, resumes VAD on play; clear visual state (mic icon vs pause icon) | High | Complete (Sprint 31) |
 | F-072 | Hands-free opt-in — require explicit user tap to activate hands-free mode instead of auto-starting on page load | Medium | Complete (Sprint 31) |
 | F-073 | Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent sprint history | Medium | Complete (Sprint 32) |
-| F-074 | Auto-rebuild dashboard data after sprint merge — sprint-run.sh should call /api/rebuild-data so dashboard is always current | High | Open |
-| F-075 | Active Project selector in Settings should list all registered Afterburner projects from /api/projects | Medium | Open |
+| F-074 | Auto-rebuild dashboard data after sprint merge — sprint-run.sh should call /api/rebuild-data so dashboard is always current | High | Complete (Sprint 33) |
+| F-075 | Active Project selector in Settings should list all registered Afterburner projects from /api/projects | Medium | Complete (Sprint 34 + hotfix) |

@@ -34,3 +34,4 @@ logs/
 
 # Cloudflare tunnel config (contains tunnel ID)
 .tunnel-config
+.venv

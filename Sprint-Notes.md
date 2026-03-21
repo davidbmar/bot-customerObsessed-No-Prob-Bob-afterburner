@@ -1,10 +1,10 @@
-# Sprint 24 — Agent Notes
+# Sprint 25 — Agent Notes
 
-*Started: 2026-03-21 17:44 UTC*
+*Started: 2026-03-21 17:56 UTC*
 
 Phase 1 Agents: 2
-- agentA-voice-settings
-- agentB-server-docs
+- agentA-button-states
+- agentB-button-tests
 
 Phase 2 Agents: 0
 (none)
@@ -13,59 +13,44 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-voice-settings
+## agentA-button-states
 
-*Completed: 2026-03-21 17:48 UTC*
+*Completed: 2026-03-21 18:01 UTC*
 
 ### Files changed
-- `bot/chat_ui.html` — Added Voice Detection section (2 sliders + 1 checkbox), JS functions for persistence/restart, barge-in guards, localStorage restore
-- `docs/project-memory/backlog/README.md` — F-061 marked Complete (Sprint 24)
-- `docs/project-memory/sessions/S-2026-03-21-1747-voice-settings.md` — Session doc (new)
+- **bot/chat_ui.html** — Added F-064 (Stop Generating) and F-065 (Pause/Resume) with full button state machine
+- **docs/project-memory/backlog/README.md** — Marked F-064, F-065 as Complete (Sprint 25)
+- **docs/project-memory/sessions/S-2026-03-21-1800-sprint25-button-states.md** — Session doc (new)
 
 ### Commands run
-- `git fetch origin main && git merge origin/main` — synced with main
-- `.venv/bin/python3 -m pytest tests/ -v` — 654 tests pass
+- `python3 -m pytest tests/test_sprint25_button_states.py -v` — 17/17 passed
+- `python3 -m pytest tests/ -v` — 676/676 passed
 - `git push -u origin HEAD` — branch pushed
 
 ### Notes / follow-on work
-- Slider changes destroy and recreate the VAD instance (Silero doesn't support live option updates). A 200ms delay between stop/start prevents microphone contention.
-- Barge-in toggle applies to both VAD hands-free and push-to-talk for consistent UX.
-- Default values match the previously hardcoded values (sensitivity 0.80, min speech 5, barge-in ON), so existing users see no behavior change until they adjust settings.
+- No `.venv` in this worktree; tests ran fine with system Python since they're static HTML analysis
+- The `streamAborted` flag prevents TTS from playing partial responses after abort — manual E2E testing recommended to verify the user experience
+- The `toggleVadPause()` function guards against streaming with `if (isStreaming) return` so Stop always takes priority
 
 
 ---
 
-## agentB-server-docs
+## agentB-button-tests
 
-*Completed: 2026-03-21 17:48 UTC*
+*Completed: 2026-03-21 18:01 UTC*
 
-```
-All tasks complete. Here's the summary:
+### Files changed
+- **`tests/test_sprint25_streaming_integration.py`** (new) — 8 integration tests for server-side streaming abort and concurrent request handling
+- **`docs/project-memory/backlog/README.md`** — F-064 and F-065 marked Complete (Sprint 25)
+- **`docs/project-memory/sessions/S-2026-03-21-1801-sprint25-streaming-integration-tests.md`** (new) — session doc
 
----
-
-## Files Changed
-
-| File | Action |
-|------|--------|
-| `docs/PROJECT_STATUS_2026-03-20-sprint20.md` | Created — Sprint 20 (VAD, input filter, echo cancellation, fast path) |
-| `docs/PROJECT_STATUS_2026-03-21-sprint21.md` | Created — Sprint 21 (favicon, auth bypass, copy button, Escape, waveform) |
-| `docs/PROJECT_STATUS_2026-03-21-sprint22.md` | Created — Sprint 22 (conversation persistence, projects API) |
-| `docs/PROJECT_STATUS_2026-03-21-sprint23.md` | Created — Sprint 23 (paragraph spacing, notification sound, syntax highlighting, /api/stats) |
-| `bot/gateway.py` | Modified — gateway-level error handling in `_handle_tool_calls` |
-| `tests/test_sprint24_tool_errors.py` | Created — 5 tests for tool error handling |
-| `docs/project-memory/backlog/README.md` | Modified — F-062, F-063 marked Complete |
-| `docs/project-memory/sessions/S-2026-03-21-1747-sprint24-server-docs.md` | Created — session doc |
-
-## Commands Run
-
+### Commands run
 - `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — **659 tests passed**
-- `git push -u origin HEAD` — pushed to `agentB-server-docs`
+- `.venv/bin/python3 -m pytest tests/test_sprint25_streaming_integration.py -v` — 8/8 passed
+- `.venv/bin/python3 -m pytest tests/ -v` — 675 passed, 9 failed (all 9 failures are in `test_sprint25_button_states.py`, the UI spec tests owned by agentA)
+- `git push -u origin HEAD` — pushed to `agentB-button-tests`
 
-## Notes / Follow-on Work
-
-- Dashboard data rebuild needed after merge so Sprints 20-23 appear in the dashboard UI
-- F-061 (configurable VAD/barge-in settings) is assigned to agentA per the brief
-```
+### Notes / follow-on work
+- The 9 failing tests in `test_sprint25_button_states.py` are **expected** — they are the spec tests that will pass once agentA implements the Stop Generating and Pause/Resume UI in `chat_ui.html`
+- My 8 new tests all pass and cover: client disconnect handling, zombie thread detection, concurrent streams, overlapping request types, and gateway-level abort behavior
 

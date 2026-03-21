@@ -110,6 +110,6 @@ Track bugs and feature requests here.
 | F-063 | Better tool error messages — show tool name and reason instead of raw exception when bot tool calls fail | Medium | Complete (Sprint 24) |
 | F-064 | Stop generating button — cancel streaming response mid-generation before TTS starts, replaces Send button during streaming | High | Complete (Sprint 25) |
 | F-065 | Hands-free pause/resume — transform Send button into Pause/Play toggle when hands-free is active; Pause mutes mic without disabling hands-free, Play resumes listening; includes tooltips | High | Complete (Sprint 25) |
-| F-066 | Scroll-to-bottom FAB — floating button appears when scrolled up in long conversations, click to jump to latest message | Medium | Open |
+| F-066 | Scroll-to-bottom FAB — floating button appears when scrolled up in long conversations, click to jump to latest message | Medium | Complete (Sprint 26) |
 | F-067 | Message character/word count — show approximate token usage before sending long messages | Low | Open |
-| F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Open |
+| F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |

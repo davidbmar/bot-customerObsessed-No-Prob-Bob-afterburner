@@ -1,4 +1,4 @@
-agentB-docs-tests — Sprint 26
+agentA-scroll-shortcuts — Sprint 26
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -24,23 +24,31 @@ Constraints
 
 
 Objective
-- Generate PROJECT_STATUS docs for Sprints 24-25
-- Add tests for new features
+- Add scroll-to-bottom floating action button
+- Add keyboard shortcuts help
 
 Tasks
-1. **Generate PROJECT_STATUS docs**:
-   - `docs/PROJECT_STATUS_2026-03-21-sprint24.md` — Sprint 24: VAD settings, PROJECT_STATUS docs 20-23, tool error handling
-   - `docs/PROJECT_STATUS_2026-03-21-sprint25.md` — Sprint 25: Stop generating button, Pause/Resume hands-free
-   - Use `git log` for actual details
-   - Follow `PROJECT_STATUS_TEMPLATE.md` format with merge table
+1. **Scroll-to-bottom FAB** (F-066):
+   - Add a floating button (↓ arrow) that appears when the user scrolls up in the messages area
+   - Position: bottom-right of the messages container, above the input area
+   - Show only when not at the bottom (use `scroll` event + check if `scrollTop + clientHeight < scrollHeight - 100`)
+   - Click: smooth scroll to bottom
+   - Style: circular, accent color, subtle shadow, small (36px), with transition
+   - Auto-hide when user reaches the bottom
+   - Also auto-hide during streaming (auto-scroll already handles this)
 
-2. **Add scroll-to-bottom test** (static HTML analysis):
-   - Test that chat_ui.html contains scroll-to-bottom button element
-   - Test that a scroll event listener exists for the messages container
+2. **Keyboard shortcuts help** (F-068):
+   - Add a small "⌨" button in the header bar (near Debug/Docs) or as a section in the Docs panel
+   - Shows a tooltip/modal listing shortcuts:
+     - Enter — Send message
+     - Escape — Stop speaking / Stop generating
+     - Ctrl+N — New conversation (if not already bound)
+   - Keep it simple — a small popover that appears on click
 
-3. **Update backlog** — Verify Sprint 26 items marked Complete
+3. **Update backlog** — Mark F-066, F-068 as Complete (Sprint 26)
 
 Acceptance Criteria
-- PROJECT_STATUS docs exist for Sprints 24-25
-- Dashboard rebuild shows Sprints 24-25
-- All tests pass
+- Scroll up in a long conversation → ↓ button appears
+- Click ↓ → smooth scroll to bottom, button disappears
+- Keyboard shortcuts help is accessible from the UI
+- `.venv/bin/python3 -m pytest tests/ -v` — all pass

@@ -1,24 +1,18 @@
-`★ Insight ─────────────────────────────────────`
-**VAD restart strategy:** Silero VAD (via `@ricky0123/vad-web`) doesn't expose a method to update options on a running instance. The approach here — `stopVAD()` then `setTimeout(startVAD, 200)` — gives the old instance time to release the microphone before the new one requests it. Without this delay, `getUserMedia` could fail with a "device busy" error on some browsers.
-
-**Barge-in guard placement:** The guard was added in *two* places — the VAD `onSpeechStart` callback (hands-free mode) and the `startVoiceRecording` function (push-to-talk mode). This ensures consistent behavior regardless of input method.
-`─────────────────────────────────────────────────`
-
 ---
 
 ## Summary
 
 ### Files changed
-- `bot/chat_ui.html` — Added Voice Detection section (2 sliders + 1 checkbox), JS functions for persistence/restart, barge-in guards, localStorage restore
-- `docs/project-memory/backlog/README.md` — F-061 marked Complete (Sprint 24)
-- `docs/project-memory/sessions/S-2026-03-21-1747-voice-settings.md` — Session doc (new)
+- **`tests/test_sprint25_streaming_integration.py`** (new) — 8 integration tests for server-side streaming abort and concurrent request handling
+- **`docs/project-memory/backlog/README.md`** — F-064 and F-065 marked Complete (Sprint 25)
+- **`docs/project-memory/sessions/S-2026-03-21-1801-sprint25-streaming-integration-tests.md`** (new) — session doc
 
 ### Commands run
-- `git fetch origin main && git merge origin/main` — synced with main
-- `.venv/bin/python3 -m pytest tests/ -v` — 654 tests pass
-- `git push -u origin HEAD` — branch pushed
+- `git pull origin main` — already up to date
+- `.venv/bin/python3 -m pytest tests/test_sprint25_streaming_integration.py -v` — 8/8 passed
+- `.venv/bin/python3 -m pytest tests/ -v` — 675 passed, 9 failed (all 9 failures are in `test_sprint25_button_states.py`, the UI spec tests owned by agentA)
+- `git push -u origin HEAD` — pushed to `agentB-button-tests`
 
 ### Notes / follow-on work
-- Slider changes destroy and recreate the VAD instance (Silero doesn't support live option updates). A 200ms delay between stop/start prevents microphone contention.
-- Barge-in toggle applies to both VAD hands-free and push-to-talk for consistent UX.
-- Default values match the previously hardcoded values (sensitivity 0.80, min speech 5, barge-in ON), so existing users see no behavior change until they adjust settings.
+- The 9 failing tests in `test_sprint25_button_states.py` are **expected** — they are the spec tests that will pass once agentA implements the Stop Generating and Pause/Resume UI in `chat_ui.html`
+- My 8 new tests all pass and cover: client disconnect handling, zombie thread detection, concurrent streams, overlapping request types, and gateway-level abort behavior

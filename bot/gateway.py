@@ -234,10 +234,21 @@ class Gateway:
     ) -> list[dict[str, Any]]:
         """Execute tool calls and re-query the LLM with results."""
         tools_called: list[dict[str, Any]] = []
+        tool_errors: list[str] = []
 
         for tc in llm_resp.tool_calls:
             log.info("Tool call: %s(%s)", tc.name, tc.arguments)
-            result = execute_tool(tc.name, tc.arguments)
+            try:
+                result = execute_tool(tc.name, tc.arguments)
+            except Exception as exc:
+                log.exception("Tool '%s' raised an unexpected exception", tc.name)
+                result = f"Tool '{tc.name}' failed: {exc}"
+
+            # Detect error results (from execute_tool's own error handling)
+            is_error = result.startswith("Tool error:") or result.startswith("Tool '") or result.startswith("Unknown tool:")
+            if is_error:
+                tool_errors.append(f"Tool '{tc.name}' failed: {result}")
+
             tools_called.append({
                 "name": tc.name,
                 "arguments": tc.arguments,
@@ -284,9 +295,18 @@ class Gateway:
                 })
 
         # Re-query LLM with tool results so it can respond naturally
+        follow_up_system = self.system_prompt
+        if tool_errors:
+            error_note = (
+                "\n\nNote: The following tool calls encountered errors. "
+                "Explain the issue to the user in a helpful, non-technical way:\n"
+                + "\n".join(f"- {e}" for e in tool_errors)
+            )
+            follow_up_system = self.system_prompt + error_note
+
         follow_up = self.llm.chat(
             messages=messages,
-            system_prompt=self.system_prompt,
+            system_prompt=follow_up_system,
         )
         if follow_up.content:
             llm_resp.content = follow_up.content

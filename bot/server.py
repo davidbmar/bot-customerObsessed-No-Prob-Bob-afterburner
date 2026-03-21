@@ -106,6 +106,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_get_config()
         elif path == "/api/conversations/export":
             self._handle_export_conversation(parsed)
+        elif path == "/api/stats":
+            self._handle_get_stats()
         elif path == "/api/projects":
             self._handle_get_projects()
         elif path == "/api/llm/providers":
@@ -306,6 +308,14 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         """Create a new conversation and return its ID."""
         conversation_id = f"web-{uuid.uuid4().hex[:12]}"
         self._json_response({"conversation_id": conversation_id})
+
+    def _handle_get_stats(self) -> None:
+        """Return project stats: sprint count, test count, feature count."""
+        self._json_response({
+            "sprints": _count_sprints(),
+            "tests": _count_tests(),
+            "features": _count_features(),
+        })
 
     def _handle_get_projects(self) -> None:
         """List registered projects and the active project."""
@@ -730,6 +740,40 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format: str, *args) -> None:  # noqa: A002
         log.info(format, *args)
+
+
+def _count_sprints() -> int:
+    """Count PROJECT_STATUS_*.md files in docs/."""
+    docs_dir = Path(__file__).parent.parent / "docs"
+    return len(list(docs_dir.glob("PROJECT_STATUS_*.md")))
+
+
+def _count_tests() -> int:
+    """Count collected pytest tests (returns 0 on failure)."""
+    try:
+        result = subprocess.run(
+            [".venv/bin/python3", "-m", "pytest", "--co", "-q"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        # Last non-empty line is like "643 tests collected"
+        for line in reversed(result.stdout.splitlines()):
+            line = line.strip()
+            if line and "test" in line:
+                parts = line.split()
+                if parts[0].isdigit():
+                    return int(parts[0])
+        return 0
+    except Exception:
+        return 0
+
+
+def _count_features() -> int:
+    """Count lines matching '| F-' in backlog README.md."""
+    backlog_path = Path(__file__).parent.parent / "docs" / "project-memory" / "backlog" / "README.md"
+    if not backlog_path.exists():
+        return 0
+    return sum(1 for line in backlog_path.read_text().splitlines() if "| F-" in line)
 
 
 def _kill_stale_server(port: int) -> None:

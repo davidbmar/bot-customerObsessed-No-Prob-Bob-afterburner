@@ -7,8 +7,9 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
 <script>
-// B-029: Suppress ONNX runtime warnings (severity 3 = error only)
-if (typeof ort !== 'undefined') { ort.env.logSeverityLevel = 3; }
+// B-029/B-044: Suppress ONNX runtime warnings from Silero VAD init
+// ort.env.logLevel (string API) + logSeverityLevel (numeric API) for cross-version compat
+if (typeof ort !== 'undefined') { ort.env.logLevel = 'error'; ort.env.logSeverityLevel = 3; }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js" defer></script>
 <style>
@@ -4558,6 +4559,9 @@ function startVAD() {
 
   var threshold = getSilenceThreshold();
   var redemptionFrames = Math.round(threshold / 0.064);
+
+  // B-044: Re-apply ONNX log suppression before model load (vad-web bundle may reset ort.env)
+  if (typeof ort !== 'undefined') { ort.env.logLevel = 'error'; ort.env.logSeverityLevel = 3; }
 
   vad.MicVAD.new({
     positiveSpeechThreshold: getVadSensitivity(),

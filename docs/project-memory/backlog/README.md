@@ -44,6 +44,10 @@ Track bugs and feature requests here.
 | B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22, /api/stats added Sprint 23) |
 | B-033 | Tool result message uses OpenAI format for Claude API — causes 400 error when bot calls Afterburner tools with Claude provider | Critical | Fixed (hotfix) |
 | B-034 | Restored bot messages lose paragraph spacing — old conversations saved via textContent have "word.Next sentence" instead of paragraph breaks | Medium | Complete (Sprint 23) |
+| B-039 | Pause button doesn't stop VAD listening — clicking Pause (⏸) only cancels TTS but VAD immediately resumes and captures ambient noise, sending phantom messages to LLM | High | Open |
+| B-040 | Stop speaking doesn't pause mic — "Stop speaking" banner button cancels TTS but VAD re-triggers instantly, picking up background audio as new user input | High | Open |
+| B-041 | Hands-free auto-starts on page load — VAD begins listening immediately when page loads without user opting in, causing unintended voice captures | Medium | Open |
+| B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Open |
 
 ## Features
 
@@ -119,3 +123,5 @@ Track bugs and feature requests here.
 | F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |
 | F-069 | Voice transcription discard button — show transcription preview with discard/confirm before auto-sending | High | Complete (Sprint 29) |
 | F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Complete (Sprint 30) |
+| F-071 | Unified play/pause toggle for hands-free — single button that stops TTS AND pauses VAD on pause, resumes VAD on play; clear visual state (mic icon vs pause icon) | High | Open |
+| F-072 | Hands-free opt-in — require explicit user tap to activate hands-free mode instead of auto-starting on page load | Medium | Open |

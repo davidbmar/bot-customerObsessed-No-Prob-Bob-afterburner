@@ -425,6 +425,12 @@
   /* Code block language badge */
   .code-lang-badge { position: absolute; top: 8px; right: 8px; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
+  /* Syntax highlighting (F-059) */
+  .syn-kw { color: var(--accent); font-weight: 600; }
+  .syn-str { color: #50c878; }
+  .syn-cmt { color: var(--text-muted); font-style: italic; }
+  .syn-num { color: #e8943a; }
+
   /* Copy button for assistant messages */
   .copy-btn { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 11px; padding: 2px 6px; cursor: pointer; margin-top: 4px; }
   .copy-btn:hover { color: var(--text); border-color: var(--accent); }
@@ -1404,6 +1410,14 @@
     </div>
 
     <div class="settings-group">
+      <label for="settingsNotifySound" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="settingsNotifySound" onchange="toggleNotifySound(this.checked)" style="width:16px;height:16px;cursor:pointer">
+        Notification sound
+      </label>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:2px">Play a chime when the bot responds (only when tab is not focused)</p>
+    </div>
+
+    <div class="settings-group">
       <label>Conversation ID</label>
       <div class="conv-id-display" id="settingsConvId"></div>
     </div>
@@ -1701,6 +1715,49 @@ function maybeAddDateSeparator(date, container) {
    fenced code blocks (with language badge), headings, unordered/ordered/nested lists,
    GFM tables, blockquotes, horizontal rules, bold/italic/bold+italic, inline code.
    All text is set via textContent to prevent XSS. */
+// F-059: Lightweight syntax highlighter for code blocks
+function highlightSyntax(codeEl) {
+  var src = codeEl.textContent;
+  var kwRe = /\b(function|const|let|var|if|else|return|import|export|from|class|def|for|while|try|catch|throw|new|typeof|async|await|yield|switch|case|break|continue|in|of|with|as|None|True|False|null|true|false|undefined)\b/g;
+  var tokens = [];
+  // Tokenize: comments, strings, keywords, numbers
+  var re = /(\/\/[^\n]*|#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*\b)/g;
+  var last = 0;
+  var match;
+  while ((match = re.exec(src)) !== null) {
+    if (match.index > last) tokens.push({type: 'text', val: src.slice(last, match.index)});
+    if (match[1]) tokens.push({type: 'cmt', val: match[1]});
+    else if (match[2]) tokens.push({type: 'str', val: match[2]});
+    else if (match[3]) tokens.push({type: 'num', val: match[3]});
+    last = re.lastIndex;
+  }
+  if (last < src.length) tokens.push({type: 'text', val: src.slice(last)});
+  // Build highlighted HTML
+  while (codeEl.firstChild) codeEl.removeChild(codeEl.firstChild);
+  tokens.forEach(function(t) {
+    if (t.type === 'text') {
+      // Highlight keywords within text segments
+      var parts = t.val.split(kwRe);
+      for (var i = 0; i < parts.length; i++) {
+        if (kwRe.test(parts[i])) {
+          kwRe.lastIndex = 0;
+          var sp = document.createElement('span');
+          sp.className = 'syn-kw';
+          sp.textContent = parts[i];
+          codeEl.appendChild(sp);
+        } else {
+          if (parts[i]) codeEl.appendChild(document.createTextNode(parts[i]));
+        }
+      }
+    } else {
+      var sp = document.createElement('span');
+      sp.className = 'syn-' + t.type;
+      sp.textContent = t.val;
+      codeEl.appendChild(sp);
+    }
+  });
+}
+
 function renderMarkdownToDOM(text, container) {
   // Clear existing children (safe for streaming re-renders)
   while (container.firstChild) container.removeChild(container.firstChild);
@@ -1727,6 +1784,7 @@ function renderMarkdownToDOM(text, container) {
         pre.appendChild(badge);
       }
       pre.appendChild(codeEl);
+      highlightSyntax(codeEl);
       container.appendChild(pre);
     } else {
       _processTextLines(container, part);
@@ -2353,6 +2411,9 @@ function sendMessageStream(text) {
             // Speak the response aloud if voice is available
             if (typeof speakResponse === 'function' && fullText) {
               speakResponse(fullText);
+            } else {
+              // F-046: Play notification chime (only if TTS not speaking)
+              playNotifyChime();
             }
           } else if (evt.type === 'error') {
             var streamGroup = document.getElementById('streaming-group');
@@ -2865,7 +2926,12 @@ function restoreConversation() {
         // Skip error messages on restore
         continue;
       }
-      addMessage(m.role, m.content, null, m.dateISO || null);
+      var content = m.content;
+      // B-034: Fix paragraph spacing in old conversations saved via textContent
+      if (content && content.indexOf('\n') === -1) {
+        content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2');
+      }
+      addMessage(m.role, content, null, m.dateISO || null);
     }
     return true;
   } catch(e) {
@@ -3149,7 +3215,12 @@ function switchToConversation(cid) {
     for (var i = 0; i < state.messages.length; i++) {
       var m = state.messages[i];
       if (m.role === 'error') continue;
-      addMessage(m.role, m.content, null, m.dateISO || null);
+      var content = m.content;
+      // B-034: Fix paragraph spacing in old conversations saved via textContent
+      if (content && content.indexOf('\n') === -1) {
+        content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2');
+      }
+      addMessage(m.role, content, null, m.dateISO || null);
     }
 
     // Scroll to bottom
@@ -3437,6 +3508,39 @@ function signOut() {
   document.getElementById('authSignoutBtn').style.display = 'none';
   document.getElementById('authStatus').textContent = '';
   showAuthOverlay();
+}
+
+// ==========================================================================
+// NOTIFICATION SOUND (F-046) — Web Audio API chime on bot response
+// ==========================================================================
+
+var notifySoundEnabled = localStorage.getItem('notifySound') === 'true';
+
+function toggleNotifySound(on) {
+  notifySoundEnabled = on;
+  localStorage.setItem('notifySound', on ? 'true' : 'false');
+}
+
+function playNotifyChime() {
+  if (!notifySoundEnabled || document.hasFocus()) return;
+  // Don't play if TTS is about to speak
+  if (typeof speakResponse === 'function' && agentAudio && !agentAudio.paused) return;
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var tones = [440, 554]; // A4 and C#5 — pleasant major third
+    tones.forEach(function(freq, i) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.08);
+    });
+  } catch(e) {}
 }
 
 // ==========================================================================
@@ -4103,6 +4207,9 @@ restoreTheme();
 initAuth();
 init();
 restoreHandsfreePrefs();
+// F-046: Restore notification sound checkbox
+var notifyCb = document.getElementById('settingsNotifySound');
+if (notifyCb) notifyCb.checked = notifySoundEnabled;
 </script>
 </body>
 </html>

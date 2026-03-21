@@ -94,3 +94,19 @@ class TestPersonalityLoader:
         doc = loader.load("base")
         assert "---" not in doc.raw_content.split("\n")[0]
         assert "name:" not in doc.raw_content
+
+    def test_personality_knows_about_voice(
+        self, loader: PersonalityLoader
+    ) -> None:
+        """B-037: customer-discovery must know about voice/STT/TTS capabilities."""
+        doc = loader.load("customer-discovery")
+        prompt = doc.system_prompt.lower()
+        assert "voice" in prompt or "speech" in prompt or "hear" in prompt, (
+            "Personality system prompt must mention voice capabilities"
+        )
+        assert "text-only" not in prompt, (
+            "Personality must not claim to be text-only"
+        )
+        assert "can't hear" not in prompt, (
+            "Personality must not claim it can't hear"
+        )

@@ -1,43 +1,52 @@
-agentA-word-count — Sprint 27
+agentB-docs-stats — Sprint 28
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 26: scroll-to-bottom FAB, keyboard shortcuts help
-- 685 tests pass
-- User hit login failure after venv rebuild — google-auth not in [dev] deps
-- anthropic, openai also missing from [dev] — breaks LLM providers on fresh install
+- Sprint 27: Fixed pyproject.toml deps, word count indicator, start.sh renamed
+- 690+ tests pass
+- Critical UX bug: bot tells users "I can't hear audio" while actively receiving their transcribed speech
+- Voice works (STT + TTS) but personality prompt has no awareness of it
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix pyproject.toml dependencies so pip install -e ".[dev]" installs everything needed to run the bot (B-035, B-036)
-- Add message character/word count indicator near input (F-067)
-- Generate PROJECT_STATUS doc for Sprint 26
+- Fix bot not knowing about its own voice capabilities — it says "I'm text-only" when user speaks via mic (B-037)
+- Generate PROJECT_STATUS doc for Sprint 27
+- Update Docs panel stats to pull from /api/stats dynamically
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns pyproject.toml, bot/server.py, scripts/, tests/, docs/ — agentA MUST NOT touch these
+- agentA owns bot/chat_ui.html, personalities/ — agentB MUST NOT touch these
+- agentB owns bot/server.py, tests/, docs/ — agentA MUST NOT touch these
 
 
 Objective
-- Add a subtle word/character count indicator near the text input
+- Generate PROJECT_STATUS doc for Sprint 27
+- Add personality test for voice awareness
 
 Tasks
-1. **Message word count indicator** (F-067):
-   - Add a small, muted text element below or beside the input field
-   - Show word count and approximate token count as the user types
-   - Format: "42 words · ~56 tokens" (estimate tokens as words × 1.3)
-   - Only show when input has text (hide when empty)
-   - Style: font-size 11px, color var(--text-muted), right-aligned below input
-   - Update on every `input` event
+1. **Generate PROJECT_STATUS doc**:
+   - `docs/PROJECT_STATUS_2026-03-21-sprint27.md` — Sprint 27: Fixed deps, word count, start.sh rename
+   - Follow PROJECT_STATUS_TEMPLATE.md format
 
-2. **Update backlog** — Mark F-067 as Complete (Sprint 27)
+2. **Add personality test for voice awareness**:
+   - Test that `customer-discovery` personality system prompt contains voice-related keywords
+   - Test it does NOT contain phrases like "text-only" or "can't hear"
+   - ```python
+     def test_personality_knows_about_voice():
+         p = Personality('customer-discovery')
+         prompt = p.system_prompt.lower()
+         assert 'voice' in prompt or 'speech' in prompt or 'hear' in prompt
+         assert 'text-only' not in prompt
+         assert "can't hear" not in prompt
+     ```
+
+3. **Update backlog** — Verify items marked Complete
 
 Acceptance Criteria
-- Type text → word count appears below input
-- Clear text → count disappears
-- Count updates in real-time as you type
+- PROJECT_STATUS doc exists for Sprint 27
+- Voice awareness test passes
+- All tests pass

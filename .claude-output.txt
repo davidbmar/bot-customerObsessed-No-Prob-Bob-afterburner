@@ -1,29 +1,34 @@
+`★ Insight ─────────────────────────────────────`
+**Key design pattern used:** Splitting `stopAgentSpeaking()` into two functions (`stopAgentSpeakingOnly` + `stopAgentSpeaking`) separates "stop TTS audio" from "stop TTS + pause mic". This is important because the same "stop speaking" action has different intent depending on context:
+- **User-initiated stops** (Escape, pause button, stop banner): user wants silence — pause everything
+- **Barge-in** (onSpeechStart, push-to-talk): user is actively speaking — stop bot but keep listening
+
+Without this split, barge-in would pause the mic right as the user tries to talk, defeating its purpose.
+`─────────────────────────────────────────────────`
+
 ---
 
 ## Summary
 
 ### Files changed
-- **`bot/chat_ui.html`** — Added conversation summary banner (F-070) + ONNX warning suppression (B-029)
-- **`docs/project-memory/backlog/README.md`** — Marked F-070 and B-029 as Complete (Sprint 30)
-- **`docs/project-memory/sessions/S-2026-03-21-1947-conv-summary-onnx-fix.md`** — Session doc
+- `bot/chat_ui.html` — all pause/play/VAD fixes
 
 ### Commands run
-- `python3 -m pytest tests/ -v` — **709 passed**, 3 warnings
+- `git pull origin main`
+- `python3 -m pytest tests/ -x -q` — 726 passed
 - `git commit` + `git push -u origin HEAD`
 
-### What was implemented
-
-**F-070 — Conversation summary banner:**
-- Collapsible banner appears at top of chat when conversation exceeds 10 messages
-- Shows `"Summary: [first user question] — [extracted topics]"`
-- Click to expand shows message counts and full topic list
-- Auto-updates on each new message via `addMessage()` hook
-- Subtle styling (muted background, small text, collapsed by default)
-
-**B-029 — Suppress ONNX warnings:**
-- Added inline `<script>` after ONNX import that sets `ort.env.logSeverityLevel = 3` (error-only)
-- Eliminates 10+ console warnings on every page load
+### What was done
+| Bug/Feature | Fix |
+|---|---|
+| B-039, B-040 | Pause button now stops TTS **and** pauses VAD mic |
+| B-041 | Page load defaults to paused — no auto-listening |
+| F-071 | Visual "Paused" / "Listening..." indicator (already existed, now correctly shown) |
+| Escape key | Also pauses VAD |
+| Stop speaking button | Also pauses VAD |
+| TTS ended/error | No longer overrides user's explicit pause |
+| Barge-in | Still works — uses `stopAgentSpeakingOnly()` |
 
 ### Notes / follow-on work
-- Topic extraction uses a simple heuristic (capitalized words > 4 chars). A more sophisticated NLP approach could be added later if needed.
-- The ONNX suppression script checks `typeof ort !== 'undefined'` as a safety guard since the script loads synchronously right after the ONNX import.
+- The `toggleHandsfree()` button deliberately sets `vadPaused = false` (user explicitly activating), while page-load auto-restore keeps `vadPaused = true` and re-pauses after the toggle
+- Consider adding a UI test for the pause/play state transitions (e.g., Playwright-based)

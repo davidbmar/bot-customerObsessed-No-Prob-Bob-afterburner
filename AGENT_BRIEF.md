@@ -1,51 +1,103 @@
-agentA-conv-summary — Sprint 30
+agentA-pause-play — Sprint 31
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 29: Input filter improvements, transcription discard button
-- 700+ tests pass
-- Bot has 70+ features, 29 sprints, zero open bugs
-- Long conversations (39 msgs) are hard to follow — need summary
+# afterburner-customer-bot Project Status — 2026-03-21 (Sprint 29: Input filter improvements, transcription discard button)
+
+## Sprint 29 Summary
+
+Sprint 29 improved the input quality filter to catch TV/movie background audio (B-038) and added a voice transcription discard button (F-069). agentA built the discard button UI with countdown timer and preview in the input field. agentB improved the input filter with longer audio duration thresholds, multi-sentence detection, and dialogue pattern matching for background media.
+
+---
+
+## What Changed
+
+### agentA-discard-button
+
+Added voice transcription discard button (F-069). Voice transcription now shows text as preview in the input field with a 3-second countdown timer and discard (X) button instead of auto-sending immediately. User can edit, confirm with Enter, or discard with Escape. Garbled transcriptions shown with yellow warning border.
+
+**Commits:**
+- 5b32cfb feat: add voice transcription discard button (F-069)
+- 05d8faa agentA-discard-button: implement sprint 29 tasks
+
+**Files:** bot/chat_ui.html
+
+### agentB-filter-docs
+
+Improved input quality filter to catch background media audio (B-038). Added longer audio duration thresholds, multi-sentence detection, and dialogue pattern matching so TV/movie audio is filtered before reaching the LLM.
+
+**Commits:**
+- 1604f79 agentB-filter-docs: implement sprint 29 tasks
+- f1ffb0e feat: improve input filter to catch background media audio (B-038)
+
+**Files:** bot/input_filter.py, tests/test_input_filter.py
+
+---
+
+## Merge Results
+
+| # | Branch | Deliverable | Phase | Conflicts | Files Changed |
+|---|--------|-------------|-------|-----------|---------------|
+| 1 | agentB-filter-docs | Input filter improvements (B-038) | 1 | Clean | 2 |
+| 2 | agentA-discard-button | Voice transcription discard button (F-069) | 1 | Clean | 1 |
+
+---
+
+## Backlog Snapshot
+
+### Completed This Sprint
+- B-038: Input filter lets TV/movie audio through
+- F-069: Voice transcription discard button
+
+### Still Open
+- B-008: sprint-run.sh crashes with `local -A` on zsh
+- B-010: GitHub not configured in dashboard project entry
+- B-015: Dashboard backlog counts show 0
+- B-016: Ollama Qwen 3.5 response latency ~22s
+- B-020: Sprint 12 agent done markers not written
+- B-029: Console shows 10 ONNX runtime warnings on every page load
+
+---
+
+## Test Results
+
+700+ tests passing.
+
+---
+
+## Next Steps
+
+- Add conversation summary banner for long conversations (F-070)
+- Suppress ONNX console warnings (B-029)
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Generate PROJECT_STATUS doc for Sprint 29
-- Add conversation summary — show a brief AI-generated summary at the top of long conversations (F-070)
-- Suppress ONNX console warnings to clean up browser console (B-029)
+- Fix the broken pause/play hands-free behavior so Pause stops BOTH speaking AND listening (B-039, B-040, F-071)
+- Fix dashboard backlog showing 0 items by correcting the backlog file path in build-sprint-data.sh (B-015)
 
 Constraints
-- Use the project venv: .venv/bin/python3
-- All tests must pass: .venv/bin/python3 -m pytest tests/ -v
-- Agents run non-interactively — MUST NOT ask for confirmation
-- agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, tests/, docs/ — agentA MUST NOT touch these
+- agentA owns `bot/chat_ui.html` exclusively
+- agentB owns `scripts/build-sprint-data.sh` in the afterburner repo AND `bot/tools.py` in this repo
+- No two agents may modify the same files
 
 
 Objective
-- Add conversation summary banner for long conversations
-- Suppress ONNX console warnings
+- Fix Pause/Play toggle so it stops BOTH TTS and VAD listening (B-039, B-040, F-071)
+- Prevent hands-free from auto-starting on page load (B-041)
 
 Tasks
-1. **Conversation summary banner** (F-070):
-   - When a conversation has > 10 messages, show a collapsible summary banner at the top of the chat
-   - The summary is generated client-side by extracting the first user message and the bot's synthesis (if any)
-   - Format: "📋 Summary: [first user question] — [key topics discussed]"
-   - Clicking expands to show more detail
-   - Collapsed by default, subtle styling (muted background, small text)
-   - Update when new messages are added
-
-2. **Suppress ONNX warnings** (B-029):
-   - The Silero VAD ONNX runtime logs 10 warnings on every page load
-   - These come from the ONNX WebAssembly runtime, not our code
-   - Suppress by setting `ort.env.logLevel = 'error'` before loading the VAD model
-   - Or wrap the VAD initialization in a console.warn override that filters ONNX messages
-   - The simplest approach: before creating the VAD, set `ort.env.logSeverityLevel = 3` (error only)
-
-3. **Update backlog** — Mark F-070, B-029 as Complete (Sprint 30)
+- In `bot/chat_ui.html`, make the Pause button (⏸) call BOTH `stopAgentSpeaking()` AND set `vadPaused = true` so VAD stops capturing audio
+- Make the Play button (▶) set `vadPaused = false` to resume VAD listening
+- In the TTS `ended` event handler, do NOT reset `vadPaused` — respect user's explicit pause state
+- On page load, set `vadPaused = true` by default — user must click Play or the Hands-free toggle to start listening
+- The "Stop speaking" banner button (`#stopSpeakingBtn`) should also pause VAD (set `vadPaused = true`)
+- Add visual indicator: when paused, show "Paused" text next to the button instead of "Listening..."
 
 Acceptance Criteria
-- Long conversations show a summary banner at the top
-- No ONNX warnings in browser console
-- All tests pass
+- Clicking Pause stops TTS playback AND stops mic listening — no phantom messages
+- Clicking Play resumes listening — VAD starts detecting speech again
+- "Stop speaking" also pauses the mic
+- Fresh page load does NOT auto-listen — user must explicitly activate hands-free
+- Existing keyboard shortcut (Escape to stop speaking) also pauses VAD

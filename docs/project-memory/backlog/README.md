@@ -81,4 +81,9 @@ Track bugs and feature requests here.
 | F-044 | Markdown rendering in bot messages — support **bold**, *italic*, `code`, lists, headers | High | Complete (Sprint 19) |
 | F-045 | Message timestamp grouping — group messages by date ("Today", "Yesterday", "Mar 19") | Medium | Complete (Sprint 19) |
 | F-046 | Notification sound on bot response (optional, toggleable) | Low | Open |
+| F-048 | Input quality filter — drop garbage STT before hitting LLM (port from voice-calendar-scheduler) | High | Open |
+| F-049 | Hands-free continuous speech mode with browser-side VAD (Silero VAD WASM) | High | Open |
+| F-050 | Echo cancellation — mute mic while TTS is playing to prevent feedback loop | High | Open |
+| F-051 | Configurable silence threshold for hands-free mode (1-3 seconds) | Medium | Open |
+| F-052 | Fast path — instant answers for simple queries without LLM ("help", "what can you do") | Medium | Open |
 | F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Complete (Sprint 19) |

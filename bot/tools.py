@@ -334,8 +334,100 @@ def _find_project_root(slug: str) -> Path | None:
     return None
 
 
+def resolve_slug(user_input: str) -> str | None:
+    """Match user input like 'the Bob project' to a dashboard project slug.
+
+    Tries exact match, then substring, then word overlap.
+    Returns the best matching slug or None.
+    """
+    try:
+        resp = httpx.get(f"{DASHBOARD_URL}/api/projects", timeout=5.0)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+
+    projects = data.get("projects", [])
+    if not projects:
+        return None
+
+    query = user_input.lower().strip()
+
+    # Exact slug match
+    for p in projects:
+        if p.get("slug", "").lower() == query:
+            return p["slug"]
+
+    # Exact name match
+    for p in projects:
+        if p.get("name", "").lower() == query:
+            return p["slug"]
+
+    # Substring match in slug or name
+    for p in projects:
+        slug = p.get("slug", "").lower()
+        name = p.get("name", "").lower()
+        if query in slug or query in name:
+            return p["slug"]
+
+    # Word overlap — split query into words and find best match
+    query_words = set(query.split())
+    best_slug = None
+    best_score = 0
+    for p in projects:
+        slug = p.get("slug", "").lower()
+        name = p.get("name", "").lower()
+        candidate_words = set(slug.replace("-", " ").split()) | set(name.split())
+        score = len(query_words & candidate_words)
+        if score > best_score:
+            best_score = score
+            best_slug = p["slug"]
+
+    return best_slug if best_score > 0 else None
+
+
+def list_project_slugs() -> list[str]:
+    """Return all registered project slugs from the dashboard."""
+    try:
+        resp = httpx.get(f"{DASHBOARD_URL}/api/projects", timeout=5.0)
+        if resp.status_code == 200:
+            data = resp.json()
+            return [p.get("slug", "") for p in data.get("projects", []) if p.get("slug")]
+    except (httpx.HTTPError, ValueError):
+        pass
+    return []
+
+
 def tool_get_sprint_status(slug: str = "") -> str:
-    """Get sprint status for a project by reading sprint marker files."""
+    """Get sprint status for a project via the dashboard API."""
+    resolved = slug or (_config.active_project if _config else "")
+    if not resolved:
+        return "No project specified and no active project set."
+
+    # Try dashboard API first
+    try:
+        resp = httpx.get(
+            f"{DASHBOARD_URL}/api/project/{resolved}/status",
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            return json.dumps(resp.json())
+        if resp.status_code == 404:
+            # Try fuzzy match
+            matched = resolve_slug(resolved)
+            if matched and matched != resolved:
+                resp = httpx.get(
+                    f"{DASHBOARD_URL}/api/project/{matched}/status",
+                    timeout=10.0,
+                )
+                if resp.status_code == 200:
+                    return json.dumps(resp.json())
+            return f"Project '{slug}' not found in dashboard."
+    except httpx.HTTPError:
+        pass
+
+    # Fall back to filesystem reading
     project_root = _resolve_project_root(slug or None)
     if not project_root:
         return f"Project '{slug}' not found in dashboard registry."
@@ -346,6 +438,7 @@ def tool_get_sprint_status(slug: str = "") -> str:
 def get_sprint_status(project_root: Path) -> dict[str, Any]:
     """Read .agent-done-* files and SPRINT_BRIEF.md to determine sprint status.
 
+    Filesystem fallback — used only when dashboard API is unavailable.
     Returns a dict with sprint_number, agent_count, agents_done, agents_running.
     """
     result: dict[str, Any] = {
@@ -369,7 +462,6 @@ def get_sprint_status(project_root: Path) -> dict[str, Any]:
     result["agents_done"] = sorted(done_agents)
 
     # Detect all agents from worktree branches or brief
-    # Look for agent branches in .sprint/ config or AGENT_BRIEF files
     agent_briefs = list(project_root.glob("AGENT_BRIEF*.md"))
     all_agents: set[str] = set()
 
@@ -485,7 +577,40 @@ def generate_vision(
 
 
 def tool_feedback_on_sprint(slug: str = "") -> str:
-    """Read latest PROJECT_STATUS doc and summarize what was shipped."""
+    """Get latest sprint summary via the dashboard API, with filesystem fallback."""
+    resolved = slug or (_config.active_project if _config else "")
+
+    # Try dashboard API first
+    if resolved:
+        try:
+            resp = httpx.get(
+                f"{DASHBOARD_URL}/api/project/{resolved}/sprints",
+                timeout=10.0,
+            )
+            if resp.status_code == 404:
+                matched = resolve_slug(resolved)
+                if matched and matched != resolved:
+                    resp = httpx.get(
+                        f"{DASHBOARD_URL}/api/project/{matched}/sprints",
+                        timeout=10.0,
+                    )
+            if resp.status_code == 200:
+                data = resp.json()
+                sprints = data.get("sprints", [])
+                if sprints:
+                    latest = sprints[0]
+                    parts = [f"Sprint {latest.get('number', '?')} summary:"]
+                    if latest.get("summary"):
+                        parts.append(f"\n{latest['summary']}")
+                    if latest.get("agentCount"):
+                        parts.append(f"\nAgents: {latest['agentCount']}")
+                    parts.append(f"\nDoes this match what you expected from Sprint {latest.get('number', '?')}?")
+                    return "\n".join(parts)
+                return "No sprints found in dashboard data. Has a sprint been completed?"
+        except httpx.HTTPError:
+            pass
+
+    # Filesystem fallback
     project_root = _resolve_project_root(slug or None)
     if not project_root:
         return "No active project set. Switch to a project first."
@@ -565,5 +690,5 @@ def _extract_section(text: str, heading: str) -> str:
     return ""
 
 
-# Public alias for tool dispatch compatibility
+# Public aliases for tool dispatch compatibility
 save_discovery = tool_save_discovery

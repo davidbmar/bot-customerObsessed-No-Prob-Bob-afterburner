@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -17,6 +17,10 @@ from bot.tools import (
     feedback_on_sprint,
     get_project_summary,
     get_sprint_status,
+    list_project_slugs,
+    resolve_slug,
+    tool_feedback_on_sprint,
+    tool_get_sprint_status,
     tool_save_discovery,
 )
 
@@ -285,9 +289,11 @@ def test_get_sprint_status_no_config(tmp_path: Path) -> None:
 
 
 def test_execute_tool_dispatches_get_sprint_status(sprint_project: Path) -> None:
-    """execute_tool routes 'get_sprint_status' correctly."""
-    with patch("bot.tools._find_project_root", return_value=sprint_project):
-        result = execute_tool("get_sprint_status", {"slug": "test"})
+    """execute_tool routes 'get_sprint_status' correctly (filesystem fallback)."""
+    import httpx as _httpx
+    with patch("bot.tools.httpx.get", side_effect=_httpx.ConnectError("refused")):
+        with patch("bot.tools._find_project_root", return_value=sprint_project):
+            result = execute_tool("get_sprint_status", {"slug": "test"})
     data = json.loads(result)
     assert data["sprint_number"] == 7
     assert "agentA" in data["agents_done"]
@@ -443,16 +449,18 @@ def test_feedback_on_sprint_root_level_status(tmp_path: Path) -> None:
 
 
 def test_execute_tool_dispatches_feedback_on_sprint(project_with_status: Path) -> None:
-    """execute_tool routes 'feedback_on_sprint' correctly."""
+    """execute_tool routes 'feedback_on_sprint' correctly (filesystem fallback)."""
     from bot.tools import set_config
-    from unittest.mock import MagicMock
 
     mock_config = MagicMock()
     mock_config.active_project_root = project_with_status
+    mock_config.active_project = "test-project"
     mock_config.projects = {}
     set_config(mock_config)
 
-    result = execute_tool("feedback_on_sprint", {})
+    import httpx as _httpx
+    with patch("bot.tools.httpx.get", side_effect=_httpx.ConnectError("refused")):
+        result = execute_tool("feedback_on_sprint", {})
     assert "Sprint 7" in result
 
     set_config(None)
@@ -657,3 +665,194 @@ def test_extract_section_target_audience_fallback() -> None:
     ]
     doc = _format_structured_discovery(messages)
     assert "Developers and designers" in doc.split("## Users")[1].split("##")[0]
+
+
+# -- resolve_slug tests --
+
+MOCK_PROJECTS_RESPONSE = {
+    "projects": [
+        {"slug": "bot-customerobsessed", "name": "Customer Obsessed Bot (No Prob Bob)"},
+        {"slug": "fsm-generic", "name": "FSM-generic (Voice OS)"},
+        {"slug": "grassyknoll", "name": "grassyknoll"},
+    ],
+    "activeProject": "bot-customerobsessed",
+}
+
+
+def _mock_httpx_get(url, **kwargs):
+    """Mock httpx.get that returns project list."""
+    mock = MagicMock()
+    if "/api/projects" in url:
+        mock.status_code = 200
+        mock.json.return_value = MOCK_PROJECTS_RESPONSE
+    elif "/api/project/" in url and "/status" in url:
+        mock.status_code = 200
+        mock.json.return_value = {
+            "slug": "bot-customerobsessed",
+            "latestSprint": 19,
+            "totalSprints": 19,
+            "openBugs": 0,
+            "totalFeatures": 5,
+            "recentSessions": [],
+        }
+    elif "/api/project/" in url and "/sprints" in url:
+        mock.status_code = 200
+        mock.json.return_value = {
+            "sprints": [
+                {"number": 19, "title": "Sprint 19", "summary": "Markdown rendering", "agentCount": 2},
+            ]
+        }
+    else:
+        mock.status_code = 404
+        mock.json.return_value = {"error": "not found"}
+    return mock
+
+
+def test_resolve_slug_exact_match() -> None:
+    """resolve_slug returns exact slug match."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        assert resolve_slug("bot-customerobsessed") == "bot-customerobsessed"
+
+
+def test_resolve_slug_name_match() -> None:
+    """resolve_slug matches by project name."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        assert resolve_slug("Customer Obsessed Bot (No Prob Bob)") == "bot-customerobsessed"
+
+
+def test_resolve_slug_substring_match() -> None:
+    """resolve_slug matches substring in slug or name."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        assert resolve_slug("bob") == "bot-customerobsessed"
+
+
+def test_resolve_slug_word_overlap() -> None:
+    """resolve_slug matches by word overlap."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        assert resolve_slug("voice os") == "fsm-generic"
+
+
+def test_resolve_slug_no_match() -> None:
+    """resolve_slug returns None when nothing matches."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        assert resolve_slug("nonexistent-xyz") is None
+
+
+def test_resolve_slug_api_failure() -> None:
+    """resolve_slug returns None when dashboard is unreachable."""
+    import httpx as _httpx
+    with patch("bot.tools.httpx.get", side_effect=_httpx.ConnectError("refused")):
+        assert resolve_slug("bob") is None
+
+
+def test_list_project_slugs() -> None:
+    """list_project_slugs returns slug list from dashboard."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        slugs = list_project_slugs()
+    assert "bot-customerobsessed" in slugs
+    assert "fsm-generic" in slugs
+    assert len(slugs) == 3
+
+
+# -- API-backed tool_get_sprint_status tests --
+
+
+def test_tool_get_sprint_status_via_api() -> None:
+    """tool_get_sprint_status calls dashboard API and returns status JSON."""
+    from bot.tools import set_config
+
+    mock_config = MagicMock()
+    mock_config.active_project = "bot-customerobsessed"
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        result = tool_get_sprint_status(slug="bot-customerobsessed")
+
+    data = json.loads(result)
+    assert data["latestSprint"] == 19
+    assert data["slug"] == "bot-customerobsessed"
+
+    set_config(None)
+
+
+def test_tool_get_sprint_status_fuzzy_fallback() -> None:
+    """tool_get_sprint_status fuzzy-matches slug when exact match returns 404."""
+    from bot.tools import set_config
+
+    call_count = {"n": 0}
+
+    def mock_get(url, **kwargs):
+        call_count["n"] += 1
+        m = MagicMock()
+        if "/api/projects" in url:
+            m.status_code = 200
+            m.json.return_value = MOCK_PROJECTS_RESPONSE
+        elif "/api/project/bob/status" in url:
+            m.status_code = 404
+            m.json.return_value = {"error": "not found"}
+        elif "/api/project/bot-customerobsessed/status" in url:
+            m.status_code = 200
+            m.json.return_value = {"slug": "bot-customerobsessed", "latestSprint": 19}
+        else:
+            m.status_code = 404
+            m.json.return_value = {"error": "not found"}
+        return m
+
+    mock_config = MagicMock()
+    mock_config.active_project = ""
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    with patch("bot.tools.httpx.get", side_effect=mock_get):
+        result = tool_get_sprint_status(slug="bob")
+
+    data = json.loads(result)
+    assert data["latestSprint"] == 19
+
+    set_config(None)
+
+
+# -- API-backed tool_feedback_on_sprint tests --
+
+
+def test_tool_feedback_on_sprint_via_api() -> None:
+    """tool_feedback_on_sprint calls dashboard sprints API."""
+    from bot.tools import set_config
+
+    mock_config = MagicMock()
+    mock_config.active_project = "bot-customerobsessed"
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        result = tool_feedback_on_sprint(slug="bot-customerobsessed")
+
+    assert "Sprint 19" in result
+    assert "Markdown rendering" in result
+    assert "match what you expected" in result.lower()
+
+    set_config(None)
+
+
+def test_tool_feedback_on_sprint_no_sprints() -> None:
+    """tool_feedback_on_sprint returns message when no sprints exist."""
+    from bot.tools import set_config
+
+    def mock_get(url, **kwargs):
+        m = MagicMock()
+        m.status_code = 200
+        m.json.return_value = {"sprints": []}
+        return m
+
+    mock_config = MagicMock()
+    mock_config.active_project = "bot-customerobsessed"
+    mock_config.projects = {}
+    set_config(mock_config)
+
+    with patch("bot.tools.httpx.get", side_effect=mock_get):
+        result = tool_feedback_on_sprint(slug="bot-customerobsessed")
+
+    assert "no sprints" in result.lower()
+
+    set_config(None)

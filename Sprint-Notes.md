@@ -1,10 +1,10 @@
-# Sprint 35 — Agent Notes
+# Sprint 36 — Agent Notes
 
-*Started: 2026-03-21 21:45 UTC*
+*Started: 2026-03-21 22:03 UTC*
 
 Phase 1 Agents: 2
-- agentA-ui-polish
-- agentB-test-cmd-docs
+- agentA-list-projects
+- agentB-sprint-docs
 
 Phase 2 Agents: 0
 (none)
@@ -13,9 +13,9 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-test-cmd-docs
+## agentB-sprint-docs
 
-*Completed: 2026-03-21 21:45 UTC*
+*Completed: 2026-03-21 22:04 UTC*
 
 ```
 Not logged in · Please run /login
@@ -24,9 +24,9 @@ Not logged in · Please run /login
 
 ---
 
-## agentA-ui-polish
+## agentA-list-projects
 
-*Completed: 2026-03-21 21:45 UTC*
+*Completed: 2026-03-21 22:04 UTC*
 
 ```
 Not logged in · Please run /login

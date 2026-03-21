@@ -169,8 +169,42 @@ def _format_structured_discovery(
 
 
 def tool_get_project_summary(slug: str = "") -> str:
-    """Get project summary from the Afterburner dashboard API."""
-    project_root = _resolve_project_root(slug or None)
+    """Get project summary from the Afterburner dashboard API.
+
+    Combines lifecycle docs (Vision/Plan/Roadmap) with sprint/session
+    data from the status API so the response is always useful.
+    """
+    resolved = slug
+    if not resolved and _config:
+        resolved = _config.active_project
+    project_root = _resolve_project_root(resolved or None)
+
+    parts: list[str] = []
+
+    # 1. Try sprint status API (always has data if project has sprints)
+    if resolved:
+        try:
+            resp = httpx.get(
+                f"{DASHBOARD_URL}/api/project/{resolved}/status",
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                status = resp.json()
+                parts.append(f"## Project Status")
+                parts.append(f"- Slug: {status.get('slug', resolved)}")
+                parts.append(f"- Latest sprint: {status.get('latestSprint', 0)}")
+                parts.append(f"- Total sprints: {status.get('totalSprints', 0)}")
+                parts.append(f"- Open bugs: {status.get('openBugs', 0)}")
+                parts.append(f"- Total features: {status.get('totalFeatures', 0)}")
+                sessions = status.get("recentSessions", [])
+                if sessions:
+                    parts.append(f"- Recent sessions ({len(sessions)}):")
+                    for s in sessions[:3]:
+                        parts.append(f"  - {s.get('title', '')} ({s.get('date', '')})")
+        except httpx.HTTPError:
+            pass
+
+    # 2. Try lifecycle docs
     try:
         resp = httpx.post(
             f"{DASHBOARD_URL}/api/lifecycle/load-all",
@@ -179,17 +213,16 @@ def tool_get_project_summary(slug: str = "") -> str:
         )
         if resp.status_code == 200:
             data = resp.json()
-            parts: list[str] = []
             for doc_type in ["vision", "plan", "roadmap"]:
                 content = data.get(doc_type, "")
                 if content:
                     parts.append(f"## {doc_type.title()}\n{content[:500]}")
-            if parts:
-                return "\n\n".join(parts)
-            return f"Project '{slug}' exists but has no lifecycle docs yet."
-        return f"Could not load project summary (HTTP {resp.status_code})."
-    except httpx.HTTPError as exc:
-        return f"Dashboard unavailable: {exc}"
+    except httpx.HTTPError:
+        pass
+
+    if parts:
+        return "\n\n".join(parts)
+    return f"Project '{slug}' not found or has no data yet."
 
 
 def get_project_summary(project_root: Path) -> dict[str, Any]:

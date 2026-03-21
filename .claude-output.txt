@@ -1,20 +1,24 @@
+`★ Insight ─────────────────────────────────────`
+**VAD restart strategy:** Silero VAD (via `@ricky0123/vad-web`) doesn't expose a method to update options on a running instance. The approach here — `stopVAD()` then `setTimeout(startVAD, 200)` — gives the old instance time to release the microphone before the new one requests it. Without this delay, `getUserMedia` could fail with a "device busy" error on some browsers.
+
+**Barge-in guard placement:** The guard was added in *two* places — the VAD `onSpeechStart` callback (hands-free mode) and the `startVoiceRecording` function (push-to-talk mode). This ensures consistent behavior regardless of input method.
+`─────────────────────────────────────────────────`
+
 ---
 
 ## Summary
 
 ### Files changed
-- **`bot/chat_ui.html`** — 3 features added:
-  - B-034: Paragraph spacing migration in `restoreConversation()` and `switchToConversation()`
-  - F-046: Notification sound toggle (Settings checkbox + Web Audio API chime + localStorage)
-  - F-059: `highlightSyntax()` function + CSS classes (`.syn-kw`, `.syn-str`, `.syn-cmt`, `.syn-num`)
-- **`docs/project-memory/backlog/README.md`** — Marked B-034, F-046, F-059 as Complete (Sprint 23)
-- **`docs/project-memory/sessions/S-2026-03-21-1738-sprint23-chat-polish.md`** — Session doc
+- `bot/chat_ui.html` — Added Voice Detection section (2 sliders + 1 checkbox), JS functions for persistence/restart, barge-in guards, localStorage restore
+- `docs/project-memory/backlog/README.md` — F-061 marked Complete (Sprint 24)
+- `docs/project-memory/sessions/S-2026-03-21-1747-voice-settings.md` — Session doc (new)
 
 ### Commands run
-- `git pull origin main` — already up to date
-- `.venv/bin/python3 -m pytest tests/ -v` — **643 passed**
-- `git push -u origin HEAD` — pushed to `agentA-chat-polish`
+- `git fetch origin main && git merge origin/main` — synced with main
+- `.venv/bin/python3 -m pytest tests/ -v` — 654 tests pass
+- `git push -u origin HEAD` — branch pushed
 
 ### Notes / follow-on work
-- The paragraph spacing regex `([.!?])([A-Z])` is a heuristic — edge cases like abbreviations (e.g., "U.S.Army") could get false positives, but this is acceptable for conversational text
-- The syntax highlighter is intentionally minimal (~35 lines). If more languages need precise highlighting later, consider integrating Prism.js or highlight.js (would be a new feature)
+- Slider changes destroy and recreate the VAD instance (Silero doesn't support live option updates). A 200ms delay between stop/start prevents microphone contention.
+- Barge-in toggle applies to both VAD hands-free and push-to-talk for consistent UX.
+- Default values match the previously hardcoded values (sensitivity 0.80, min speech 5, barge-in ON), so existing users see no behavior change until they adjust settings.

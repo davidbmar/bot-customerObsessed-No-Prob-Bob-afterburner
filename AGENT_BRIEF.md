@@ -1,68 +1,65 @@
-agentA-chat-polish — Sprint 23
+agentA-voice-settings — Sprint 24
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 22: conversation persistence fixed (save markdown, sidebar refresh), /api/projects endpoint, Active Project dropdown wired, Docs stats updated
-- 643 tests pass
-- Hotfix: tool result format fixed for Claude API (B-033)
-- Restored old conversations lose paragraph spacing (B-034)
+- Sprint 23: paragraph spacing fix, notification sound toggle, code syntax highlighting, /api/stats endpoint, tool result regression tests
+- 654 tests pass
+- Barge-in hotfix: VAD no longer paused during TTS, enables voice interruption
+- User wants configurable VAD thresholds like the apartment locator admin panel
+- Dashboard only shows Sprints 1-19, missing 20-23
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix paragraph spacing in restored bot messages — old conversations saved as textContent lose line breaks (B-034)
-- Add notification sound on bot response with toggle in settings (F-046)
-- Add code block syntax highlighting in bot messages (F-059)
+- Add configurable VAD and barge-in settings panel — expose Silero VAD thresholds as user-adjustable sliders (F-061)
+- Generate PROJECT_STATUS docs for Sprints 20-23 so dashboard shows recent sprint history (F-062)
+- Better error messages when bot tool calls fail — show what went wrong instead of generic error (F-063)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, tests/ — agentA MUST NOT touch these
+- agentB owns bot/server.py, bot/gateway.py, tests/, docs/ — agentA MUST NOT touch these
 
 
 Objective
-- Fix paragraph spacing in restored conversations
-- Add notification sound toggle
-- Add code syntax highlighting
+- Add a Voice Settings section in the Settings panel with configurable VAD and barge-in parameters
 
 Tasks
-1. **Fix paragraph spacing in restored conversations** (B-034):
-   - In `saveConversation()` (~line 2821), for assistant messages: already using `bodyEl.dataset.markdown || bodyEl.textContent`
-   - The issue is that OLD conversations were saved with `textContent` which has no paragraph breaks
-   - Add a one-time migration in `restoreConversation()` and `switchToConversation()`:
-     - When loading messages from localStorage, if the content has no newlines but has patterns like `.A` or `?A` or `!A` (period/question/exclamation followed immediately by capital letter with no space), insert `\n\n` before the capital letter
-   - This heuristic fixes "understand.So" → "understand.\n\nSo" and "else?I'm" → "else?\n\nI'm"
-   - Apply the fix: `content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2')`
-   - Only apply when content has NO existing newlines (old format), so new markdown content is untouched
+1. **Add Voice Settings section to Settings panel** (F-061):
+   - In the Settings overlay in `bot/chat_ui.html`, after the "Silence Threshold" slider, add a new section header: "Voice Detection"
+   - Add these configurable sliders:
+     a. **Speech Sensitivity** — controls `positiveSpeechThreshold` on the Silero VAD instance
+        - Slider range: 0.5 (very sensitive) to 0.95 (strict, only clear speech)
+        - Default: 0.8 (current hardcoded value at ~line 3876)
+        - Label shows current value like "0.80"
+        - Description: "How confident VAD must be that audio is speech. Lower = catches quieter speech but may false-trigger."
+     b. **Barge-in Toggle** — checkbox to enable/disable interrupting the bot mid-speech
+        - Default: ON (current behavior)
+        - When OFF: the `onSpeechStart` handler should NOT call `stopAgentSpeaking()` even if `isBotSpeaking` is true
+        - Description: "Allow voice to interrupt the bot while it's speaking"
+     c. **Min Speech Duration** — controls `minSpeechFrames` on the VAD instance
+        - Slider range: 1 (instant) to 15 (needs ~0.5s of speech)
+        - Default: 5 (current hardcoded value)
+        - Description: "How long speech must sustain before it's confirmed. Higher = fewer false triggers."
 
-2. **Add notification sound on bot response** (F-046):
-   - Add a subtle notification sound when the bot finishes a response (not during streaming, only on completion)
-   - Use the Web Audio API to generate a short, pleasant chime — no external audio files needed
-   - Example: two short sine wave tones (440Hz then 554Hz, 80ms each) with quick fade
-   - Add a toggle in the Settings panel: "Notification sound" checkbox, default OFF
-   - Save preference in localStorage (`notifySound`)
-   - Play sound in the streaming `done` event handler, only if `notifySound` is enabled and tab is not focused (`!document.hasFocus()`)
-   - Do NOT play if TTS is about to speak (the voice IS the notification)
+2. **Wire sliders to VAD instance**:
+   - When sliders change, update the VAD instance's options if possible. Silero VAD may not support dynamic option changes — if so, destroy and recreate the VAD instance with new options.
+   - Store preferences in localStorage: `vadSensitivity`, `bargeInEnabled`, `vadMinSpeech`
+   - On page load, restore saved preferences and apply to VAD initialization
+   - Replace the hardcoded values at ~line 3876 (`positiveSpeechThreshold: 0.8`, `minSpeechFrames: 5`) with the stored/default values
 
-3. **Add code block syntax highlighting** (F-059):
-   - In `renderMarkdownToDOM()`, when rendering `<pre><code>` blocks:
-   - Add a lightweight syntax highlighter — not a full library, just basic token coloring:
-     - Keywords (function, const, let, var, if, else, return, import, class, def, for, while, try, catch) → accent color
-     - Strings (single/double quoted, backtick) → green
-     - Comments (// and #) → muted color
-     - Numbers → orange
-   - Apply via CSS classes on `<span>` elements inside `<code>`
-   - Add corresponding CSS rules using `var(--accent)` and other theme variables
-   - Keep it simple — ~30 lines of JS, no external dependencies
+3. **Add barge-in guard**:
+   - Read barge-in toggle state in `onSpeechStart` callback
+   - If barge-in is disabled: skip the `stopAgentSpeaking()` call, just start recording
 
-4. **Update backlog** — Mark B-034, F-046, F-059 as Complete (Sprint 23)
+4. **Update backlog** — Add F-061 and mark as Complete (Sprint 24)
 
 Acceptance Criteria
-- Old restored conversations show proper paragraph breaks (no "word.Next")
-- Settings has "Notification sound" toggle
-- Sound plays when bot responds (only when tab not focused, sound enabled, TTS not active)
-- Code blocks in bot messages have colored keywords/strings/comments
+- Settings panel shows Voice Detection section with 2 sliders and 1 checkbox
+- Changing Speech Sensitivity affects how easily VAD triggers
+- Toggling Barge-in OFF prevents voice from interrupting TTS
+- Settings persist across page reloads
 - `.venv/bin/python3 -m pytest tests/ -v` — all pass

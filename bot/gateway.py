@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Generator
 
-from .llm import TOOL_DEFINITIONS, LLMResponse, OllamaClient, get_client, LLM_PROVIDERS
+from .llm import TOOL_DEFINITIONS, READ_ONLY_TOOLS, LLMResponse, OllamaClient, get_client, LLM_PROVIDERS
 from .memory import ConversationMemory
 from .personality import PersonalityLoader
 from .tools import execute_tool, set_config
@@ -112,10 +112,13 @@ class Gateway:
             return self.system_prompt + SYNTHESIS_PROMPT_SUFFIX
         return self.system_prompt
 
-    def process_message(self, chat_id: str, text: str) -> GatewayResponse:
+    def process_message(self, chat_id: str, text: str, read_only: bool = False) -> GatewayResponse:
         """Process a user message and return the bot's response.
 
         This is the main entry point — all transports call this.
+        When read_only=True, write tools (save_discovery, add_to_backlog,
+        generate_vision) are excluded so unauthenticated users can't
+        modify project files.
         """
         self.memory.add(chat_id, "user", text)
         self._exchange_counts[chat_id] = self._exchange_counts.get(chat_id, 0) + 1
@@ -126,11 +129,13 @@ class Gateway:
 
         system_prompt = self._get_system_prompt(chat_id)
 
+        tools = READ_ONLY_TOOLS if read_only else TOOL_DEFINITIONS
+
         # Call LLM
         llm_resp = self.llm.chat(
             messages=messages,
             system_prompt=system_prompt,
-            tools=TOOL_DEFINITIONS,
+            tools=tools,
         )
 
         # Handle tool calls if any
@@ -155,7 +160,7 @@ class Gateway:
         )
 
     def process_message_stream(
-        self, chat_id: str, text: str
+        self, chat_id: str, text: str, read_only: bool = False
     ) -> Generator[dict, None, GatewayResponse]:
         """Process a user message, streaming token chunks back.
 
@@ -170,6 +175,7 @@ class Gateway:
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
         system_prompt = self._get_system_prompt(chat_id)
+        tools = READ_ONLY_TOOLS if read_only else TOOL_DEFINITIONS
         start = time.monotonic()
 
         # Check if the LLM client supports streaming
@@ -178,7 +184,7 @@ class Gateway:
             llm_resp = self.llm.chat(
                 messages=messages,
                 system_prompt=system_prompt,
-                tools=TOOL_DEFINITIONS,
+                tools=tools,
             )
             tools_called: list[dict[str, Any]] = []
             if llm_resp.tool_calls:
@@ -191,7 +197,7 @@ class Gateway:
             gen = self.llm.chat_stream(
                 messages=messages,
                 system_prompt=system_prompt,
-                tools=TOOL_DEFINITIONS,
+                tools=tools,
             )
             full_content = ""
             llm_resp = None

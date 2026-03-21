@@ -267,6 +267,16 @@ TOOL_DEFINITIONS: list[dict] = [
 ]
 
 
+# Tools that modify project files — blocked for unauthenticated users
+WRITE_TOOL_NAMES = {"save_discovery", "add_to_backlog", "generate_vision"}
+
+# Read-only subset of TOOL_DEFINITIONS (safe for any user)
+READ_ONLY_TOOLS: list[dict] = [
+    t for t in TOOL_DEFINITIONS
+    if t.get("function", {}).get("name") not in WRITE_TOOL_NAMES
+]
+
+
 def _openai_tools_to_anthropic(tools: list[dict]) -> list[dict]:
     """Convert OpenAI-format tool definitions to Anthropic's tool format."""
     result = []

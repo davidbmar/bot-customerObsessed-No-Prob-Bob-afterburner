@@ -101,8 +101,8 @@ class TelegramPoller:
 
         log.info("Telegram [%s]: %s", chat_id, text[:80])
 
-        # Process through gateway
-        response = self.gateway.process_message(f"telegram-{chat_id}", text)
+        # Process through gateway — Telegram is read-only (no write tools)
+        response = self.gateway.process_message(f"telegram-{chat_id}", text, read_only=True)
 
         # Send response
         self._send_message(chat_id, response.text)

@@ -1,4 +1,4 @@
-agentA-list-projects — Sprint 36
+agentB-sprint-docs — Sprint 37
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -77,28 +77,27 @@ Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent hi
 Sprint-Level Context
 
 Goal
-- Generate PROJECT_STATUS docs for Sprints 33-35 so dashboard is complete (B-049)
-- Add "list all projects" capability to bot tools so users can ask "what projects are there?" (F-076)
+- Fix sprint agent worktrees to symlink .venv so agents can run tests (B-051, F-077)
+- Generate PROJECT_STATUS docs for Sprints 33-36 so dashboard is complete (B-049)
 
 Constraints
-- agentA owns `bot/tools.py` and `bot/llm.py` exclusively
+- agentA owns `.sprint/scripts/sprint-init.sh` exclusively
 - agentB owns `docs/` files exclusively
 - No two agents may modify the same files
 
 
 Objective
-- Add a `list_projects` tool the bot can call when users ask "what projects are there?" (F-076)
+- Generate PROJECT_STATUS docs for Sprints 33-36 (B-049)
 
 Tasks
-- In `bot/tools.py`, add a `tool_list_projects()` function that calls `list_project_slugs()` (already exists) and returns a formatted list with slug + name for each project
-- In `bot/llm.py`, add `list_projects` to the `TOOL_DEFINITIONS` array with description "List all registered Afterburner projects"
-- In `bot/tools.py`, add `list_projects` to the `execute_tool` dispatch dict
-- Add tests in `tests/test_tools.py`:
-  - Test that `tool_list_projects()` returns formatted project list when dashboard is available
-  - Test that `tool_list_projects()` returns error message when dashboard is unavailable
-  - Test that `list_projects` is in `TOOL_DEFINITIONS`
+- Create docs for each sprint using PROJECT_STATUS_TEMPLATE format:
+  - `docs/PROJECT_STATUS_2026-03-21-sprint33.md` — Sprint 33: auto-rebuild (F-074), Sprint 32 doc (B-047), Active Project dropdown (F-075). Agents: agentA-project-dropdown, agentB-auto-rebuild
+  - `docs/PROJECT_STATUS_2026-03-21-sprint34.md` — Sprint 34: sprint-config venv test (B-048 partial), Active Project fix attempt. Agents: agentA-project-fix, agentB-config-docs
+  - `docs/PROJECT_STATUS_2026-03-21-sprint35.md` — Sprint 35: UI polish attempt (agents had minimal output). Agents: agentA-ui-polish, agentB-test-cmd-docs
+  - `docs/PROJECT_STATUS_2026-03-21-sprint36.md` — Sprint 36: list_projects tool (F-076 partial). Agents: agentA-list-projects, agentB-sprint-docs
+- Use git log for commit details between sprint boundaries
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- User asks "what projects are there?" and bot calls list_projects tool
-- Tool returns formatted list of all registered projects with slugs and names
-- All existing + new tests pass
+- All four PROJECT_STATUS docs exist with correct summaries and merge tables
+- Dashboard shows 36 sprints after rebuild

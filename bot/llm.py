@@ -243,6 +243,27 @@ TOOL_DEFINITIONS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_project_doc",
+            "description": "Read a file from a project's directory. Use this to understand what a project does by reading its README.md, or to check specific files like package.json, pyproject.toml, CLAUDE.md, etc. Call this when get_project_summary returns empty data and you need to learn about the project.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string",
+                        "description": "Project slug (e.g. 'tool-s3-cloudfront-push')",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Relative file path within the project (default: README.md)",
+                    },
+                },
+                "required": ["slug"],
+            },
+        },
+    },
 ]
 
 

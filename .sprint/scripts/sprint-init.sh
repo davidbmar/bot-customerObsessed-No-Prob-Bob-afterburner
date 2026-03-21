@@ -102,6 +102,10 @@ for agent in "${INIT_AGENTS[@]}"; do
       fi
     fi
     git worktree add "${WT}" -b "${agent}"
+    # Symlink .venv so agents can run tests in the worktree (B-051/F-077)
+    if [ -d "${ROOT}/.venv" ] && [ ! -e "${WT}/.venv" ]; then
+      ln -sf "${ROOT}/.venv" "${WT}/.venv"
+    fi
     echo "[created] ${agent}"
   fi
 

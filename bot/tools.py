@@ -54,6 +54,7 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
         "generate_vision": tool_generate_vision,
         "feedback_on_sprint": tool_feedback_on_sprint,
         "list_projects": tool_list_projects,
+        "read_project_doc": tool_read_project_doc,
     }
     fn = dispatch.get(name)
     if not fn:
@@ -461,6 +462,35 @@ def tool_list_projects() -> str:
         log.warning("Dashboard unavailable for list_projects: %s", exc)
         return "Dashboard unavailable. Cannot list projects right now."
     return "No projects found."
+
+
+def tool_read_project_doc(slug: str = "", path: str = "README.md") -> str:
+    """Read a document from a project's directory.
+
+    Useful for understanding what a project does by reading its README,
+    package.json, pyproject.toml, or other docs.
+    """
+    project_root = _resolve_project_root(slug or None)
+    if not project_root:
+        return f"Project '{slug}' not found in dashboard registry."
+
+    # Security: only allow reading within the project root
+    target = (project_root / path).resolve()
+    if not str(target).startswith(str(project_root.resolve())):
+        return "Cannot read files outside the project directory."
+
+    if not target.exists():
+        return f"File not found: {path}"
+
+    if not target.is_file():
+        return f"Not a file: {path}"
+
+    # Limit to text files under 10KB
+    if target.stat().st_size > 10240:
+        content = target.read_text(errors="replace")[:10000]
+        return f"(Truncated to 10KB)\n\n{content}"
+
+    return target.read_text(errors="replace")
 
 
 def tool_get_sprint_status(slug: str = "") -> str:

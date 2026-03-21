@@ -313,8 +313,12 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         if not config:
             self._json_response({"projects": [], "active_project": ""})
             return
+        projects = []
+        for slug in config.list_projects():
+            name = slug.replace("-", " ").replace("_", " ").title()
+            projects.append({"slug": slug, "name": name})
         self._json_response({
-            "projects": config.list_projects(),
+            "projects": projects,
             "active_project": config.active_project,
         })
 
@@ -839,6 +843,7 @@ def main() -> None:
         model=cfg.model_name,
         ollama_url=cfg.ollama_url,
         provider_id=cfg.llm_provider or None,
+        config=cfg,
     )
     srv = start_server(gw, port=cfg.server_port)
 

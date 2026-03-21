@@ -35,9 +35,9 @@ Track bugs and feature requests here.
 | B-027 | Copy button only appears on first bot message, not on subsequent bot messages | Medium | Complete (Sprint 21) |
 | B-028 | Active Project dropdown in Settings panel is empty — should list available projects or be hidden when only one project exists | Low | Open |
 | B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Open |
-| B-030 | Conversation restore fails — clicking saved conversation in sidebar shows only welcome message, not the actual history (sidebar shows "9 msgs" but chat area shows 1) | High | Open |
-| B-031 | New conversations not saved to sidebar — after +New Chat and sending messages, conversation doesn't appear as new sidebar entry | High | Open |
-| B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Open |
+| B-030 | Conversation restore fails — clicking saved conversation in sidebar shows only welcome message, not the actual history (sidebar shows "9 msgs" but chat area shows 1) | High | Complete (Sprint 22) |
+| B-031 | New conversations not saved to sidebar — after +New Chat and sending messages, conversation doesn't appear as new sidebar entry | High | Complete (Sprint 22) |
+| B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22) |
 
 ## Features
 
@@ -100,5 +100,5 @@ Track bugs and feature requests here.
 | F-055 | Copy button on all bot messages — currently only the first message has a Copy button | Medium | Complete (Sprint 21) |
 | F-056 | Favicon — add a simple favicon so browser tab has an icon and no 404 | Low | Complete (Sprint 21) |
 | F-057 | Google SSO localhost dev bypass — skip auth overlay when running on localhost without valid Google client ID | Medium | Complete (Sprint 21) |
-| F-058 | Conversation auto-save to sidebar — new conversations should persist to sidebar list after first user message without requiring page reload | High | Open |
+| F-058 | Conversation auto-save to sidebar — new conversations should persist to sidebar list after first user message without requiring page reload | High | Complete (Sprint 22) |
 | F-059 | Code block syntax highlighting — bot markdown code blocks render but without language-specific syntax colors | Low | Open |

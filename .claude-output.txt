@@ -1,21 +1,27 @@
-All tasks complete.
+`★ Insight ─────────────────────────────────────`
+**Layered filtering strategy** — The filter now has three tiers: (1) signal-level checks (no-speech prob, audio duration, hallucination patterns) catch STT artifacts, (2) content-level checks (garbage words, low confidence) catch misheard noise, and (3) semantic-level checks (monologue length, repeated phrases, engagement markers) catch valid-sounding speech from wrong sources. Each layer catches what the previous can't.
+
+**N-gram phrase detection** — Using `Counter` on sliding 2-4 word windows is O(n) and catches natural repetition in media (dialogue loops, song lyrics, narration patterns) without false-positiving on normal speech where people occasionally repeat a word.
+`─────────────────────────────────────────────────`
 
 ---
 
 ## Summary
 
 ### Files changed
-- `personalities/customer-discovery.md` — added `## Capabilities` section with voice awareness
-- `personalities/base.md` — added same `## Capabilities` section (all personalities inherit voice awareness)
-- `bot/chat_ui.html` — added `id="docsStats"` to stats paragraph; updated `openDocs()` to fetch `/api/stats` dynamically with hardcoded fallback
-- `docs/project-memory/backlog/README.md` — marked B-037 as Complete (Sprint 28)
-- `docs/project-memory/sessions/S-2026-03-21-1906-voice-personality-dynamic-stats.md` — new session doc
+- `bot/input_filter.py` — Added `BACKGROUND_NOISE` enum, `BACKGROUND_NOISE_MESSAGE`, three detection heuristics (long monologue, repeated phrases, no engagement markers)
+- `bot/server.py` — Import `BACKGROUND_NOISE_MESSAGE`, return `filter_message` in STT response for background noise
+- `tests/test_input_filter.py` — 18 new tests across 4 new test classes (87 total in file)
+- `docs/PROJECT_STATUS_2026-03-21-sprint28.md` — Sprint 28 status doc
+- `docs/project-memory/backlog/README.md` — B-038 marked Complete (Sprint 29)
+- `docs/project-memory/sessions/S-2026-03-21-1928-sprint29-filter-docs.md` — Session doc
 
 ### Commands run
-- `git pull origin main` — already up to date
-- `pytest tests/ -v` — 693 tests passed
-- `git push -u origin HEAD` — branch pushed
+- `git fetch origin main`
+- `python3 -m pytest tests/test_input_filter.py -v` (87 passed)
+- `python3 -m pytest tests/ -v` (709 passed, 3 warnings)
+- `git commit` + `git push -u origin HEAD`
 
 ### Notes / follow-on work
-- The Capabilities section is in both `base.md` and `customer-discovery.md`. Since customer-discovery extends base, it's slightly redundant — but explicit is better than implicit for system prompt instructions that affect user experience.
-- The `/api/stats` endpoint (F-060, Sprint 23) must be running for dynamic stats to work; the hardcoded fallback covers offline/dev scenarios.
+- The UI (chat_ui.html, owned by agentA) should check for `filter_message` in the STT response and display it to the user instead of silently ignoring filtered input
+- The >200 word monologue check is intentionally aggressive — even user messages over 200 words get flagged. This is a reasonable trade-off since voice input of 200+ words in a single VAD segment is almost certainly media, not a user talking to a bot

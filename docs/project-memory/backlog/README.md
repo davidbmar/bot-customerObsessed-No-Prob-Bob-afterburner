@@ -118,3 +118,4 @@ Track bugs and feature requests here.
 | F-067 | Message character/word count — show approximate token usage before sending long messages | Low | Complete (Sprint 27) |
 | F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |
 | F-069 | Voice transcription discard button — show transcription preview with discard/confirm before auto-sending | High | Complete (Sprint 29) |
+| F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Open |

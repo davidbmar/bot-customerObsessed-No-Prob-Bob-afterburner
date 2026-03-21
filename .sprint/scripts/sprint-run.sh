@@ -185,7 +185,9 @@ wait_for_agents() {
   echo ""
 
   # Track which agents we've already sent notifications for
-  local -A notified_agents=()
+  # Uses a space-delimited string instead of associative arrays for
+  # bash 3 / zsh compatibility (fixes B-008: local -A crash on zsh)
+  local _notified_agents=" "
 
   while true; do
     local done_count=0
@@ -197,8 +199,8 @@ wait_for_agents() {
       if [ -f "${ROOT}/.agent-done-${agent}" ]; then
         done_count=$((done_count + 1))
         # Send whatsup notification once per agent completion
-        if [ -z "${notified_agents[$agent]+x}" ]; then
-          notified_agents[$agent]=1
+        if ! echo "$_notified_agents" | grep -q " ${agent} "; then
+          _notified_agents="${_notified_agents}${agent} "
           if [ "$WHATSUP_ENABLED" = "true" ] && [ -x "$WHATSUP_CMD" ]; then
             "$WHATSUP_CMD" notify "${PROJECT_SLUG}" agent-completed --sprint "${SPRINT_NUM}" --agent "${agent}" 2>/dev/null || true
           fi

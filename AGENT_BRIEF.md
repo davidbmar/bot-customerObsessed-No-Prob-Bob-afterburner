@@ -1,4 +1,4 @@
-agentA-pause-play — Sprint 31
+agentB-sprint-docs — Sprint 32
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -74,30 +74,29 @@ Improved input quality filter to catch background media audio (B-038). Added lon
 Sprint-Level Context
 
 Goal
-- Fix the broken pause/play hands-free behavior so Pause stops BOTH speaking AND listening (B-039, B-040, F-071)
-- Fix dashboard backlog showing 0 items by correcting the backlog file path in build-sprint-data.sh (B-015)
+- Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows full history (B-043, F-073)
+- Fix sprint-run.sh `local -A` crash on zsh so automated sprints complete end-to-end (B-008)
+- Suppress ONNX runtime console warnings from Silero VAD initialization (B-044)
 
 Constraints
 - agentA owns `bot/chat_ui.html` exclusively
-- agentB owns `scripts/build-sprint-data.sh` in the afterburner repo AND `bot/tools.py` in this repo
+- agentB owns `.sprint/scripts/sprint-run.sh` and `docs/` files
 - No two agents may modify the same files
 
 
 Objective
-- Fix Pause/Play toggle so it stops BOTH TTS and VAD listening (B-039, B-040, F-071)
-- Prevent hands-free from auto-starting on page load (B-041)
+- Generate PROJECT_STATUS docs for Sprints 30-31 (B-043, F-073)
+- Fix sprint-run.sh `local -A` crash on zsh (B-008)
 
 Tasks
-- In `bot/chat_ui.html`, make the Pause button (⏸) call BOTH `stopAgentSpeaking()` AND set `vadPaused = true` so VAD stops capturing audio
-- Make the Play button (▶) set `vadPaused = false` to resume VAD listening
-- In the TTS `ended` event handler, do NOT reset `vadPaused` — respect user's explicit pause state
-- On page load, set `vadPaused = true` by default — user must click Play or the Hands-free toggle to start listening
-- The "Stop speaking" banner button (`#stopSpeakingBtn`) should also pause VAD (set `vadPaused = true`)
-- Add visual indicator: when paused, show "Paused" text next to the button instead of "Listening..."
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint30.md` following PROJECT_STATUS_TEMPLATE format, using Sprint 30 brief from `.sprint/history/` and git log for details
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint31.md` following PROJECT_STATUS_TEMPLATE format, using Sprint 31 brief from `.sprint/history/` and git log for details
+- In `.sprint/scripts/sprint-run.sh`, replace `local -A` (bash 4+ only) with a zsh-compatible approach — use regular variables or arrays instead of associative arrays
+- Test the fix: `zsh -c 'source .sprint/scripts/sprint-run.sh --help'` should not error
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- Clicking Pause stops TTS playback AND stops mic listening — no phantom messages
-- Clicking Play resumes listening — VAD starts detecting speech again
-- "Stop speaking" also pauses the mic
-- Fresh page load does NOT auto-listen — user must explicitly activate hands-free
-- Existing keyboard shortcut (Escape to stop speaking) also pauses VAD
+- `docs/PROJECT_STATUS_2026-03-21-sprint30.md` exists with correct sprint summary
+- `docs/PROJECT_STATUS_2026-03-21-sprint31.md` exists with correct sprint summary
+- `sprint-run.sh` no longer crashes with `local: -A: invalid option` on zsh
+- Dashboard shows Sprints 30 and 31 after rebuild

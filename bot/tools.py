@@ -189,9 +189,29 @@ def tool_get_project_summary(slug: str = "") -> str:
                 f"{DASHBOARD_URL}/api/project/{resolved}/status",
                 timeout=5.0,
             )
-            if resp.status_code == 200:
-                status = resp.json()
-                parts.append(f"## Project Status")
+            status = resp.json() if resp.status_code == 200 else {}
+
+            # F-080: Auto-rebuild if project has no dashboard data
+            if (resp.status_code == 404 or status.get("totalSprints", 0) == 0) and project_root:
+                log.info("Auto-rebuilding dashboard data for %s", resolved)
+                try:
+                    httpx.post(
+                        f"{DASHBOARD_URL}/api/rebuild-data",
+                        json={"projectRoot": str(project_root), "slug": resolved},
+                        timeout=30.0,
+                    )
+                    # Retry status after rebuild
+                    resp = httpx.get(
+                        f"{DASHBOARD_URL}/api/project/{resolved}/status",
+                        timeout=5.0,
+                    )
+                    if resp.status_code == 200:
+                        status = resp.json()
+                except httpx.HTTPError:
+                    pass
+
+            if status:
+                parts.append("## Project Status")
                 parts.append(f"- Slug: {status.get('slug', resolved)}")
                 parts.append(f"- Latest sprint: {status.get('latestSprint', 0)}")
                 parts.append(f"- Total sprints: {status.get('totalSprints', 0)}")
@@ -202,6 +222,11 @@ def tool_get_project_summary(slug: str = "") -> str:
                     parts.append(f"- Recent sessions ({len(sessions)}):")
                     for s in sessions[:3]:
                         parts.append(f"  - {s.get('title', '')} ({s.get('date', '')})")
+
+            # F-078: Auto-switch active project when querying a different one
+            if _config and hasattr(_config, "switch_project") and resolved != getattr(_config, "active_project", ""):
+                _config.switch_project(resolved)
+
         except httpx.HTTPError:
             pass
 

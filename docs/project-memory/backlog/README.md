@@ -36,6 +36,7 @@ Track bugs and feature requests here.
 | B-028 | Active Project dropdown in Settings panel is empty — should list available projects or be hidden when only one project exists | Low | Complete (Sprint 22) |
 | B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Open |
 | B-037 | Bot says "I'm text-only" and "I can't hear audio" when user speaks via voice — personality system prompt doesn't mention STT/TTS voice capabilities | High | Complete (Sprint 28) |
+| B-038 | Input filter lets TV/movie audio through — hands-free mode transcribes background media and sends full movie scenes to LLM as user messages | Medium | Open |
 | B-035 | pyproject.toml [dev] group missing anthropic, openai, google-auth — venv rebuild breaks login and LLM providers | High | Complete (Sprint 27) |
 | B-036 | scripts/start.sh doesn't install optional deps — new clone requires manual pip install of anthropic/google-auth | Medium | Complete (Sprint 27) |
 | B-030 | Conversation restore fails — clicking saved conversation in sidebar shows only welcome message, not the actual history (sidebar shows "9 msgs" but chat area shows 1) | High | Complete (Sprint 22) |

@@ -53,7 +53,7 @@ Track bugs and feature requests here.
 | B-045 | Active Project dropdown shows "No projects registered" — _auto_discover_projects() can't parse projects.json dict format (expects list, gets {projects:[...]}) | Medium | Complete (hotfix post-Sprint 34) |
 | B-046 | Bot reports Sprint 29 as "latest" when Sprints 30-32 exist — feedback_on_sprint reads stale sprints.json, needs rebuild after each sprint | Medium | Complete (Sprint 33, F-074 auto-rebuild) |
 | B-047 | Missing PROJECT_STATUS doc for Sprint 32 — dashboard shows 31 sprints but Sprint 32 was completed | Medium | Complete (Sprint 33) |
-| B-048 | sprint-config.sh DEFAULT_TEST_CMD uses system python3 instead of .venv/bin/python3 — sprint-run.sh verification fails on macOS | Medium | Open |
+| B-048 | sprint-config.sh DEFAULT_TEST_CMD uses system python3 instead of .venv/bin/python3 — sprint-run.sh verification fails on macOS | Medium | Complete (hotfix post-Sprint 35) |
 | B-049 | Missing PROJECT_STATUS docs for Sprints 33-34 — needs generation for dashboard to show recent sprints | Medium | Open |
 
 ## Features
@@ -135,3 +135,4 @@ Track bugs and feature requests here.
 | F-073 | Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent sprint history | Medium | Complete (Sprint 32) |
 | F-074 | Auto-rebuild dashboard data after sprint merge — sprint-run.sh should call /api/rebuild-data so dashboard is always current | High | Complete (Sprint 33) |
 | F-075 | Active Project selector in Settings should list all registered Afterburner projects from /api/projects | Medium | Complete (Sprint 34 + hotfix) |
+| F-076 | list_projects tool — bot can list all registered Afterburner projects when user asks "what projects are there?" | Medium | Open |

@@ -2500,6 +2500,7 @@ var streamAborted = false;
 var vadPaused = false;
 
 function sendMessage() {
+  unlockTTSAudio();  // iOS Safari: unlock audio on user gesture
   clearVoicePreviewUI();
   var input = document.getElementById('input');
   var text = input.value.trim();
@@ -4139,6 +4140,10 @@ function unlockTTSAudio() {
   }).catch(function() {});
 }
 
+// Unlock audio on ANY first user interaction (iOS Safari + Chrome autoplay policy)
+document.addEventListener('click', unlockTTSAudio, { once: true });
+document.addEventListener('touchstart', unlockTTSAudio, { once: true });
+
 var talkBtn = document.getElementById('talkBtn');
 
 // Hold-to-talk: touch events (mobile)
@@ -4418,6 +4423,7 @@ var handsfreeActive = false;
 var vadIsSpeaking = false; // true while TTS is playing (echo cancellation)
 
 function toggleHandsfree() {
+  unlockTTSAudio();  // iOS Safari: unlock audio on user gesture
   handsfreeActive = !handsfreeActive;
   var btn = document.getElementById('handsfreeBtn');
   var talkBtn = document.getElementById('talkBtn');

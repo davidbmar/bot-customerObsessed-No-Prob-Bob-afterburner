@@ -39,7 +39,7 @@ Track bugs and feature requests here.
 | B-031 | New conversations not saved to sidebar — after +New Chat and sending messages, conversation doesn't appear as new sidebar entry | High | Complete (Sprint 22) |
 | B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22, /api/stats added Sprint 23) |
 | B-033 | Tool result message uses OpenAI format for Claude API — causes 400 error when bot calls Afterburner tools with Claude provider | Critical | Fixed (hotfix) |
-| B-034 | Restored bot messages lose paragraph spacing — old conversations saved via textContent have "word.Next sentence" instead of paragraph breaks | Medium | Open |
+| B-034 | Restored bot messages lose paragraph spacing — old conversations saved via textContent have "word.Next sentence" instead of paragraph breaks | Medium | Complete (Sprint 23) |
 
 ## Features
 
@@ -90,7 +90,7 @@ Track bugs and feature requests here.
 | F-043 | CLI evaluate command improvements — show pass/fail per scenario with colors | Medium | Complete (Sprint 16) |
 | F-044 | Markdown rendering in bot messages — support **bold**, *italic*, `code`, lists, headers | High | Complete (Sprint 19) |
 | F-045 | Message timestamp grouping — group messages by date ("Today", "Yesterday", "Mar 19") | Medium | Complete (Sprint 19) |
-| F-046 | Notification sound on bot response (optional, toggleable) | Low | Open |
+| F-046 | Notification sound on bot response (optional, toggleable) | Low | Complete (Sprint 23) |
 | F-048 | Input quality filter — drop garbage STT before hitting LLM (port from voice-calendar-scheduler) | High | Complete (Sprint 20) |
 | F-049 | Hands-free continuous speech mode with browser-side VAD (Silero VAD WASM) | High | Complete (Sprint 20) |
 | F-050 | Echo cancellation — mute mic while TTS is playing to prevent feedback loop | High | Complete (Sprint 20) |
@@ -103,5 +103,5 @@ Track bugs and feature requests here.
 | F-056 | Favicon — add a simple favicon so browser tab has an icon and no 404 | Low | Complete (Sprint 21) |
 | F-057 | Google SSO localhost dev bypass — skip auth overlay when running on localhost without valid Google client ID | Medium | Complete (Sprint 21) |
 | F-058 | Conversation auto-save to sidebar — new conversations should persist to sidebar list after first user message without requiring page reload | High | Complete (Sprint 22) |
-| F-059 | Code block syntax highlighting — bot markdown code blocks render but without language-specific syntax colors | Low | Open |
+| F-059 | Code block syntax highlighting — bot markdown code blocks render but without language-specific syntax colors | Low | Complete (Sprint 23) |
 | F-060 | /api/stats endpoint — returns sprint/test/feature counts for Docs panel auto-update | Low | Complete (Sprint 23) |

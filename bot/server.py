@@ -106,6 +106,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_get_config()
         elif path == "/api/conversations/export":
             self._handle_export_conversation(parsed)
+        elif path.startswith("/api/conversations/") and path.endswith("/summary"):
+            self._handle_conversation_summary(path)
         elif path == "/api/stats":
             self._handle_get_stats()
         elif path == "/api/projects":
@@ -363,6 +365,42 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _handle_conversation_summary(self, path: str) -> None:
+        """Return a brief summary for a conversation (F-070)."""
+        # Extract conversation ID from /api/conversations/{id}/summary
+        parts = path.split("/")
+        # parts: ['', 'api', 'conversations', '{id}', 'summary']
+        if len(parts) < 5:
+            self._json_response({"error": "Invalid path"}, status=400)
+            return
+        conversation_id = parts[3]
+        if not conversation_id:
+            self._json_response({"error": "Missing conversation ID"}, status=400)
+            return
+
+        messages = self.gateway.memory.get_history(conversation_id)
+        if not messages:
+            self._json_response({"error": "Conversation not found"}, status=404)
+            return
+
+        # Use the first user message as the summary
+        summary = ""
+        for msg in messages:
+            if msg.get("role") == "user":
+                text = msg.get("content", "").strip()
+                if text:
+                    # Truncate long messages to 120 chars
+                    summary = text[:120] + ("..." if len(text) > 120 else "")
+                    break
+
+        if not summary:
+            summary = "Empty conversation"
+
+        self._json_response({
+            "summary": summary,
+            "message_count": len(messages),
+        })
 
     def _handle_switch_project(self) -> None:
         """Switch the active project."""

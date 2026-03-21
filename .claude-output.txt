@@ -1,32 +1,16 @@
-`★ Insight ─────────────────────────────────────`
-**State machine pattern for UI transitions**: The voice preview flow uses a simple state machine (`showVoicePreview` → timer → `confirmVoicePreview` OR user action → `discardVoicePreview`). The key design choice is that `onVoicePreviewEdit` cancels the auto-send timer but keeps the discard UI visible — this lets users edit without time pressure while still being able to discard.
-
-**Garbled detection heuristic**: Rather than a complex NLP check, a simple ratio of alphabetic characters to total length (<40% alpha = garbled) catches most noise transcriptions (random punctuation, numbers from TV captions) while letting real speech through.
-`─────────────────────────────────────────────────`
-
----
-
-## Summary
+## Results
 
 ### Files changed
-- `bot/chat_ui.html` — Added voice transcription preview with discard button (F-069)
-- `docs/project-memory/backlog/F-069-voice-discard-button.md` — New feature doc
-- `docs/project-memory/backlog/README.md` — Added F-069 entry
-- `docs/project-memory/sessions/S-2026-03-21-1926-sprint29-voice-discard.md` — Session doc
+- **`docs/PROJECT_STATUS_2026-03-21-sprint29.md`** — New Sprint 29 status doc (input filter B-038, discard button F-069)
+- **`bot/server.py`** — Added `GET /api/conversations/{id}/summary` endpoint and `_handle_conversation_summary` handler
+- **`tests/test_sprint30_summary.py`** — 6 new tests for the summary endpoint
 
 ### Commands run
-- `git pull origin main` — Already up to date
-- `.venv/bin/python3 -m pytest tests/ -v` — **694 tests passed**
-- `git push -u origin HEAD` — Pushed to `agentA-discard-button`
-
-### What was implemented
-1. **Voice transcription preview**: Both PTT and VAD paths now show transcribed text in the input field instead of auto-sending
-2. **Discard button (✕)**: Appears next to input, clears transcription and returns to listening
-3. **Countdown timer**: "Sending in 3... 2... 1..." auto-sends after 3 seconds
-4. **Edit cancels auto-send**: If user starts typing, countdown stops but discard stays available
-5. **Keyboard shortcuts**: Enter confirms, Escape discards
-6. **Garbled warning**: Yellow border when transcription looks like noise (short, non-alpha heavy)
+- `git pull origin main` — already up to date
+- `.venv/bin/python3 -m pytest tests/ -v` — **715 tests passed**
+- `git commit` + `git push -u origin HEAD`
 
 ### Notes / follow-on work
-- B-038 (TV/movie audio filtering) is being handled by agentB on the server side — this discard button is the client-side safety net
-- The 3-second auto-send timeout is a hardcoded constant; could be made configurable in Settings panel in a future sprint if users want different delays
+- **Backlog verified**: B-038 and F-069 already marked Complete (Sprint 29), F-070 is Open — no changes needed
+- The summary endpoint uses a simple approach (first user message, truncated to 120 chars) — agentA's UI can call this to show conversation summaries
+- B-029 (ONNX warnings) is listed as a Sprint 30 goal in the brief but assigned to agentA's scope

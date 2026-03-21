@@ -15,6 +15,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ── Load .env ────────────────────────────────────────────────
+if [ -f "$REPO_ROOT/.env" ]; then
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+    value="${line#*=}"
+    value="$(echo "$value" | sed 's/[[:space:]][[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')"
+    export "$key=$value"
+  done < "$REPO_ROOT/.env"
+fi
+
 PORT="${PORT:-1203}"
 BACKGROUND=false
 [[ "${1:-}" == "--background" ]] && BACKGROUND=true

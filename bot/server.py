@@ -759,6 +759,7 @@ def main() -> None:
         personality_name=cfg.personality_name,
         model=cfg.model_name,
         ollama_url=cfg.ollama_url,
+        provider_id=cfg.llm_provider or None,
     )
     srv = start_server(gw, port=cfg.server_port)
 

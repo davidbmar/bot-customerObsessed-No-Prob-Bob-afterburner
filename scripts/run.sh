@@ -281,27 +281,30 @@ if [ "$MODE" = "2" ]; then
     source "$TUNNEL_CONFIG"
     echo ""
     echo "  Starting Cloudflare Tunnel: $TUNNEL_NAME"
-    echo "--- cloudflared start $(date '+%Y-%m-%d %H:%M:%S') ---" >> "$TUNNEL_LOG"
+    # Truncate tunnel log so we don't match stale "Registered" lines
+    echo "--- cloudflared start $(date '+%Y-%m-%d %H:%M:%S') ---" > "$TUNNEL_LOG"
     cloudflared tunnel --url "http://localhost:$PORT" run "$TUNNEL_NAME" >> "$TUNNEL_LOG" 2>&1 &
     CF_PID=$!
     echo "  cloudflared PID: $CF_PID"
     CONNECT_URL="$TUNNEL_URL/chat"
 
-    # Wait for tunnel to register
+    # Wait for tunnel to register (need at least 1 connection)
     echo "  Waiting for tunnel to connect..."
     for i in $(seq 1 30); do
       if grep -q "Registered tunnel connection" "$TUNNEL_LOG" 2>/dev/null; then
+        echo "  Tunnel connected"
         break
       fi
       sleep 1
     done
 
-    if grep -q "Registered tunnel connection" "$TUNNEL_LOG" 2>/dev/null; then
-      echo "  Tunnel connected"
-    else
+    if ! grep -q "Registered tunnel connection" "$TUNNEL_LOG" 2>/dev/null; then
       echo "  WARNING: Tunnel may not be fully connected yet."
       echo "  Check: $TUNNEL_LOG"
     fi
+
+    # Give Cloudflare edge a moment to propagate
+    sleep 2
   else
     # Quick tunnel (random URL)
     echo ""

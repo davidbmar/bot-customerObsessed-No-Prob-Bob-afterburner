@@ -3156,12 +3156,30 @@ var mediaRecorder = null;
 var audioChunks = [];
 var agentAudio = null;
 
+// Persistent audio element — unlocked on first user gesture (iOS Safari requirement).
+// Safari blocks audio.play() unless initiated by a tap. We "prime" this element
+// by playing a silent buffer during the mic button press, then reuse it for TTS.
+var ttsAudioEl = document.createElement('audio');
+ttsAudioEl.playsInline = true;
+var ttsUnlocked = false;
+
+function unlockTTSAudio() {
+  if (ttsUnlocked) return;
+  // Play a tiny silent WAV to unlock the audio element on this user gesture
+  ttsAudioEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  ttsAudioEl.play().then(function() {
+    ttsUnlocked = true;
+    console.log('[voice] TTS audio unlocked for iOS');
+  }).catch(function() {});
+}
+
 var talkBtn = document.getElementById('talkBtn');
 
 // Hold-to-talk: touch events (mobile)
 talkBtn.addEventListener('touchstart', function(e) {
   e.preventDefault();
   console.log('[voice] touchstart');
+  unlockTTSAudio();
   voiceHeld = true;
   startVoiceRecording();
 });
@@ -3184,6 +3202,7 @@ document.addEventListener('touchend', function() {
 talkBtn.addEventListener('mousedown', function(e) {
   if (e.button !== 0) return;
   console.log('[voice] mousedown');
+  unlockTTSAudio();
   voiceHeld = true;
   startVoiceRecording();
 });
@@ -3376,24 +3395,38 @@ function speakResponse(text) {
     body: JSON.stringify({ text: cleanText })
   })
   .then(function(r) {
-    if (!r.ok) return null;
+    if (!r.ok) {
+      showToast('TTS server error: ' + r.status);
+      return null;
+    }
     return r.blob();
   })
   .then(function(blob) {
     if (!blob) return;
     var url = URL.createObjectURL(blob);
-    agentAudio = new Audio(url);
-    talkBtn.classList.add('speaking');
-    agentAudio.onended = function() {
+    // Use the pre-unlocked audio element (required for iOS Safari)
+    ttsAudioEl.onended = function() {
       URL.revokeObjectURL(url);
       talkBtn.classList.remove('speaking');
       agentAudio = null;
     };
-    agentAudio.play().catch(function() {
+    ttsAudioEl.onerror = function() {
+      URL.revokeObjectURL(url);
+      talkBtn.classList.remove('speaking');
+      agentAudio = null;
+    };
+    ttsAudioEl.src = url;
+    agentAudio = ttsAudioEl;
+    talkBtn.classList.add('speaking');
+    ttsAudioEl.play().catch(function(e) {
+      console.warn('[voice] TTS play failed:', e);
+      showToast('Audio play blocked: ' + e.message);
       talkBtn.classList.remove('speaking');
     });
   })
-  .catch(function() {});
+  .catch(function(e) {
+    showToast('TTS fetch failed: ' + (e.message || e));
+  });
 }
 
 restoreTheme();

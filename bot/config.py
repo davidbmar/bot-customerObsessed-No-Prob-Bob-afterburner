@@ -26,6 +26,7 @@ class BotConfig:
     server_host: str = "127.0.0.1"
     projects: dict[str, str] = field(default_factory=dict)
     active_project: str = ""
+    llm_provider: str = ""
     google_client_id: str = ""
     allowed_emails: str = ""
 
@@ -94,6 +95,7 @@ class BotConfig:
         return cls(
             personality=data.get("personality", "customer-discovery"),
             model=llm.get("model", "qwen3:4b"),
+            llm_provider=llm.get("provider", ""),
             ollama_url=llm.get("baseUrl", "http://localhost:11434"),
             data_dir=data.get("data_dir", ""),
             telegram_token=telegram.get("botToken", ""),

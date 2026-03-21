@@ -11,19 +11,30 @@ Signals used (all free — computed during STT):
   - word count: very short utterances are usually noise
   - audio duration: recordings under ~0.6s are almost always accidental
   - known patterns: common noise transcriptions ("you", "um", "beep", etc.)
+  - long monologue: >200 words from a single segment likely means background media
+  - repeated phrases: same phrase 3+ times indicates TV/movie audio
+  - no engagement markers: long text with no questions, greetings, or first-person pronouns
 """
 
 import re
 import logging
+from collections import Counter
 from enum import Enum
 
 log = logging.getLogger("input_filter")
 
 
+BACKGROUND_NOISE_MESSAGE = (
+    "It sounds like there might be background audio. "
+    "If you're talking to me, try again \u2014 I'm listening!"
+)
+
+
 class InputQuality(Enum):
-    VALID = "valid"           # Send to fast-path / LLM
-    GARBAGE = "garbage"       # Drop silently
-    LOW_QUALITY = "low"       # Drop silently (borderline, but not worth LLM cost)
+    VALID = "valid"                   # Send to fast-path / LLM
+    GARBAGE = "garbage"               # Drop silently
+    LOW_QUALITY = "low"               # Drop silently (borderline, but not worth LLM cost)
+    BACKGROUND_NOISE = "background"   # Likely TV/movie — notify user
 
 
 # Single words that Whisper commonly produces from noise / short mic presses.
@@ -108,4 +119,54 @@ def classify(
             log.info("Filter: two garbage words: %r", clean)
             return InputQuality.GARBAGE
 
+    # ── Background media detection (B-038) ────────────────────
+
+    # Long monologue: >200 words from a single segment is likely TV/movie audio
+    if word_count > 200:
+        log.info("Filter: long monologue (%d words): %r…", word_count, clean[:80])
+        return InputQuality.BACKGROUND_NOISE
+
+    # Repeated phrase: if a 2-4 word phrase appears 3+ times, likely media
+    if word_count >= 6 and _has_repeated_phrases(words):
+        log.info("Filter: repeated phrases detected: %r…", clean[:80])
+        return InputQuality.BACKGROUND_NOISE
+
+    # No engagement markers: long text (>50 words) with no questions, greetings,
+    # or first-person pronouns is likely not directed at the bot
+    if word_count > 50 and _lacks_engagement_markers(clean, words):
+        log.info("Filter: no engagement markers (%d words): %r…", word_count, clean[:80])
+        return InputQuality.BACKGROUND_NOISE
+
     return InputQuality.VALID
+
+
+# ── Background noise helpers ──────────────────────────────────
+
+_GREETINGS = {"hello", "hi", "hey", "ok", "okay", "bye", "thanks", "thank"}
+_FIRST_PERSON = {"i", "my", "me", "we", "our", "mine", "i'm", "i've", "i'll", "i'd", "we're", "we've"}
+
+
+def _has_repeated_phrases(words: list[str]) -> bool:
+    """Check if any 2-4 word phrase appears 3+ times."""
+    lower_words = [w.lower().strip(".,!?;:'\"") for w in words]
+    for n in (2, 3, 4):
+        if len(lower_words) < n:
+            continue
+        ngrams = [" ".join(lower_words[i:i + n]) for i in range(len(lower_words) - n + 1)]
+        counts = Counter(ngrams)
+        for phrase, count in counts.items():
+            if count >= 3 and len(phrase.replace(" ", "")) > 3:
+                return True
+    return False
+
+
+def _lacks_engagement_markers(text: str, words: list[str]) -> bool:
+    """Return True if text has no questions, greetings, or first-person pronouns."""
+    if "?" in text:
+        return False
+    lower_words = {w.lower().strip(".,!?;:'\"") for w in words}
+    if lower_words & _GREETINGS:
+        return False
+    if lower_words & _FIRST_PERSON:
+        return False
+    return True

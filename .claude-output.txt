@@ -2,28 +2,25 @@
 
 ## Summary
 
-### Files changed
-- **`bot/chat_ui.html`** — Added conversation summary banner (F-070) + ONNX warning suppression (B-029)
-- **`docs/project-memory/backlog/README.md`** — Marked F-070 and B-029 as Complete (Sprint 30)
-- **`docs/project-memory/sessions/S-2026-03-21-1947-conv-summary-onnx-fix.md`** — Session doc
+### Files Changed
 
-### Commands run
-- `python3 -m pytest tests/ -v` — **709 passed**, 3 warnings
-- `git commit` + `git push -u origin HEAD`
+**This repo (`bot-customerObsessed-No-Prob-Bob-afterburner`):**
+- `bot/tools.py` — Added friendly error messages and logging to `tool_get_sprint_status` and `tool_feedback_on_sprint` when dashboard API is unreachable (B-042)
+- `docs/project-memory/sessions/S-2026-03-21-2050-sprint31-backlog-tools.md` — Session doc
 
-### What was implemented
+**Afterburner repo (`traceable-searchable-adr-memory-index`):**
+- `scripts/build-sprint-data.sh` — Fixed backlog file path to check `backlog/README.md` first; added table-format parser for `| B-NNN |` / `| F-NNN |` rows (B-015)
 
-**F-070 — Conversation summary banner:**
-- Collapsible banner appears at top of chat when conversation exceeds 10 messages
-- Shows `"Summary: [first user question] — [extracted topics]"`
-- Click to expand shows message counts and full topic list
-- Auto-updates on each new message via `addMessage()` hook
-- Subtle styling (muted background, small text, collapsed by default)
+### Commands Run
+- `python3 -m pytest tests/ -x -q` — 726 passed
+- `build-sprint-data.sh` — 42 bugs + 72 features parsed (was 0)
+- `git push -u origin HEAD`
 
-**B-029 — Suppress ONNX warnings:**
-- Added inline `<script>` after ONNX import that sets `ort.env.logSeverityLevel = 3` (error-only)
-- Eliminates 10+ console warnings on every page load
+### Acceptance Criteria Verification
+- `backlog.json` contains 42 bugs and 72 features after rebuild
+- `tool_get_sprint_status("nonexistent")` returns `"Dashboard unavailable, using local data — but project 'nonexistent' not found locally either."` instead of a stack trace
+- All 726 tests pass
 
-### Notes / follow-on work
-- Topic extraction uses a simple heuristic (capitalized words > 4 chars). A more sophisticated NLP approach could be added later if needed.
-- The ONNX suppression script checks `typeof ort !== 'undefined'` as a safety guard since the script loads synchronously right after the ONNX import.
+### Notes / Follow-on Work
+- The `build-sprint-data.sh` commit is on `main` in the afterburner repo (not on a feature branch) since it was committed directly there. The sprint-merge process should handle pushing that.
+- `_find_project_root` in `bot/tools.py` has a pre-existing bug where it crashes if `projects.json` contains strings instead of dicts (seen during manual testing) — not in scope for this sprint but could be a future B-item.

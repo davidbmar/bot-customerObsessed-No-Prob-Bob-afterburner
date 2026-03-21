@@ -394,6 +394,7 @@
     font-size: 13px;
     white-space: pre;
     line-height: 1.4;
+    position: relative;
   }
   .message .body pre code {
     background: none;
@@ -405,6 +406,25 @@
     padding-left: 20px;
   }
   .message .body li { margin-bottom: 4px; }
+
+  /* Tables (GFM pipe tables) */
+  .message .body table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  .message .body th, .message .body td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; font-size: 0.9em; }
+  .message .body th { background: var(--bg-tertiary); font-weight: 600; }
+  .message .body tr:nth-child(even) { background: var(--bg-secondary); }
+
+  /* Blockquotes */
+  .message .body blockquote { border-left: 3px solid var(--border); margin: 8px 0; padding: 4px 12px; color: var(--text-muted); font-style: italic; background: var(--bg-secondary); border-radius: 0 4px 4px 0; }
+
+  /* Horizontal rules */
+  .message .body hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* Code block language badge */
+  .code-lang-badge { position: absolute; top: 8px; right: 8px; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Copy button for assistant messages */
+  .copy-btn { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 11px; padding: 2px 6px; cursor: pointer; margin-top: 4px; }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
 
   /* Date separator between message groups */
   .date-separator {
@@ -1251,111 +1271,286 @@ function maybeAddDateSeparator(date, container) {
 }
 
 /* Safe markdown rendering using DOM methods only — no innerHTML.
-   Extracts fenced code blocks first so blank lines inside them
-   don't break the block-level split. */
+   Ported from claude-chat-workspace with full feature set:
+   fenced code blocks (with language badge), headings, unordered/ordered/nested lists,
+   GFM tables, blockquotes, horizontal rules, bold/italic/bold+italic, inline code.
+   All text is set via textContent to prevent XSS. */
 function renderMarkdownToDOM(text, container) {
-  var segments = [];
-  var codeBlockRe = /```(\w*)\n?([\s\S]*?)```/g;
-  var lastIdx = 0;
-  var m;
-  while ((m = codeBlockRe.exec(text)) !== null) {
-    if (m.index > lastIdx) {
-      segments.push({ type: 'text', content: text.substring(lastIdx, m.index) });
-    }
-    segments.push({ type: 'code', content: m[2] });
-    lastIdx = m.index + m[0].length;
-  }
-  if (lastIdx < text.length) {
-    segments.push({ type: 'text', content: text.substring(lastIdx) });
-  }
+  // Clear existing children (safe for streaming re-renders)
+  while (container.firstChild) container.removeChild(container.firstChild);
 
-  for (var s = 0; s < segments.length; s++) {
-    var seg = segments[s];
-    if (seg.type === 'code') {
+  // Split on fenced code blocks first (``` ... ```)
+  var parts = text.split(/(```[\w]*\n?[\s\S]*?```)/g);
+
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (part.startsWith('```')) {
+      // Extract language identifier from opening fence (e.g. ```python)
+      var langMatch = part.match(/^```(\w+)/);
+      var lang = langMatch ? langMatch[1] : '';
+      var code = part.replace(/^```[\w]*\n?/, '').replace(/```$/, '');
       var pre = document.createElement('pre');
+      if (lang) pre.dataset.language = lang;
       var codeEl = document.createElement('code');
-      codeEl.textContent = seg.content.trim();
+      if (lang) codeEl.className = 'language-' + lang;
+      codeEl.textContent = code;
+      if (lang) {
+        var badge = document.createElement('span');
+        badge.className = 'code-lang-badge';
+        badge.textContent = lang;
+        pre.appendChild(badge);
+      }
       pre.appendChild(codeEl);
       container.appendChild(pre);
-      continue;
-    }
-
-    var blocks = seg.content.split(/\n\n+/);
-    for (var i = 0; i < blocks.length; i++) {
-      var block = blocks[i].trim();
-      if (!block) continue;
-
-      // Headers: # through ######
-      var headerMatch = block.match(/^(#{1,6})\s+(.+)$/);
-      if (headerMatch && block.indexOf('\n') === -1) {
-        var level = Math.min(headerMatch[1].length, 6);
-        var h = document.createElement('h' + level);
-        renderInlineToDOM(headerMatch[2], h);
-        container.appendChild(h);
-        continue;
-      }
-
-      // Unordered list
-      if (/^[-*]\s/.test(block)) {
-        var ul = document.createElement('ul');
-        var items = block.split(/\n/);
-        for (var j = 0; j < items.length; j++) {
-          var itemText = items[j].replace(/^[-*]\s+/, '').trim();
-          if (itemText) {
-            var li = document.createElement('li');
-            renderInlineToDOM(itemText, li);
-            ul.appendChild(li);
-          }
-        }
-        container.appendChild(ul);
-        continue;
-      }
-
-      // Ordered list
-      if (/^\d+\.\s/.test(block)) {
-        var ol = document.createElement('ol');
-        var oitems = block.split(/\n/);
-        for (var k = 0; k < oitems.length; k++) {
-          var oitemText = oitems[k].replace(/^\d+\.\s+/, '').trim();
-          if (oitemText) {
-            var oli = document.createElement('li');
-            renderInlineToDOM(oitemText, oli);
-            ol.appendChild(oli);
-          }
-        }
-        container.appendChild(ol);
-        continue;
-      }
-
-      // Regular paragraph
-      var p = document.createElement('p');
-      renderInlineToDOM(block, p);
-      container.appendChild(p);
+    } else {
+      _processTextLines(container, part);
     }
   }
 }
 
-function renderInlineToDOM(text, parent) {
-  // Parse inline elements: **bold**, *italic*, `code`
-  var parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/);
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
-    if (!part) continue;
+// Parses a GFM table row into trimmed cell strings.
+function _parseTableCells(row) {
+  return row.replace(/^\||\|$/g, '').split('|').map(function(c) { return c.trim(); });
+}
 
-    if (part.match(/^\*\*(.+)\*\*$/)) {
-      var strong = document.createElement('strong');
-      strong.textContent = part.slice(2, -2);
-      parent.appendChild(strong);
-    } else if (part.match(/^\*(.+)\*$/)) {
-      var em = document.createElement('em');
-      em.textContent = part.slice(1, -1);
-      parent.appendChild(em);
-    } else if (part.match(/^`(.+)`$/)) {
-      var codeEl = document.createElement('code');
-      codeEl.textContent = part.slice(1, -1);
-      parent.appendChild(codeEl);
+// Line-by-line block parser: headings, lists (nested), tables, blockquotes, HR.
+// Blank lines between list items do NOT close the list — only two consecutive blanks
+// or a non-list structural element will close it.
+function _processTextLines(parent, text) {
+  var lines = text.split('\n');
+  var currentList = null;
+  var lastLi = null;
+  var currentNestedList = null;
+  var currentBlockquote = null;
+  var pendingListClose = false;
+  var consecutiveBlanks = 0;
+  var regularLines = [];
+
+  function flushRegularLines() {
+    for (var k = 0; k < regularLines.length; k++) {
+      if (k > 0) parent.appendChild(document.createElement('br'));
+      if (regularLines[k]) _appendInlineSegmentsSingleLine(parent, regularLines[k]);
+    }
+    regularLines = [];
+  }
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+
+    // Normalize bullet variants (bullet char, lone *) to `-`
+    line = line.replace(/^(\s*)\u2022\s/, '$1- ');
+    if (/^(\s*)\*(?!\*) /.test(line)) {
+      line = line.replace(/^(\s*)\*(?!\*) /, '$1- ');
+    }
+
+    // Blockquote line starting with `> `
+    if (line.startsWith('> ') || line === '>') {
+      flushRegularLines();
+      currentList = null;
+      pendingListClose = false;
+      consecutiveBlanks = 0;
+      if (!currentBlockquote) {
+        currentBlockquote = document.createElement('blockquote');
+        parent.appendChild(currentBlockquote);
+      } else {
+        currentBlockquote.appendChild(document.createElement('br'));
+      }
+      _appendInlineSegmentsSingleLine(currentBlockquote, line.startsWith('> ') ? line.slice(2) : '');
+      continue;
+    }
+
+    // Non-blockquote line resets the blockquote group
+    currentBlockquote = null;
+
+    // GFM table detection: current line is a pipe row, next line is a separator
+    if (/^\|.+\|$/.test(line) && i + 1 < lines.length && /^\|[-| :]+\|$/.test(lines[i + 1])) {
+      flushRegularLines();
+      currentList = null;
+      pendingListClose = false;
+      consecutiveBlanks = 0;
+
+      var tableLines = [];
+      while (i < lines.length && /^\|.+\|/.test(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      i--; // counteract outer loop i++
+
+      var table = document.createElement('table');
+      var thead = document.createElement('thead');
+      var tbody = document.createElement('tbody');
+
+      var headerCells = _parseTableCells(tableLines[0]);
+      var headerRow = document.createElement('tr');
+      for (var h = 0; h < headerCells.length; h++) {
+        var th = document.createElement('th');
+        _appendInlineSegmentsSingleLine(th, headerCells[h]);
+        headerRow.appendChild(th);
+      }
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      for (var r = 2; r < tableLines.length; r++) {
+        var cells = _parseTableCells(tableLines[r]);
+        var tr = document.createElement('tr');
+        for (var c = 0; c < cells.length; c++) {
+          var td = document.createElement('td');
+          _appendInlineSegmentsSingleLine(td, cells[c]);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      parent.appendChild(table);
+      continue;
+    }
+
+    // Heading detection: # ## ###
+    var hm = line.match(/^(#{1,3}) (.*)/);
+    if (hm) {
+      flushRegularLines();
+      currentList = null;
+      pendingListClose = false;
+      consecutiveBlanks = 0;
+      var hEl = document.createElement('h' + hm[1].length);
+      _appendInlineSegmentsSingleLine(hEl, hm[2]);
+      parent.appendChild(hEl);
+      continue;
+    }
+
+    // Horizontal rule: --- or *** on their own line
+    var trimmed = line.trim();
+    if (trimmed === '---' || trimmed === '***') {
+      flushRegularLines();
+      currentList = null;
+      pendingListClose = false;
+      consecutiveBlanks = 0;
+      parent.appendChild(document.createElement('hr'));
+      continue;
+    }
+
+    // Blank line handling — defer list close inside a list context
+    if (trimmed === '') {
+      currentBlockquote = null;
+      if (currentList) {
+        consecutiveBlanks++;
+        if (consecutiveBlanks >= 2) {
+          currentList = null;
+          pendingListClose = false;
+          consecutiveBlanks = 0;
+        } else {
+          pendingListClose = true;
+        }
+        continue;
+      }
+      consecutiveBlanks = 0;
+      regularLines.push(line);
+      continue;
+    }
+
+    // Non-blank line — reset consecutive blank counter
+    consecutiveBlanks = 0;
+
+    // Indented list item (2+ spaces + `- `) → nested <ul> inside lastLi
+    if (/^  - /.test(line) && currentList && currentList.tagName === 'UL') {
+      flushRegularLines();
+      pendingListClose = false;
+      consecutiveBlanks = 0;
+      if (!currentNestedList) {
+        currentNestedList = document.createElement('ul');
+        if (lastLi) lastLi.appendChild(currentNestedList);
+        else currentList.appendChild(currentNestedList);
+      }
+      var li = document.createElement('li');
+      _appendInlineSegmentsSingleLine(li, line.replace(/^\s*- /, ''));
+      currentNestedList.appendChild(li);
+      continue;
+    }
+
+    // Unordered list item: - item
+    if (line.startsWith('- ')) {
+      flushRegularLines();
+      if (pendingListClose && currentList && currentList.tagName === 'UL') {
+        pendingListClose = false;
+      } else {
+        if (pendingListClose) { currentList = null; pendingListClose = false; }
+        if (!currentList || currentList.tagName !== 'UL') {
+          currentList = document.createElement('ul');
+          parent.appendChild(currentList);
+        }
+      }
+      currentNestedList = null;
+      var li = document.createElement('li');
+      _appendInlineSegmentsSingleLine(li, line.slice(2));
+      currentList.appendChild(li);
+      lastLi = li;
+      continue;
+    }
+
+    // Ordered list item: 1. item  2. item  etc.
+    var olm = line.match(/^\d+\. (.*)/);
+    if (olm) {
+      flushRegularLines();
+      if (pendingListClose && currentList && currentList.tagName === 'OL') {
+        pendingListClose = false;
+      } else {
+        if (pendingListClose) { currentList = null; pendingListClose = false; }
+        if (!currentList || currentList.tagName !== 'OL') {
+          currentList = document.createElement('ol');
+          parent.appendChild(currentList);
+        }
+      }
+      var li = document.createElement('li');
+      _appendInlineSegmentsSingleLine(li, olm[1]);
+      currentList.appendChild(li);
+      continue;
+    }
+
+    // Regular non-blank line — close list context
+    currentList = null;
+    pendingListClose = false;
+    regularLines.push(line);
+  }
+
+  flushRegularLines();
+}
+
+// Renders a single line with inline code and bold/italic support.
+function _appendInlineSegmentsSingleLine(parent, text) {
+  var segments = text.split(/(`[^`\n]+`)/g);
+  for (var i = 0; i < segments.length; i++) {
+    var seg = segments[i];
+    if (seg.startsWith('`') && seg.endsWith('`') && seg.length > 2) {
+      var code = document.createElement('code');
+      code.textContent = seg.slice(1, -1);
+      parent.appendChild(code);
     } else {
-      parent.appendChild(document.createTextNode(part));
+      if (seg) _appendFormattedLine(parent, seg);
+    }
+  }
+}
+
+// Renders bold+italic (***), bold (**), and italic (*) in a single line.
+function _appendFormattedLine(parent, text) {
+  var parts = text.split(/(\*{3}[^*]+\*{3}|\*\*[^*]+\*\*|\*[^*\n]+\*)/g);
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+    if (p.startsWith('***') && p.endsWith('***') && p.length > 6) {
+      var strong = document.createElement('strong');
+      var em = document.createElement('em');
+      em.textContent = p.slice(3, -3);
+      strong.appendChild(em);
+      parent.appendChild(strong);
+    } else if (p.startsWith('**') && p.endsWith('**') && p.length > 4) {
+      var strong = document.createElement('strong');
+      strong.textContent = p.slice(2, -2);
+      parent.appendChild(strong);
+    } else if (p.startsWith('*') && p.endsWith('*') && p.length > 2) {
+      var em = document.createElement('em');
+      em.textContent = p.slice(1, -1);
+      parent.appendChild(em);
+    } else {
+      if (p) parent.appendChild(document.createTextNode(p));
     }
   }
 }
@@ -1389,11 +1584,41 @@ function addMessage(role, text, debugData, msgDate) {
   var body = document.createElement('div');
   body.className = 'body';
   if (role === 'assistant') {
+    body.dataset.markdown = text;
     renderMarkdownToDOM(text, body);
   } else {
     body.textContent = text;
   }
   el.appendChild(body);
+
+  // Copy button for assistant messages
+  if (role === 'assistant') {
+    var copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = function() {
+      var md = body.dataset.markdown || body.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(function() {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+        });
+      } else {
+        // Fallback for non-HTTPS contexts
+        var ta = document.createElement('textarea');
+        ta.value = md;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+      }
+    };
+    el.appendChild(copyBtn);
+  }
 
   group.appendChild(el);
 
@@ -1645,7 +1870,7 @@ function sendMessageStream(text) {
           var remainingDots = document.getElementById('streamingDots');
           if (remainingDots) remainingDots.remove();
           if (fullText) {
-            while (body.firstChild) body.removeChild(body.firstChild);
+            body.dataset.markdown = fullText;
             renderMarkdownToDOM(fullText, body);
             saveConversation();
           }
@@ -1675,8 +1900,8 @@ function sendMessageStream(text) {
             body.textContent = fullText;
             container.scrollTop = container.scrollHeight;
           } else if (evt.type === 'done') {
-            // Re-render with markdown
-            while (body.firstChild) body.removeChild(body.firstChild);
+            // Re-render with markdown and store source for copy
+            body.dataset.markdown = fullText;
             renderMarkdownToDOM(fullText, body);
 
             // Add debug data

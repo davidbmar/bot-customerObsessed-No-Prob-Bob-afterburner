@@ -30,6 +30,11 @@ Track bugs and feature requests here.
 | B-022 | Debug panel still visible on fresh load despite B-013 fix — localStorage may be overriding default hidden state | Low | Complete (Sprint 18) |
 | B-023 | Sidebar visible by default on desktop — should be collapsed on first visit, user opens when needed | Low | Complete (Sprint 18) |
 | B-024 | Light theme is now the default after clearing localStorage — should detect system preference with prefers-color-scheme | Low | Complete (Sprint 18) |
+| B-025 | Send button stays disabled after programmatic text input — only listens for `input` event, misses `keyup`/`change` so paste/autofill doesn't enable it | Low | Open |
+| B-026 | No favicon — browser shows 404 for `/favicon.ico` on every page load | Low | Open |
+| B-027 | Copy button only appears on first bot message, not on subsequent bot messages | Medium | Open |
+| B-028 | Active Project dropdown in Settings panel is empty — should list available projects or be hidden when only one project exists | Low | Open |
+| B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Open |
 
 ## Features
 
@@ -87,3 +92,8 @@ Track bugs and feature requests here.
 | F-051 | Configurable silence threshold for hands-free mode (1-3 seconds) | Medium | Complete (Sprint 20) |
 | F-052 | Fast path — instant answers for simple queries without LLM ("help", "what can you do") | Medium | Complete (Sprint 20) |
 | F-047 | Export full conversation as structured seed doc with Problem/Users/Use Cases sections | High | Complete (Sprint 19) |
+| F-053 | Voice activity waveform — show amplitude visualization during recording so user knows mic is hearing them | Medium | Open |
+| F-054 | Keyboard shortcut Escape to stop bot speaking — faster than clicking the Stop button | Medium | Open |
+| F-055 | Copy button on all bot messages — currently only the first message has a Copy button | Medium | Open |
+| F-056 | Favicon — add a simple favicon so browser tab has an icon and no 404 | Low | Open |
+| F-057 | Google SSO localhost dev bypass — skip auth overlay when running on localhost without valid Google client ID | Medium | Open |

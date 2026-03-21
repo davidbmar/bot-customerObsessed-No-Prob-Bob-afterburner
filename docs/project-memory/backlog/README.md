@@ -108,5 +108,5 @@ Track bugs and feature requests here.
 | F-061 | Configurable VAD/barge-in settings — expose Silero VAD thresholds (sensitivity, min speech, barge-in toggle) as sliders in Settings panel | Medium | Complete (Sprint 24) |
 | F-062 | Generate PROJECT_STATUS docs for Sprints 20-23 so dashboard shows recent sprint history | Medium | Complete (Sprint 24) |
 | F-063 | Better tool error messages — show tool name and reason instead of raw exception when bot tool calls fail | Medium | Complete (Sprint 24) |
-| F-064 | Stop generating button — cancel streaming response mid-generation before TTS starts, replaces Send button during streaming | High | Open |
-| F-065 | Hands-free pause/resume — transform Send button into Pause/Play toggle when hands-free is active; Pause mutes mic without disabling hands-free, Play resumes listening; includes tooltips | High | Open |
+| F-064 | Stop generating button — cancel streaming response mid-generation before TTS starts, replaces Send button during streaming | High | Complete (Sprint 25) |
+| F-065 | Hands-free pause/resume — transform Send button into Pause/Play toggle when hands-free is active; Pause mutes mic without disabling hands-free, Play resumes listening; includes tooltips | High | Complete (Sprint 25) |

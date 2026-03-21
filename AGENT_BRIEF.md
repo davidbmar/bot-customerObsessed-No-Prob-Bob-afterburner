@@ -1,4 +1,4 @@
-agentA-ui-polish — Sprint 35
+agentA-list-projects — Sprint 36
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -77,24 +77,28 @@ Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent hi
 Sprint-Level Context
 
 Goal
-- Fix sprint-config.sh to use venv python so sprint-run.sh verification passes (B-048)
-- Generate PROJECT_STATUS docs for Sprints 33-34 so dashboard shows all sprints (B-049)
+- Generate PROJECT_STATUS docs for Sprints 33-35 so dashboard is complete (B-049)
+- Add "list all projects" capability to bot tools so users can ask "what projects are there?" (F-076)
 
 Constraints
-- agentA owns `bot/chat_ui.html` exclusively
-- agentB owns `.sprint/scripts/` and `docs/` files
+- agentA owns `bot/tools.py` and `bot/llm.py` exclusively
+- agentB owns `docs/` files exclusively
 - No two agents may modify the same files
 
 
 Objective
-- Minor UI polish: ensure the Active Project dropdown pre-selects the current active project correctly
+- Add a `list_projects` tool the bot can call when users ask "what projects are there?" (F-076)
 
 Tasks
-- In `bot/chat_ui.html`, when populating the Active Project dropdown from `/api/projects`, set the `selected` attribute on the option matching `active_project` from the response
-- If no active project is set, default to the first project in the list
-- After user selects a project and clicks "Save & Switch", the dropdown should reflect the new selection on next Settings open
+- In `bot/tools.py`, add a `tool_list_projects()` function that calls `list_project_slugs()` (already exists) and returns a formatted list with slug + name for each project
+- In `bot/llm.py`, add `list_projects` to the `TOOL_DEFINITIONS` array with description "List all registered Afterburner projects"
+- In `bot/tools.py`, add `list_projects` to the `execute_tool` dispatch dict
+- Add tests in `tests/test_tools.py`:
+  - Test that `tool_list_projects()` returns formatted project list when dashboard is available
+  - Test that `tool_list_projects()` returns error message when dashboard is unavailable
+  - Test that `list_projects` is in `TOOL_DEFINITIONS`
 
 Acceptance Criteria
-- Active Project dropdown pre-selects the currently active project
-- Changing active project persists across Settings panel opens
-- No regressions in existing Settings panel behavior
+- User asks "what projects are there?" and bot calls list_projects tool
+- Tool returns formatted list of all registered projects with slugs and names
+- All existing + new tests pass

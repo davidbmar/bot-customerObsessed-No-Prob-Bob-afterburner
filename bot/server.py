@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .fast_path import try_fast_path
 from .gateway import Gateway
-from .input_filter import InputQuality, classify as classify_input
+from .input_filter import BACKGROUND_NOISE_MESSAGE, InputQuality, classify as classify_input
 from .personality import PersonalityLoader
 
 log = logging.getLogger(__name__)
@@ -615,6 +615,8 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
 
             if filtered:
                 response["reason"] = quality.value
+                if quality == InputQuality.BACKGROUND_NOISE:
+                    response["filter_message"] = BACKGROUND_NOISE_MESSAGE
             else:
                 # Check fast path for instant answers
                 fast_response = try_fast_path(text)

@@ -31,3 +31,6 @@ data/*.db-shm
 
 # Server logs
 logs/
+
+# Cloudflare tunnel config (contains tunnel ID)
+.tunnel-config

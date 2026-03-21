@@ -1,4 +1,4 @@
-agentA-list-projects — Sprint 36
+agentA-worktree-venv — Sprint 37
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -77,28 +77,29 @@ Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent hi
 Sprint-Level Context
 
 Goal
-- Generate PROJECT_STATUS docs for Sprints 33-35 so dashboard is complete (B-049)
-- Add "list all projects" capability to bot tools so users can ask "what projects are there?" (F-076)
+- Fix sprint agent worktrees to symlink .venv so agents can run tests (B-051, F-077)
+- Generate PROJECT_STATUS docs for Sprints 33-36 so dashboard is complete (B-049)
 
 Constraints
-- agentA owns `bot/tools.py` and `bot/llm.py` exclusively
+- agentA owns `.sprint/scripts/sprint-init.sh` exclusively
 - agentB owns `docs/` files exclusively
 - No two agents may modify the same files
 
 
 Objective
-- Add a `list_projects` tool the bot can call when users ask "what projects are there?" (F-076)
+- Fix sprint agent worktrees so agents can run tests and install packages (B-051, F-077)
 
 Tasks
-- In `bot/tools.py`, add a `tool_list_projects()` function that calls `list_project_slugs()` (already exists) and returns a formatted list with slug + name for each project
-- In `bot/llm.py`, add `list_projects` to the `TOOL_DEFINITIONS` array with description "List all registered Afterburner projects"
-- In `bot/tools.py`, add `list_projects` to the `execute_tool` dispatch dict
-- Add tests in `tests/test_tools.py`:
-  - Test that `tool_list_projects()` returns formatted project list when dashboard is available
-  - Test that `tool_list_projects()` returns error message when dashboard is unavailable
-  - Test that `list_projects` is in `TOOL_DEFINITIONS`
+- In `.sprint/scripts/sprint-init.sh`, after creating each worktree with `git worktree add`, add a symlink to the project's .venv:
+  ```bash
+  ln -sf "${PROJECT_ROOT}/.venv" "${WORKTREE_DIR}/.venv"
+  ```
+- This allows agents in worktrees to run `.venv/bin/python3 -m pytest` without errors
+- Also symlink `node_modules` if it exists (for JS projects)
+- Add a comment explaining why the symlink is needed
+- Test: verify that `.venv/bin/python3 -c "import pytest"` works in a worktree
 
 Acceptance Criteria
-- User asks "what projects are there?" and bot calls list_projects tool
-- Tool returns formatted list of all registered projects with slugs and names
-- All existing + new tests pass
+- After `sprint-init.sh` creates worktrees, each has a `.venv` symlink pointing to the main project's venv
+- Agents can run `.venv/bin/python3 -m pytest tests/ -x -q` in worktrees
+- Existing sprint-init.sh functionality (branch creation, AGENT_BRIEF.md) still works

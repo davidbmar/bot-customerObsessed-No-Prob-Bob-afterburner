@@ -1,68 +1,56 @@
-agentA-chat-polish — Sprint 23
+agentB-server-docs — Sprint 24
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 22: conversation persistence fixed (save markdown, sidebar refresh), /api/projects endpoint, Active Project dropdown wired, Docs stats updated
-- 643 tests pass
-- Hotfix: tool result format fixed for Claude API (B-033)
-- Restored old conversations lose paragraph spacing (B-034)
+- Sprint 23: paragraph spacing fix, notification sound toggle, code syntax highlighting, /api/stats endpoint, tool result regression tests
+- 654 tests pass
+- Barge-in hotfix: VAD no longer paused during TTS, enables voice interruption
+- User wants configurable VAD thresholds like the apartment locator admin panel
+- Dashboard only shows Sprints 1-19, missing 20-23
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix paragraph spacing in restored bot messages — old conversations saved as textContent lose line breaks (B-034)
-- Add notification sound on bot response with toggle in settings (F-046)
-- Add code block syntax highlighting in bot messages (F-059)
+- Add configurable VAD and barge-in settings panel — expose Silero VAD thresholds as user-adjustable sliders (F-061)
+- Generate PROJECT_STATUS docs for Sprints 20-23 so dashboard shows recent sprint history (F-062)
+- Better error messages when bot tool calls fail — show what went wrong instead of generic error (F-063)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, tests/ — agentA MUST NOT touch these
+- agentB owns bot/server.py, bot/gateway.py, tests/, docs/ — agentA MUST NOT touch these
 
 
 Objective
-- Fix paragraph spacing in restored conversations
-- Add notification sound toggle
-- Add code syntax highlighting
+- Generate PROJECT_STATUS docs for Sprints 20-23 and improve tool error messages
 
 Tasks
-1. **Fix paragraph spacing in restored conversations** (B-034):
-   - In `saveConversation()` (~line 2821), for assistant messages: already using `bodyEl.dataset.markdown || bodyEl.textContent`
-   - The issue is that OLD conversations were saved with `textContent` which has no paragraph breaks
-   - Add a one-time migration in `restoreConversation()` and `switchToConversation()`:
-     - When loading messages from localStorage, if the content has no newlines but has patterns like `.A` or `?A` or `!A` (period/question/exclamation followed immediately by capital letter with no space), insert `\n\n` before the capital letter
-   - This heuristic fixes "understand.So" → "understand.\n\nSo" and "else?I'm" → "else?\n\nI'm"
-   - Apply the fix: `content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2')`
-   - Only apply when content has NO existing newlines (old format), so new markdown content is untouched
+1. **Generate PROJECT_STATUS docs for Sprints 20-23** (F-062):
+   - Create these files in `docs/` following the `PROJECT_STATUS_TEMPLATE.md` format:
+     a. `docs/PROJECT_STATUS_2026-03-20-sprint20.md` — Sprint 20: Hands-free VAD, input filter, echo cancellation, fast path
+     b. `docs/PROJECT_STATUS_2026-03-21-sprint21.md` — Sprint 21: Favicon, auth bypass, copy button, Escape key, waveform, send button
+     c. `docs/PROJECT_STATUS_2026-03-21-sprint22.md` — Sprint 22: Conversation persistence, /api/projects, Active Project dropdown
+     d. `docs/PROJECT_STATUS_2026-03-21-sprint23.md` — Sprint 23: Paragraph spacing, notification sound, syntax highlighting, /api/stats
+   - Use `git log` to find actual dates and details for each sprint
+   - Each doc needs: sprint number, goal, merge table with `| # | Branch | Deliverable | Phase | Conflicts |` format
 
-2. **Add notification sound on bot response** (F-046):
-   - Add a subtle notification sound when the bot finishes a response (not during streaming, only on completion)
-   - Use the Web Audio API to generate a short, pleasant chime — no external audio files needed
-   - Example: two short sine wave tones (440Hz then 554Hz, 80ms each) with quick fade
-   - Add a toggle in the Settings panel: "Notification sound" checkbox, default OFF
-   - Save preference in localStorage (`notifySound`)
-   - Play sound in the streaming `done` event handler, only if `notifySound` is enabled and tab is not focused (`!document.hasFocus()`)
-   - Do NOT play if TTS is about to speak (the voice IS the notification)
+2. **Improve tool error messages** (F-063):
+   - In `bot/gateway.py` `_handle_tool_calls()`, when `execute_tool()` raises an exception or returns an error:
+     - Instead of letting the raw error propagate to the LLM response, catch it and format a user-friendly message
+     - Include the tool name and a brief explanation: "Tool 'get_sprint_status' failed: [reason]"
+   - In the follow-up LLM call, include a system note that the tool failed so the bot can explain it naturally
 
-3. **Add code block syntax highlighting** (F-059):
-   - In `renderMarkdownToDOM()`, when rendering `<pre><code>` blocks:
-   - Add a lightweight syntax highlighter — not a full library, just basic token coloring:
-     - Keywords (function, const, let, var, if, else, return, import, class, def, for, while, try, catch) → accent color
-     - Strings (single/double quoted, backtick) → green
-     - Comments (// and #) → muted color
-     - Numbers → orange
-   - Apply via CSS classes on `<span>` elements inside `<code>`
-   - Add corresponding CSS rules using `var(--accent)` and other theme variables
-   - Keep it simple — ~30 lines of JS, no external dependencies
+3. **Write tests for tool error handling**:
+   - Test that when `execute_tool` raises, the gateway returns a response (not crashes)
+   - Test that the error message includes the tool name
 
-4. **Update backlog** — Mark B-034, F-046, F-059 as Complete (Sprint 23)
+4. **Update backlog** — Add F-062, F-063 and mark as Complete (Sprint 24)
 
 Acceptance Criteria
-- Old restored conversations show proper paragraph breaks (no "word.Next")
-- Settings has "Notification sound" toggle
-- Sound plays when bot responds (only when tab not focused, sound enabled, TTS not active)
-- Code blocks in bot messages have colored keywords/strings/comments
-- `.venv/bin/python3 -m pytest tests/ -v` — all pass
+- `docs/PROJECT_STATUS_*.md` files exist for Sprints 20-23
+- Dashboard rebuild shows Sprints 20-23
+- Tool call errors show descriptive messages, not raw tracebacks
+- All tests pass

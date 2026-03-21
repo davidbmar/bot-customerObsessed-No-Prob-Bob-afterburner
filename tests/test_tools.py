@@ -856,3 +856,146 @@ def test_tool_feedback_on_sprint_no_sprints() -> None:
     assert "no sprints" in result.lower()
 
     set_config(None)
+
+
+# -- tool_list_projects tests --
+
+
+def test_tool_list_projects_returns_formatted_list() -> None:
+    """tool_list_projects returns formatted project list from dashboard API."""
+    from bot.tools import tool_list_projects
+
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        result = tool_list_projects()
+
+    assert "Registered projects:" in result
+    assert "bot-customerobsessed" in result
+    assert "fsm-generic" in result
+
+
+def test_tool_list_projects_dashboard_offline() -> None:
+    """tool_list_projects returns error when dashboard is unreachable."""
+    from bot.tools import tool_list_projects
+    import httpx as _httpx
+
+    with patch("bot.tools.httpx.get", side_effect=_httpx.ConnectError("refused")):
+        result = tool_list_projects()
+
+    assert "unavailable" in result.lower()
+
+
+def test_tool_registration_includes_list_projects() -> None:
+    """TOOL_DEFINITIONS includes list_projects."""
+    from bot.llm import TOOL_DEFINITIONS
+    tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
+    assert "list_projects" in tool_names
+
+
+def test_tool_registration_includes_read_project_doc() -> None:
+    """TOOL_DEFINITIONS includes read_project_doc."""
+    from bot.llm import TOOL_DEFINITIONS
+    tool_names = [t["function"]["name"] for t in TOOL_DEFINITIONS]
+    assert "read_project_doc" in tool_names
+
+
+def test_execute_tool_dispatches_list_projects() -> None:
+    """execute_tool routes 'list_projects' correctly."""
+    with patch("bot.tools.httpx.get", side_effect=_mock_httpx_get):
+        result = execute_tool("list_projects", {})
+    assert "Registered projects:" in result
+
+
+# -- tool_read_project_doc tests --
+
+
+def test_tool_read_project_doc_reads_file(tmp_path: Path) -> None:
+    """tool_read_project_doc reads a file from the project directory."""
+    from bot.tools import tool_read_project_doc
+
+    readme = tmp_path / "README.md"
+    readme.write_text("# My Project\n\nThis is a test project.\n")
+
+    with patch("bot.tools._resolve_project_root", return_value=tmp_path):
+        result = tool_read_project_doc(slug="test", path="README.md")
+
+    assert "# My Project" in result
+    assert "test project" in result
+
+
+def test_tool_read_project_doc_blocks_traversal(tmp_path: Path) -> None:
+    """tool_read_project_doc blocks path traversal attempts."""
+    from bot.tools import tool_read_project_doc
+
+    with patch("bot.tools._resolve_project_root", return_value=tmp_path):
+        result = tool_read_project_doc(slug="test", path="../../etc/passwd")
+
+    assert "cannot read" in result.lower() or "outside" in result.lower()
+
+
+def test_tool_read_project_doc_missing_file(tmp_path: Path) -> None:
+    """tool_read_project_doc returns error for nonexistent file."""
+    from bot.tools import tool_read_project_doc
+
+    with patch("bot.tools._resolve_project_root", return_value=tmp_path):
+        result = tool_read_project_doc(slug="test", path="nonexistent.md")
+
+    assert "not found" in result.lower()
+
+
+def test_tool_read_project_doc_missing_project() -> None:
+    """tool_read_project_doc returns error for unknown project."""
+    from bot.tools import tool_read_project_doc
+
+    with patch("bot.tools._resolve_project_root", return_value=None):
+        result = tool_read_project_doc(slug="nonexistent")
+
+    assert "not found" in result.lower()
+
+
+def test_execute_tool_dispatches_read_project_doc(tmp_path: Path) -> None:
+    """execute_tool routes 'read_project_doc' correctly."""
+    readme = tmp_path / "README.md"
+    readme.write_text("# Test\n")
+
+    with patch("bot.tools._resolve_project_root", return_value=tmp_path):
+        result = execute_tool("read_project_doc", {"slug": "test", "path": "README.md"})
+
+    assert "# Test" in result
+
+
+def test_get_project_summary_includes_sprint_data() -> None:
+    """get_project_summary includes sprint data from status API."""
+    from bot.tools import tool_get_project_summary, set_config
+
+    def mock_get(url, **kwargs):
+        m = MagicMock()
+        if "/api/project/" in url and "/status" in url:
+            m.status_code = 200
+            m.json.return_value = {
+                "slug": "test", "latestSprint": 10, "totalSprints": 10,
+                "openBugs": 3, "totalFeatures": 5, "recentSessions": [],
+            }
+        else:
+            m.status_code = 404
+            m.json.return_value = {}
+        return m
+
+    def mock_post(url, **kwargs):
+        m = MagicMock()
+        m.status_code = 200
+        m.json.return_value = {"vision": "", "plan": "", "roadmap": ""}
+        return m
+
+    mock_config = MagicMock()
+    mock_config.active_project = "test"
+    mock_config.projects = {"test": "/tmp/test"}
+    set_config(mock_config)
+
+    with patch("bot.tools.httpx.get", side_effect=mock_get), \
+         patch("bot.tools.httpx.post", side_effect=mock_post):
+        result = tool_get_project_summary(slug="test")
+
+    assert "Latest sprint: 10" in result
+    assert "Open bugs: 3" in result
+
+    set_config(None)

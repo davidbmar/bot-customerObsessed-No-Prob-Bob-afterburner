@@ -3423,10 +3423,16 @@ function setAgentSpeaking(speaking) {
   if (speaking) {
     talkBtn.classList.add('speaking');
     stopBtn.style.display = 'block';
+    if (typeof handsfreeActive !== 'undefined' && handsfreeActive) {
+      setVadState('speaking');
+    }
   } else {
     talkBtn.classList.remove('speaking');
     stopBtn.style.display = 'none';
     agentAudio = null;
+    if (typeof handsfreeActive !== 'undefined' && handsfreeActive) {
+      setVadState('listening');
+    }
   }
 }
 
@@ -3832,6 +3838,9 @@ function startVAD() {
     minSpeechFrames: 5,
     onSpeechStart: function() {
       console.log('[vad] speech start');
+      if (isBotSpeaking) {
+        stopAgentSpeaking();
+      }
       setVadState('recording');
     },
     onSpeechEnd: function(audio) {

@@ -798,6 +798,16 @@ def main() -> None:
     if cfg.allowed_emails:
         os.environ.setdefault("ALLOWED_EMAILS", cfg.allowed_emails)
 
+    # Pre-load STT model in main thread to avoid Python 3.14 atexit crash
+    # (faster-whisper imports ThreadPoolExecutor which fails in HTTP threads)
+    try:
+        from .stt import _get_model as _preload_stt
+        _preload_stt()
+    except ImportError:
+        logging.info("STT not installed (faster-whisper) — voice transcription disabled")
+    except Exception as e:
+        logging.warning("STT pre-load failed: %s", e)
+
     gw = Gateway(
         personality_name=cfg.personality_name,
         model=cfg.model_name,

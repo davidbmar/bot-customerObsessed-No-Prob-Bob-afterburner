@@ -1,0 +1,25 @@
+`★ Insight ─────────────────────────────────────`
+The `pip install -q -e ".[dev]"` added to `start.sh` uses pip's `-q` (quiet) flag so it only prints output when something actually installs. When deps are already satisfied, pip performs a fast metadata check and exits silently — this makes it safe to run on every startup without annoying the user with repeated "Requirement already satisfied" noise.
+`─────────────────────────────────────────────────`
+
+---
+
+## Summary
+
+**Files changed (6):**
+- `pyproject.toml` — Added `providers` extra group; updated `dev` and `all` groups with anthropic, openai, google-auth[requests]
+- `scripts/start.sh` — Added `pip install -q -e ".[dev]"` after venv activation
+- `tests/test_sprint27_deps.py` — 4 import tests (anthropic, openai, google.oauth2.id_token, google.auth.transport.requests)
+- `docs/PROJECT_STATUS_2026-03-21-sprint26.md` — Sprint 26 status doc
+- `docs/project-memory/backlog/README.md` — B-035, B-036 marked Complete (Sprint 27)
+- `docs/project-memory/sessions/S-2026-03-21-1846-sprint27-deps-docs.md` — Session doc
+
+**Commands run:**
+- `python3.12 -m venv .venv && pip install -e ".[dev]"` — created venv with Python 3.12
+- `python3 -c "import anthropic; ..."` — verified imports work
+- `pytest tests/ -v` — 693 tests passing
+- `git push -u origin HEAD` — pushed to `agentB-deps-docs`
+
+**Notes / follow-on work:**
+- agentA owns F-067 (message word count) and chat_ui.html — not touched here
+- The `AGENT_BRIEF.md` is still modified (expected — sprint infrastructure file)

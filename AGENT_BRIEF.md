@@ -1,36 +1,36 @@
-agentA-project-dropdown — Sprint 33
+agentB-config-docs — Sprint 34
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-# afterburner-customer-bot Project Status — 2026-03-21 (Sprint 31: Pause/play fix, dashboard backlog fix)
+# afterburner-customer-bot Project Status — 2026-03-21 (Sprint 32: ONNX suppress, Sprint docs, zsh fix)
 
-## Sprint 31 Summary
+## Sprint 32 Summary
 
-Sprint 31 fixed the broken pause/play hands-free behavior so Pause stops both TTS speaking and VAD listening (B-039, B-040, F-071, B-041), and fixed the dashboard backlog showing 0 items by correcting the backlog file path in build-sprint-data.sh (B-015, B-042). agentA rewired the pause/play toggle in chat_ui.html. agentB fixed the backlog path in the build script and added error handling to bot tools.
+Sprint 32 suppressed noisy ONNX runtime console warnings during Silero VAD initialization (B-044), generated missing PROJECT_STATUS docs for Sprints 30-31 so the dashboard shows all recent sprint history (B-043, F-073), and fixed the sprint-run.sh `local -A` crash on zsh (B-008). agentA suppressed ONNX warnings in chat_ui.html. agentB generated the Sprint 30-31 docs, cleaned up Sprint-Notes.md, and patched sprint-run.sh for zsh compatibility.
 
 ---
 
 ## What Changed
 
-### agentB-backlog-tools
+### agentA-onnx-suppress
 
-Fixed dashboard backlog showing 0 items (B-015) by updating `build-sprint-data.sh` to check `backlog/README.md` in addition to `backlog.md`. Added error handling in `bot/tools.py` so dashboard API connection errors return a friendly message instead of raising exceptions (B-042).
-
-**Commits:**
-- e659e98 agentB-backlog-tools: implement sprint 31 tasks
-- 079e964 fix: dashboard backlog parsing + bot tool error handling (B-015, B-042)
-
-**Files:** bot/tools.py, scripts/build-sprint-data.sh (afterburner repo)
-
-### agentA-pause-play
-
-Fixed pause/play toggle to stop both TTS playback and VAD listening (B-039, B-040, F-071). Pause button now calls `stopAgentSpeaking()` and sets `vadPaused = true`. Fresh page load no longer auto-listens — user must explicitly activate hands-free (B-041). Escape key and "Stop speaking" button also pause VAD.
+Suppressed ONNX runtime console warnings that fired on every page load when Silero VAD initializes (B-044). The WASM compilation warnings happen before JS config takes effect, so the fix intercepts console.warn during VAD init.
 
 **Commits:**
-- 5944b03 agentA-pause-play: implement sprint 31 tasks
-- 5e0e78e feat: fix pause/play to stop both TTS and VAD listening (B-039, B-040, F-071, B-041)
+- 0888ff3 agentA-onnx-suppress: implement sprint 32 tasks
+- 090be1c feat: suppress ONNX runtime console warnings from Silero VAD init (B-044)
 
 **Files:** bot/chat_ui.html
+
+### agentB-sprint-docs
+
+Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent history (B-043, F-073). Fixed sprint-run.sh `local -A` crash on zsh (B-008) by replacing associative array syntax with POSIX-compatible alternatives. Cleaned up Sprint-Notes.md.
+
+**Commits:**
+- 45cd790 agentB-sprint-docs: implement sprint 32 tasks
+- f675e05 feat: generate Sprint 30-31 PROJECT_STATUS docs + fix zsh crash (B-008, B-043, F-073)
+
+**Files:** docs/PROJECT_STATUS_2026-03-21-sprint30.md, docs/PROJECT_STATUS_2026-03-21-sprint31.md, .sprint/scripts/sprint-run.sh, Sprint-Notes.md
 
 ---
 
@@ -38,26 +38,26 @@ Fixed pause/play toggle to stop both TTS playback and VAD listening (B-039, B-04
 
 | # | Branch | Deliverable | Phase | Conflicts | Files Changed |
 |---|--------|-------------|-------|-----------|---------------|
-| 1 | agentB-backlog-tools | Dashboard backlog fix (B-015, B-042) | 1 | Clean | 2 |
-| 2 | agentA-pause-play | Pause/play fix (B-039, B-040, F-071, B-041) | 1 | Clean | 1 |
+| 1 | agentB-sprint-docs | Sprint 30-31 docs + zsh fix (B-008, B-043, F-073) | 1 | Clean | 8 |
+| 2 | agentA-onnx-suppress | ONNX warning suppression (B-044) | 1 | Clean | 1 |
 
 ---
 
 ## Backlog Snapshot
 
 ### Completed This Sprint
-- B-039: Pause button doesn't stop VAD listening
-- B-040: Phantom messages when paused
-- B-041: Hands-free auto-starts on page load
-- B-015: Dashboard backlog counts show 0
-- B-042: Bot tools show raw errors when dashboard unreachable
-- F-071: Pause/play toggle improvements
+- B-008: sprint-run.sh crashes with `local -A` on zsh
+- B-043: Missing PROJECT_STATUS docs for Sprints 30-31
+- B-044: ONNX warnings still fire despite ort.env.logLevel='error'
+- F-073: Generate PROJECT_STATUS docs for Sprints 30-31
 
 ### Still Open
-- B-008: sprint-run.sh crashes with `local -A` on zsh
 - B-010: GitHub not configured in dashboard project entry
 - B-016: Ollama Qwen 3.5 response latency ~22s
 - B-020: Sprint 12 agent done markers not written
+- B-045: Active Project dropdown in Settings panel is empty
+- B-046: Bot reports stale sprint data until rebuild runs
+- B-047: Missing PROJECT_STATUS doc for Sprint 32
 
 ---
 
@@ -69,34 +69,37 @@ Fixed pause/play toggle to stop both TTS playback and VAD listening (B-039, B-04
 
 ## Next Steps
 
-- Generate missing PROJECT_STATUS docs for Sprints 30-31 (B-043, F-073)
-- Fix sprint-run.sh `local -A` crash on zsh (B-008)
+- Auto-rebuild dashboard data after sprint merges (F-074, B-046)
+- Generate PROJECT_STATUS doc for Sprint 32 (B-047)
+- Fix Active Project dropdown (B-045, F-075)
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Auto-rebuild dashboard data after sprint merges so bot always returns current sprint info (F-074, B-046)
-- Generate PROJECT_STATUS doc for Sprint 32 and fix Active Project dropdown (B-047, B-045, F-075)
+- Fix Active Project dropdown to show registered projects (B-045)
+- Fix sprint-config.sh to use venv python for test verification (B-048)
+- Generate PROJECT_STATUS doc for Sprint 33 (B-049)
 
 Constraints
-- agentA owns `bot/chat_ui.html` exclusively
+- agentA owns `bot/chat_ui.html` and `bot/config.py` exclusively
 - agentB owns `.sprint/scripts/` and `docs/` files
 - No two agents may modify the same files
 
 
 Objective
-- Fix the empty Active Project dropdown in Settings panel (B-045, F-075)
+- Fix DEFAULT_TEST_CMD to use venv python (B-048)
+- Generate Sprint 33 PROJECT_STATUS doc (B-049)
 
 Tasks
-- In `bot/chat_ui.html`, find the Active Project combobox in the Settings panel
-- On Settings panel open, fetch project list from `/api/projects` (the bot server proxies or the dashboard serves this)
-- Populate the dropdown with project slugs and names from the response
-- Pre-select the currently active project
-- When the user selects a different project, send a POST to update the active project in the bot config
-- If only one project is registered, still show it (don't hide the dropdown)
+- In `.sprint/scripts/sprint-config.sh`, change `DEFAULT_TEST_CMD` to use `.venv/bin/python3 -m pytest tests/ -x -q` instead of the system python3 personality check
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint33.md` following PROJECT_STATUS_TEMPLATE format
+  - Sprint 33 delivered: auto-rebuild after merge (F-074), Sprint 32 PROJECT_STATUS doc (B-047), Active Project dropdown fix attempt (B-045/F-075)
+  - Use git log for commit details
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- Settings panel Active Project dropdown shows all registered Afterburner projects
-- Selecting a different project updates the active project for tool calls
-- Dropdown is populated on every Settings panel open (not cached stale)
+- `.sprint/scripts/sprint-config.sh` DEFAULT_TEST_CMD uses `.venv/bin/python3`
+- sprint-run.sh verification passes on macOS (no "No module named pytest" error)
+- `docs/PROJECT_STATUS_2026-03-21-sprint33.md` exists with correct summary
+- Dashboard shows Sprint 33 after rebuild

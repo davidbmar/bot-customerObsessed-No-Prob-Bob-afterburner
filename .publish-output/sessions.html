@@ -34,7 +34,24 @@
     </nav>
     <main class="site-main">
       <h1>Sessions</h1>
-<p class="section-intro">17 development sessions logged</p>
+<p class="section-intro">18 development sessions logged</p>
+<div class="session-entry"><h3>S-2026-03-20-0807-markdown-and-dates</h3><h1>Session</h1>
+<p>Session-ID: S-2026-03-20-0807-markdown-and-dates Title: Markdown rendering and date grouping in chat UI Date: 2026-03-20 Author: agentB (Sprint 19)</p>
+<h2>Goal</h2>
+<p>Implement markdown rendering in bot messages (F-044) and date grouping for message timestamps (F-045).</p>
+<h2>Context</h2>
+<p>Bot messages render as plain text with no formatting. All timestamps show time-only with no date context for older messages.</p>
+<h2>Plan</h2>
+<ol><li>Fix renderMarkdownToDOM to handle fenced code blocks with blank lines and add header support</li><li>Fix CSS white-space conflict for bot message bodies</li><li>Add date separator logic with &quot;Today&quot;/&quot;Yesterday&quot;/&quot;Mon, Mar 19&quot; format</li><li>Store dateISO in saved conversations for restore support</li><li>Update backlog</li></ol>
+<h2>Changes Made</h2>
+<ul><li>Fixed renderMarkdownToDOM: extracts fenced code blocks before splitting by double-newline, preventing code blocks with blank lines from breaking</li><li>Added header support (# through ######) to markdown renderer</li><li>Changed <code>.message .body { white-space: pre-wrap }</code> to <code>.message.user .body</code> only — bot messages use proper block-level markdown elements</li><li>Added CSS for h1-h6 inside bot messages</li><li>Added date separator component with &quot;Today&quot;, &quot;Yesterday&quot;, or &quot;Mon, Mar 19&quot; labels</li><li>Added <code>maybeAddDateSeparator()</code> called before each message group</li><li>Stored <code>dateISO</code> in localStorage conversation data for date persistence across reloads</li><li>Reset <code>lastMessageDateStr</code> on conversation switch, new conversation, clear, and delete</li><li>Updated backlog: F-044 and F-045 marked Complete (Sprint 19)</li></ul>
+<h2>Decisions Made</h2>
+<ul><li>Used DOM-only approach (no innerHTML) for XSS safety — consistent with existing codebase pattern</li><li>No external markdown library — lightweight regex-based approach covers the required subset</li><li>Date separator uses CSS pseudo-elements for decorative lines, keeping markup minimal</li></ul>
+<h2>Open Questions</h2>
+<p>None.</p>
+<h2>Links</h2>
+<p>Commits:</p>
+<ul><li>(pending)</li></ul></div><hr>
 <div class="session-entry"><h3>S-2026-03-20-0708-sprint17-provider-and-history</h3><h1>Session</h1>
 <p>Session-ID: S-2026-03-20-0708-sprint17-provider-and-history Title: Sprint 17 - Provider label fix and PROJECT_STATUS history Date: 2026-03-20 Author: agentA</p>
 <h2>Goal</h2>

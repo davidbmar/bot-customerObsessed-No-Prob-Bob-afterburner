@@ -1,65 +1,140 @@
-agentA-voice-settings — Sprint 24
+agentA-button-states — Sprint 25
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 23: paragraph spacing fix, notification sound toggle, code syntax highlighting, /api/stats endpoint, tool result regression tests
-- 654 tests pass
-- Barge-in hotfix: VAD no longer paused during TTS, enables voice interruption
-- User wants configurable VAD thresholds like the apartment locator admin panel
-- Dashboard only shows Sprints 1-19, missing 20-23
+- Sprint 24: VAD/barge-in settings panel, PROJECT_STATUS docs for Sprints 20-23, tool error handling
+- 659 tests pass (+ 17 new Sprint 25 spec tests, 9 currently failing)
+- Users need: stop generating during streaming, pause/resume in hands-free mode
+- Test spec already written: tests/test_sprint25_button_states.py (9 failing = the spec)
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Add configurable VAD and barge-in settings panel — expose Silero VAD thresholds as user-adjustable sliders (F-061)
-- Generate PROJECT_STATUS docs for Sprints 20-23 so dashboard shows recent sprint history (F-062)
-- Better error messages when bot tool calls fail — show what went wrong instead of generic error (F-063)
+- Add Stop Generating button to cancel streaming responses mid-generation (F-064)
+- Add Pause/Resume toggle for hands-free mode — Send button becomes ⏸/▶ (F-065)
+- All 17 tests in tests/test_sprint25_button_states.py must pass
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, bot/gateway.py, tests/, docs/ — agentA MUST NOT touch these
+- agentB owns tests/ — agentB MUST NOT touch bot/chat_ui.html
+- The test file tests/test_sprint25_button_states.py already exists and defines the spec — do NOT modify it
 
 
 Objective
-- Add a Voice Settings section in the Settings panel with configurable VAD and barge-in parameters
+- Implement F-064 (Stop Generating) and F-065 (Pause/Resume) in bot/chat_ui.html
+- All 9 currently-failing tests in test_sprint25_button_states.py must pass after your changes
 
 Tasks
-1. **Add Voice Settings section to Settings panel** (F-061):
-   - In the Settings overlay in `bot/chat_ui.html`, after the "Silence Threshold" slider, add a new section header: "Voice Detection"
-   - Add these configurable sliders:
-     a. **Speech Sensitivity** — controls `positiveSpeechThreshold` on the Silero VAD instance
-        - Slider range: 0.5 (very sensitive) to 0.95 (strict, only clear speech)
-        - Default: 0.8 (current hardcoded value at ~line 3876)
-        - Label shows current value like "0.80"
-        - Description: "How confident VAD must be that audio is speech. Lower = catches quieter speech but may false-trigger."
-     b. **Barge-in Toggle** — checkbox to enable/disable interrupting the bot mid-speech
-        - Default: ON (current behavior)
-        - When OFF: the `onSpeechStart` handler should NOT call `stopAgentSpeaking()` even if `isBotSpeaking` is true
-        - Description: "Allow voice to interrupt the bot while it's speaking"
-     c. **Min Speech Duration** — controls `minSpeechFrames` on the VAD instance
-        - Slider range: 1 (instant) to 15 (needs ~0.5s of speech)
-        - Default: 5 (current hardcoded value)
-        - Description: "How long speech must sustain before it's confirmed. Higher = fewer false triggers."
 
-2. **Wire sliders to VAD instance**:
-   - When sliders change, update the VAD instance's options if possible. Silero VAD may not support dynamic option changes — if so, destroy and recreate the VAD instance with new options.
-   - Store preferences in localStorage: `vadSensitivity`, `bargeInEnabled`, `vadMinSpeech`
-   - On page load, restore saved preferences and apply to VAD initialization
-   - Replace the hardcoded values at ~line 3876 (`positiveSpeechThreshold: 0.8`, `minSpeechFrames: 5`) with the stored/default values
+### F-064: Stop Generating Button
 
-3. **Add barge-in guard**:
-   - Read barge-in toggle state in `onSpeechStart` callback
-   - If barge-in is disabled: skip the `stopAgentSpeaking()` call, just start recording
+The Send button should become a Stop button (⏹) during streaming responses.
 
-4. **Update backlog** — Add F-061 and mark as Complete (Sprint 24)
+1. **Add AbortController to streaming fetch**:
+   - In the `sendMessage()` function, create an `AbortController` before the `fetch()` call
+   - Store it: `var currentAbortController = null;`
+   - Pass `signal: currentAbortController.signal` to the fetch options
+   - On stream completion or error, set `currentAbortController = null`
+
+2. **Transform Send button during streaming**:
+   - When streaming starts: change `sendBtn.textContent = '⏹'`, add `title="Stop generating"`, enable the button, add class `stop-generating`
+   - When streaming ends: restore the button to its previous state (Send, or ⏸ if hands-free)
+   - Track streaming state: `var isStreaming = false;`
+
+3. **Stop button handler**:
+   - When clicked during streaming: call `currentAbortController.abort()`, set `isStreaming = false`
+   - Set a flag `var streamAborted = false;` — set to true when abort is called
+   - In the SSE `done` event handler: check `streamAborted` and skip TTS synthesis if true
+   - Restore the button state after abort
+
+4. **CSS**: Add `.stop-generating` class with red/orange accent color
+
+### F-065: Hands-free Pause/Resume
+
+The Send button should become a Pause/Play toggle when hands-free is active.
+
+1. **Track paused state**:
+   - Add variable: `var vadPaused = false;`
+   - This is separate from `handsfreeActive` — you can be in hands-free but paused
+
+2. **Transform Send button in hands-free mode**:
+   - In `toggleHandsfree()`, when activating hands-free:
+     - Change `sendBtn.textContent = '⏸'`
+     - Set `sendBtn.title = 'Pause listening'`
+     - Enable the button (remove disabled)
+     - Set `sendBtn.onclick = toggleVadPause`
+   - When deactivating hands-free:
+     - Restore `sendBtn.textContent = 'Send'`
+     - Remove title
+     - Set `sendBtn.onclick = sendMessage` (or restore original handler)
+     - Set `sendBtn.disabled = !input.value.trim()`
+     - Reset `vadPaused = false`
+
+3. **toggleVadPause() function**:
+   ```javascript
+   function toggleVadPause() {
+     if (isStreaming) return; // Stop button takes priority
+     vadPaused = !vadPaused;
+     if (vadPaused) {
+       vadInstance.pause();
+       sendBtn.textContent = '▶';
+       sendBtn.title = 'Resume listening';
+       setVadState('paused');
+     } else {
+       vadInstance.start();
+       sendBtn.textContent = '⏸';
+       sendBtn.title = 'Pause listening';
+       setVadState('listening');
+     }
+   }
+   ```
+
+4. **Add 'paused' to setVadState()**:
+   - In the `setVadState()` function, add a case for `'paused'`:
+     - Set status text to "Paused"
+     - Set status dot to gray or yellow
+     - Hide waveform
+
+5. **Button priority logic** — add/update `updateSendButton()`:
+   ```javascript
+   function updateSendButton() {
+     if (isStreaming) {
+       sendBtn.textContent = '⏹';
+       sendBtn.title = 'Stop generating';
+       sendBtn.disabled = false;
+       sendBtn.onclick = stopGenerating;
+     } else if (handsfreeActive && !input.value.trim()) {
+       sendBtn.textContent = vadPaused ? '▶' : '⏸';
+       sendBtn.title = vadPaused ? 'Resume listening' : 'Pause listening';
+       sendBtn.disabled = false;
+       sendBtn.onclick = toggleVadPause;
+     } else {
+       sendBtn.textContent = 'Send';
+       sendBtn.title = '';
+       sendBtn.disabled = !input.value.trim();
+       sendBtn.onclick = sendMessage;
+     }
+   }
+   ```
+
+6. **Call updateSendButton()** from:
+   - `toggleHandsfree()` — when mode changes
+   - `sendMessage()` — when streaming starts/ends
+   - `stopGenerating()` — after abort
+   - Input event handler — when text changes (existing `updateSendButton` or equivalent)
+
+7. **Update backlog** — Mark F-064, F-065 as Complete (Sprint 25)
 
 Acceptance Criteria
-- Settings panel shows Voice Detection section with 2 sliders and 1 checkbox
-- Changing Speech Sensitivity affects how easily VAD triggers
-- Toggling Barge-in OFF prevents voice from interrupting TTS
-- Settings persist across page reloads
-- `.venv/bin/python3 -m pytest tests/ -v` — all pass
+- `tests/test_sprint25_button_states.py` — all 17 tests pass (9 currently failing)
+- During streaming: Send → ⏹ with "Stop generating" tooltip
+- Click ⏹ during streaming: stream aborts, partial text kept, no TTS
+- Hands-free ON: Send → ⏸ with "Pause listening" tooltip
+- Click ⏸: VAD pauses, status shows "Paused", button → ▶ "Resume listening"
+- Click ▶: VAD resumes, status shows "Listening...", button → ⏸
+- Type text in hands-free: Send appears (overrides ⏸)
+- After stream ends: button returns to ⏸ (hands-free) or Send (type mode)

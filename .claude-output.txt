@@ -1,34 +1,19 @@
-`★ Insight ─────────────────────────────────────`
-**Key design pattern used:** Splitting `stopAgentSpeaking()` into two functions (`stopAgentSpeakingOnly` + `stopAgentSpeaking`) separates "stop TTS audio" from "stop TTS + pause mic". This is important because the same "stop speaking" action has different intent depending on context:
-- **User-initiated stops** (Escape, pause button, stop banner): user wants silence — pause everything
-- **Barge-in** (onSpeechStart, push-to-talk): user is actively speaking — stop bot but keep listening
-
-Without this split, barge-in would pause the mic right as the user tries to talk, defeating its purpose.
-`─────────────────────────────────────────────────`
-
 ---
 
 ## Summary
 
 ### Files changed
-- `bot/chat_ui.html` — all pause/play/VAD fixes
+- `bot/chat_ui.html` — Added `ort.env.logLevel = 'error'` alongside existing `logSeverityLevel = 3` at page load (line 11) and before `vad.MicVAD.new()` in `startVAD()` function
+- `docs/project-memory/sessions/S-2026-03-21-2102-onnx-suppress-warnings.md` — New session doc
 
 ### Commands run
-- `git pull origin main`
+- `git pull origin main` — already up to date
 - `python3 -m pytest tests/ -x -q` — 726 passed
-- `git commit` + `git push -u origin HEAD`
-
-### What was done
-| Bug/Feature | Fix |
-|---|---|
-| B-039, B-040 | Pause button now stops TTS **and** pauses VAD mic |
-| B-041 | Page load defaults to paused — no auto-listening |
-| F-071 | Visual "Paused" / "Listening..." indicator (already existed, now correctly shown) |
-| Escape key | Also pauses VAD |
-| Stop speaking button | Also pauses VAD |
-| TTS ended/error | No longer overrides user's explicit pause |
-| Barge-in | Still works — uses `stopAgentSpeakingOnly()` |
+- `git commit` — `090be1c`
+- `git push -u origin HEAD` — pushed to `agentA-onnx-suppress`
 
 ### Notes / follow-on work
-- The `toggleHandsfree()` button deliberately sets `vadPaused = false` (user explicitly activating), while page-load auto-restore keeps `vadPaused = true` and re-pauses after the toggle
-- Consider adding a UI test for the pause/play state transitions (e.g., Playwright-based)
+- The fix uses both ONNX runtime log APIs (`logLevel` string + `logSeverityLevel` numeric) for cross-version compatibility
+- Re-applies suppression before `MicVAD.new()` as a safeguard against the deferred vad-web bundle resetting ort.env
+- No global `console.warn` override — only ONNX runtime internal logging is suppressed
+- VAD functionality is unaffected (speech detection, pause/play, barge-in all unchanged)

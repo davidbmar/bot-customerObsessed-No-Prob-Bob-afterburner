@@ -1,4 +1,4 @@
-agentA-pause-play — Sprint 31
+agentA-onnx-suppress — Sprint 32
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -74,30 +74,27 @@ Improved input quality filter to catch background media audio (B-038). Added lon
 Sprint-Level Context
 
 Goal
-- Fix the broken pause/play hands-free behavior so Pause stops BOTH speaking AND listening (B-039, B-040, F-071)
-- Fix dashboard backlog showing 0 items by correcting the backlog file path in build-sprint-data.sh (B-015)
+- Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows full history (B-043, F-073)
+- Fix sprint-run.sh `local -A` crash on zsh so automated sprints complete end-to-end (B-008)
+- Suppress ONNX runtime console warnings from Silero VAD initialization (B-044)
 
 Constraints
 - agentA owns `bot/chat_ui.html` exclusively
-- agentB owns `scripts/build-sprint-data.sh` in the afterburner repo AND `bot/tools.py` in this repo
+- agentB owns `.sprint/scripts/sprint-run.sh` and `docs/` files
 - No two agents may modify the same files
 
 
 Objective
-- Fix Pause/Play toggle so it stops BOTH TTS and VAD listening (B-039, B-040, F-071)
-- Prevent hands-free from auto-starting on page load (B-041)
+- Suppress ONNX runtime console warnings that fire on every page load (B-044)
 
 Tasks
-- In `bot/chat_ui.html`, make the Pause button (⏸) call BOTH `stopAgentSpeaking()` AND set `vadPaused = true` so VAD stops capturing audio
-- Make the Play button (▶) set `vadPaused = false` to resume VAD listening
-- In the TTS `ended` event handler, do NOT reset `vadPaused` — respect user's explicit pause state
-- On page load, set `vadPaused = true` by default — user must click Play or the Hands-free toggle to start listening
-- The "Stop speaking" banner button (`#stopSpeakingBtn`) should also pause VAD (set `vadPaused = true`)
-- Add visual indicator: when paused, show "Paused" text next to the button instead of "Listening..."
+- In `bot/chat_ui.html`, wrap the Silero VAD ONNX model initialization to suppress console warnings
+- The ONNX runtime emits ~10 `[W:onnxruntime:...]` warnings from `ort.min.js` during model load — these are harmless but noisy
+- Options: (a) override `console.warn` temporarily during ONNX init, (b) use ONNX runtime's `logSeverityLevel` config to silence warnings, (c) set `ort.env.logLevel = 'error'` before model load
+- Prefer option (c) — `ort.env.logLevel = 'error'` is the cleanest approach
+- Verify no other warnings are suppressed (only ONNX init warnings)
 
 Acceptance Criteria
-- Clicking Pause stops TTS playback AND stops mic listening — no phantom messages
-- Clicking Play resumes listening — VAD starts detecting speech again
-- "Stop speaking" also pauses the mic
-- Fresh page load does NOT auto-listen — user must explicitly activate hands-free
-- Existing keyboard shortcut (Escape to stop speaking) also pauses VAD
+- Page load produces 0 console warnings from ONNX runtime
+- VAD still works correctly (speech detection, pause/play)
+- No other console output is suppressed

@@ -1,21 +1,32 @@
-All tasks complete.
+`★ Insight ─────────────────────────────────────`
+**State machine pattern for UI transitions**: The voice preview flow uses a simple state machine (`showVoicePreview` → timer → `confirmVoicePreview` OR user action → `discardVoicePreview`). The key design choice is that `onVoicePreviewEdit` cancels the auto-send timer but keeps the discard UI visible — this lets users edit without time pressure while still being able to discard.
+
+**Garbled detection heuristic**: Rather than a complex NLP check, a simple ratio of alphabetic characters to total length (<40% alpha = garbled) catches most noise transcriptions (random punctuation, numbers from TV captions) while letting real speech through.
+`─────────────────────────────────────────────────`
 
 ---
 
 ## Summary
 
 ### Files changed
-- `personalities/customer-discovery.md` — added `## Capabilities` section with voice awareness
-- `personalities/base.md` — added same `## Capabilities` section (all personalities inherit voice awareness)
-- `bot/chat_ui.html` — added `id="docsStats"` to stats paragraph; updated `openDocs()` to fetch `/api/stats` dynamically with hardcoded fallback
-- `docs/project-memory/backlog/README.md` — marked B-037 as Complete (Sprint 28)
-- `docs/project-memory/sessions/S-2026-03-21-1906-voice-personality-dynamic-stats.md` — new session doc
+- `bot/chat_ui.html` — Added voice transcription preview with discard button (F-069)
+- `docs/project-memory/backlog/F-069-voice-discard-button.md` — New feature doc
+- `docs/project-memory/backlog/README.md` — Added F-069 entry
+- `docs/project-memory/sessions/S-2026-03-21-1926-sprint29-voice-discard.md` — Session doc
 
 ### Commands run
-- `git pull origin main` — already up to date
-- `pytest tests/ -v` — 693 tests passed
-- `git push -u origin HEAD` — branch pushed
+- `git pull origin main` — Already up to date
+- `.venv/bin/python3 -m pytest tests/ -v` — **694 tests passed**
+- `git push -u origin HEAD` — Pushed to `agentA-discard-button`
+
+### What was implemented
+1. **Voice transcription preview**: Both PTT and VAD paths now show transcribed text in the input field instead of auto-sending
+2. **Discard button (✕)**: Appears next to input, clears transcription and returns to listening
+3. **Countdown timer**: "Sending in 3... 2... 1..." auto-sends after 3 seconds
+4. **Edit cancels auto-send**: If user starts typing, countdown stops but discard stays available
+5. **Keyboard shortcuts**: Enter confirms, Escape discards
+6. **Garbled warning**: Yellow border when transcription looks like noise (short, non-alpha heavy)
 
 ### Notes / follow-on work
-- The Capabilities section is in both `base.md` and `customer-discovery.md`. Since customer-discovery extends base, it's slightly redundant — but explicit is better than implicit for system prompt instructions that affect user experience.
-- The `/api/stats` endpoint (F-060, Sprint 23) must be running for dynamic stats to work; the hardcoded fallback covers offline/dev scenarios.
+- B-038 (TV/movie audio filtering) is being handled by agentB on the server side — this discard button is the client-side safety net
+- The 3-second auto-send timeout is a hardcoded constant; could be made configurable in Settings panel in a future sprint if users want different delays

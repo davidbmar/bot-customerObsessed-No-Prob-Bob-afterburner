@@ -1,63 +1,52 @@
-agentA-voice-personality — Sprint 28
+agentA-discard-button — Sprint 29
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 27: Fixed pyproject.toml deps, word count indicator, start.sh renamed
+- Sprint 28: Voice personality awareness, PROJECT_STATUS Sprint 27, dynamic Docs stats
 - 690+ tests pass
-- Critical UX bug: bot tells users "I can't hear audio" while actively receiving their transcribed speech
-- Voice works (STT + TTS) but personality prompt has no awareness of it
+- Hands-free mode picks up TV/movie audio and sends it as user messages
+- No way to discard a bad voice transcription before it's sent
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Fix bot not knowing about its own voice capabilities — it says "I'm text-only" when user speaks via mic (B-037)
-- Generate PROJECT_STATUS doc for Sprint 27
-- Update Docs panel stats to pull from /api/stats dynamically
+- Improve input quality filter to catch TV/movie audio and other background noise (B-038)
+- Generate PROJECT_STATUS doc for Sprint 28
+- Add "discard" button on transcribed voice messages so user can cancel before sending
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
-- agentA owns bot/chat_ui.html, personalities/ — agentB MUST NOT touch these
-- agentB owns bot/server.py, tests/, docs/ — agentA MUST NOT touch these
+- agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
+- agentB owns bot/server.py, bot/gateway.py, bot/stt.py, tests/, docs/ — agentA MUST NOT touch these
 
 
 Objective
-- Update personality to acknowledge voice capabilities so the bot doesn't claim to be text-only
+- Add a "discard" option when voice transcription appears so user can cancel before sending
 
 Tasks
-1. **Update customer-discovery personality** (B-037):
-   - Edit `personalities/customer-discovery.md`
-   - Add a new section after the opening paragraph (before ## Principles):
-     ```
-     ## Capabilities
+1. **Add transcription preview with discard** (F-069):
+   - Currently, when VAD detects speech and sends audio to STT, the transcribed text is immediately sent to the LLM
+   - Change the flow: show the transcribed text as a preview in the input field FIRST
+   - Add a small "✕" (discard) button next to the text
+   - User can either: click Send (or press Enter) to confirm, or click ✕ to discard
+   - Auto-send after 3 seconds if user doesn't act (keeps the hands-free flow smooth)
+   - If the transcription looks garbled (very short, no real words), show it with a yellow warning border
 
-     You are a multimodal assistant that supports both text and voice interaction.
-     Users can type messages OR speak to you using the microphone button or hands-free mode.
-     Their speech is transcribed to text via speech-to-text (Whisper), and your responses
-     can be read back to them via text-to-speech (Piper).
+2. **Show transcription preview in input field**:
+   - When STT returns text, put it in the input textbox instead of auto-sending
+   - Change input border to a subtle blue to indicate "voice transcription pending"
+   - Add a small countdown indicator: "Sending in 3... 2... 1..." or a progress bar
+   - If user starts typing, cancel the auto-send (they want to edit)
+   - If user clicks ✕, clear input and return to listening
 
-     Important:
-     - Never say "I can't hear you" or "I'm text-only" — you CAN hear via speech-to-text
-     - If a user asks "can you hear me?" respond positively: "Yes, I can hear you!"
-     - If transcription seems garbled, say "I caught some of that but it was unclear — could you repeat?"
-     - You don't need to mention the technical details (Whisper, Piper) unless asked
-     ```
-
-2. **Update base personality** too:
-   - Edit `personalities/base.md`
-   - Add similar voice awareness to the base so ALL personalities know about voice
-
-3. **Update Docs panel in chat_ui.html**:
-   - Find the hardcoded stats line in the Docs overlay
-   - Replace with a fetch to `/api/stats` on panel open, showing dynamic counts
-   - Fallback: show the hardcoded text if API fails
-
-4. **Update backlog** — Mark B-037 as Complete (Sprint 28)
+3. **Update backlog** — Add F-069 and mark as Complete (Sprint 29)
 
 Acceptance Criteria
-- Bot never says "I'm text-only" or "I can't hear"
-- Bot responds positively to "can you hear me?"
-- Docs panel shows dynamic stats from /api/stats
-- All personality tests still pass
+- Voice transcription appears in input field as preview, not auto-sent
+- ✕ button discards the transcription
+- Enter or Send confirms it
+- Auto-sends after 3 seconds if no action
+- User can edit the transcription before sending

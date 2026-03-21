@@ -22,16 +22,25 @@ voice = [
 auth = [
     "google-auth>=2.22",
 ]
+providers = [
+    "anthropic>=0.30",
+    "openai>=1.30",
+]
 all = [
     "piper-tts>=1.4",
     "faster-whisper>=1.0",
     "numpy>=1.24",
     "scipy>=1.11",
     "google-auth[requests]>=2.20",
+    "anthropic>=0.30",
+    "openai>=1.30",
 ]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "anthropic>=0.30",
+    "openai>=1.30",
+    "google-auth[requests]>=2.20",
 ]
 
 [project.scripts]

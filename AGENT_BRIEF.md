@@ -1,54 +1,77 @@
-agentA-scroll-shortcuts — Sprint 26
+agentB-deps-docs — Sprint 27
 
 Previous Sprint Summary
 ─────────────────────────────────────────
-- Sprint 25: Stop generating button (F-064), Pause/Resume hands-free (F-065)
-- 674 tests pass
-- Bot UI is feature-rich: 68 features, voice, markdown, conversations, debug panel
-- Long conversations hard to navigate — need scroll-to-bottom
+- Sprint 26: scroll-to-bottom FAB, keyboard shortcuts help
+- 685 tests pass
+- User hit login failure after venv rebuild — google-auth not in [dev] deps
+- anthropic, openai also missing from [dev] — breaks LLM providers on fresh install
 ─────────────────────────────────────────
 
 Sprint-Level Context
 
 Goal
-- Add scroll-to-bottom floating button for long conversations (F-066)
-- Generate PROJECT_STATUS docs for Sprints 24-25 so dashboard stays current
-- Add keyboard shortcuts help tooltip (F-068)
+- Fix pyproject.toml dependencies so pip install -e ".[dev]" installs everything needed to run the bot (B-035, B-036)
+- Add message character/word count indicator near input (F-067)
+- Generate PROJECT_STATUS doc for Sprint 26
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, tests/, docs/ — agentA MUST NOT touch these
+- agentB owns pyproject.toml, bot/server.py, scripts/, tests/, docs/ — agentA MUST NOT touch these
 
 
 Objective
-- Add scroll-to-bottom floating action button
-- Add keyboard shortcuts help
+- Fix dependency groups so a fresh install works out of the box
+- Generate PROJECT_STATUS doc for Sprint 26
 
 Tasks
-1. **Scroll-to-bottom FAB** (F-066):
-   - Add a floating button (↓ arrow) that appears when the user scrolls up in the messages area
-   - Position: bottom-right of the messages container, above the input area
-   - Show only when not at the bottom (use `scroll` event + check if `scrollTop + clientHeight < scrollHeight - 100`)
-   - Click: smooth scroll to bottom
-   - Style: circular, accent color, subtle shadow, small (36px), with transition
-   - Auto-hide when user reaches the bottom
-   - Also auto-hide during streaming (auto-scroll already handles this)
+1. **Fix pyproject.toml dependency groups** (B-035):
+   - Add a new `[project.optional-dependencies]` group called `providers`:
+     ```
+     providers = [
+         "anthropic>=0.30",
+         "openai>=1.30",
+     ]
+     ```
+   - Update `dev` group to include providers and auth:
+     ```
+     dev = [
+         "pytest>=8.0",
+         "pytest-asyncio>=0.23",
+         "anthropic>=0.30",
+         "openai>=1.30",
+         "google-auth[requests]>=2.20",
+     ]
+     ```
+   - Update `all` group to include providers too
+   - This ensures `pip install -e ".[dev]"` gives you everything needed to run AND test
 
-2. **Keyboard shortcuts help** (F-068):
-   - Add a small "⌨" button in the header bar (near Debug/Docs) or as a section in the Docs panel
-   - Shows a tooltip/modal listing shortcuts:
-     - Enter — Send message
-     - Escape — Stop speaking / Stop generating
-     - Ctrl+N — New conversation (if not already bound)
-   - Keep it simple — a small popover that appears on click
+2. **Update scripts/start.sh** (B-036):
+   - After the venv creation/activation step, change `pip install -e .` to `pip install -e ".[dev]"`
+   - This ensures start.sh installs test deps + providers + auth on first run
 
-3. **Update backlog** — Mark F-066, F-068 as Complete (Sprint 26)
+3. **Generate PROJECT_STATUS doc for Sprint 26**:
+   - Create `docs/PROJECT_STATUS_2026-03-21-sprint26.md`
+   - Sprint 26: scroll-to-bottom FAB, keyboard shortcuts help
+   - Follow PROJECT_STATUS_TEMPLATE.md format
+
+4. **Write test for dependency completeness**:
+   - Test that all expected modules can be imported:
+     ```python
+     def test_anthropic_importable():
+         import anthropic
+     def test_google_auth_importable():
+         from google.oauth2 import id_token
+     ```
+
+5. **Update backlog** — Mark B-035, B-036 as Complete (Sprint 27)
 
 Acceptance Criteria
-- Scroll up in a long conversation → ↓ button appears
-- Click ↓ → smooth scroll to bottom, button disappears
-- Keyboard shortcuts help is accessible from the UI
-- `.venv/bin/python3 -m pytest tests/ -v` — all pass
+- `pip install -e ".[dev]"` installs anthropic, openai, google-auth
+- `python -c "import anthropic; from google.oauth2 import id_token; print('ok')"` works
+- scripts/start.sh uses `.[dev]` for install
+- PROJECT_STATUS doc exists for Sprint 26
+- All tests pass

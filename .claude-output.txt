@@ -1,23 +1,21 @@
-Sprint 21 — merged agentA-server-polish + agentB-chat-ux-fixes
+`★ Insight ─────────────────────────────────────`
+- **data-attribute pattern**: The codebase uses `dataset.markdown` as a shadow copy of the original markdown source text. This is a common pattern in chat UIs — the rendered HTML goes in `.innerHTML` for display, but the raw source is stashed in a `data-*` attribute so it can be re-rendered later (e.g., after restore from localStorage). The bug was that `saveConversation()` read `.textContent` (which strips formatting) instead of the stashed source.
+- **Event-driven sidebar refresh**: Rather than using MutationObservers or a pub/sub system, the codebase uses explicit `refreshConversationList()` calls at mutation points. This is simpler but requires remembering to add the call at every place that changes state — exactly the kind of thing that gets missed (as it was here in `saveConversation` and `newConversation`).
+`─────────────────────────────────────────────────`
 
 ---
 
 ## Summary
 
-### Files changed
-- **`bot/static/favicon.svg`** (new) — SVG chat bubble favicon
-- **`bot/static/favicon.ico`** (new) — 16x16 ICO favicon
-- **`bot/server.py`** — Added `STATIC_DIR`, `/favicon.ico` + `/favicon.svg` routes, `_serve_static()` method, `<link rel="icon">` injection, localhost auth bypass logging
-- **`tests/test_favicon_and_auth.py`** (new) — 5 integration tests for favicon serving and auth bypass
-- **`bot/chat_ui.html`** — all 4 UX fixes (copy button, escape key, waveform, send button)
-- **`docs/project-memory/backlog/README.md`** — 7 items marked Complete (Sprint 21)
-- **`docs/project-memory/sessions/S-2026-03-21-1654-sprint21-favicon-auth-bypass.md`** (new) — agentA session doc
-- **`docs/project-memory/sessions/S-2026-03-21-1657-sprint21-chat-ux-fixes.md`** (new) — agentB session doc
+**Files changed:**
+- `bot/chat_ui.html` — 3 fixes (markdown preservation, sidebar refresh, docs stats)
+- `docs/project-memory/backlog/README.md` — marked B-030, B-031, B-032, F-058 as Complete
 
-### What was implemented
-1. **Favicon** (F-056, B-026): SVG chat bubble + ICO, served via new static route
-2. **Localhost auth bypass** (F-057): Skip Google SSO when GOOGLE_CLIENT_ID is unset
-3. **Copy button on all bot messages** (B-027, F-055): Extracted `addCopyButton()` helper, called from `addMessage()`, streaming `done` event, and stream early-exit path
-4. **Escape key stops bot speaking** (F-054): Global `keydown` listener
-5. **Voice waveform** (F-053): Canvas with 5 animated frequency bars using `AnalyserNode`
-6. **Send button on paste/autofill** (B-025): Button toggled by `updateSendButton()` on `input`/`keyup`/`change`/`paste` events
+**Commands run:**
+- `git pull origin main` — already up to date
+- `python3 -m pytest tests/ -v` — 636 passed
+- `git commit` + `git push -u origin HEAD`
+
+**Notes / follow-on work:**
+- B-028 (Active Project dropdown empty in Settings) is assigned to agentB per the constraints
+- The docs stats line is still hardcoded HTML; a future enhancement could fetch counts dynamically (the brief suggested adding `id="docsStats"` — skipped as optional to keep changes scoped)

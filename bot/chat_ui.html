@@ -599,6 +599,47 @@
     color: var(--success);
   }
 
+  /* Stop speaking button */
+  .btn-stop-speaking {
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    margin: 0 auto 4px;
+    display: block;
+    animation: pulse-record 1.5s infinite;
+  }
+  .btn-stop-speaking:hover { opacity: 0.85; }
+
+  /* Transcription preview bar */
+  .transcription-preview {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin: 0 12px 4px;
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .transcription-dot {
+    width: 8px; height: 8px;
+    background: var(--error);
+    border-radius: 50%;
+    animation: pulse-record 1s infinite;
+    flex-shrink: 0;
+  }
+  #transcriptionText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* Hands-free VAD mode */
   .btn-handsfree {
     background: var(--bg-tertiary);
@@ -1242,11 +1283,20 @@
       <span style="font-size:12px;color:var(--text-muted)">Export this conversation as a discovery seed document</span>
     </div>
     <div class="vad-transcript-preview" id="vadTranscriptPreview"></div>
+    <!-- Transcription preview — shows what the mic is hearing -->
+    <div class="transcription-preview" id="transcriptionPreview" style="display:none">
+      <span class="transcription-dot"></span>
+      <span id="transcriptionText">Listening...</span>
+    </div>
+    <!-- Stop speaking button — appears only while bot TTS is playing -->
+    <button class="btn-stop-speaking" id="stopSpeakingBtn" onclick="stopAgentSpeaking()" style="display:none">
+      &#9632; Stop speaking
+    </button>
     <div class="input-area" id="inputArea">
       <textarea id="input" placeholder="Type a message..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
       <div class="voice-controls">
-        <button class="btn-talk" id="talkBtn" title="Hold to speak">&#x1F3A4;</button>
+        <button class="btn-talk" id="talkBtn" title="Hold to talk — press and hold to record, release to send">&#x1F3A4;</button>
         <button class="btn-handsfree" id="handsfreeBtn" onclick="toggleHandsfree()" title="Toggle hands-free voice mode">&#x1F3A7; Hands-free</button>
         <div class="vad-status" id="vadStatus">
           <span class="vad-dot" id="vadDot"></span>
@@ -3364,6 +3414,41 @@ var voiceHeld = false;
 var mediaRecorder = null;
 var audioChunks = [];
 var agentAudio = null;
+var isBotSpeaking = false;
+
+// --- Agent speaking state (show/hide stop button, track state) ---
+function setAgentSpeaking(speaking) {
+  isBotSpeaking = speaking;
+  var stopBtn = document.getElementById('stopSpeakingBtn');
+  if (speaking) {
+    talkBtn.classList.add('speaking');
+    stopBtn.style.display = 'block';
+  } else {
+    talkBtn.classList.remove('speaking');
+    stopBtn.style.display = 'none';
+    agentAudio = null;
+  }
+}
+
+function stopAgentSpeaking() {
+  if (agentAudio) {
+    agentAudio.pause();
+    agentAudio.currentTime = 0;
+  }
+  setAgentSpeaking(false);
+}
+
+// --- Transcription preview (shows what the mic is hearing) ---
+function showTranscriptionPreview(text) {
+  var el = document.getElementById('transcriptionPreview');
+  var textEl = document.getElementById('transcriptionText');
+  textEl.textContent = text || 'Listening...';
+  el.style.display = 'flex';
+}
+
+function hideTranscriptionPreview() {
+  document.getElementById('transcriptionPreview').style.display = 'none';
+}
 
 // Persistent audio element — unlocked on first user gesture (iOS Safari requirement).
 // Safari blocks audio.play() unless initiated by a tap. We "prime" this element
@@ -3427,13 +3512,12 @@ function startVoiceRecording() {
   if (isVoiceRecording) return;
   console.log('[voice] startVoiceRecording called');
 
-  // Stop any playing agent audio
-  if (agentAudio) {
-    agentAudio.pause();
-    agentAudio = null;
-    talkBtn.classList.remove('speaking');
+  // Interrupt bot if it's speaking (barge-in)
+  if (isBotSpeaking) {
+    stopAgentSpeaking();
   }
 
+  showTranscriptionPreview('Listening...');
   talkBtn.textContent = '...';
 
   navigator.mediaDevices.getUserMedia({ audio: true })
@@ -3539,6 +3623,7 @@ function processVoiceRecording(blob) {
 function sendVoiceToServer(audioB64, sampleRate) {
   console.log('[voice] sending to server, base64 length:', audioB64.length, 'sampleRate:', sampleRate);
   // Show "Transcribing..." indicator
+  showTranscriptionPreview('Transcribing...');
   showTyping('Transcribing...');
 
   fetch(API + '/api/voice/transcribe', {
@@ -3558,6 +3643,7 @@ function sendVoiceToServer(audioB64, sampleRate) {
     if (data.filtered) {
       hideTyping();
       var debugMode = localStorage.getItem('debugPanelVisible') === 'true';
+      hideTranscriptionPreview();
       if (debugMode) {
         showToast('Filtered: ' + (data.reason || 'low quality input'));
       }
@@ -3567,17 +3653,25 @@ function sendVoiceToServer(audioB64, sampleRate) {
     var text = (data.text || '').trim();
     if (!text) {
       hideTyping();
+      hideTranscriptionPreview();
       showToast('No speech detected');
       return;
     }
+
+    // Show transcribed text in preview bar briefly
+    showTranscriptionPreview(text);
 
     // Inject transcribed text into the chat as if the user typed it
     hideTyping();
     document.getElementById('input').value = text;
     sendMessage();
+
+    // Hide preview after a short delay (message is now in chat)
+    setTimeout(hideTranscriptionPreview, 1500);
   })
   .catch(function(err) {
     hideTyping();
+    hideTranscriptionPreview();
     showToast('Transcription failed: ' + err.message);
   });
 }
@@ -3626,21 +3720,19 @@ function speakResponse(text) {
     // Use the pre-unlocked audio element (required for iOS Safari)
     ttsAudioEl.onended = function() {
       URL.revokeObjectURL(url);
-      talkBtn.classList.remove('speaking');
-      agentAudio = null;
+      setAgentSpeaking(false);
     };
     ttsAudioEl.onerror = function() {
       URL.revokeObjectURL(url);
-      talkBtn.classList.remove('speaking');
-      agentAudio = null;
+      setAgentSpeaking(false);
     };
     ttsAudioEl.src = url;
     agentAudio = ttsAudioEl;
-    talkBtn.classList.add('speaking');
+    setAgentSpeaking(true);
     ttsAudioEl.play().catch(function(e) {
       console.warn('[voice] TTS play failed:', e);
       showToast('Audio play blocked: ' + e.message);
-      talkBtn.classList.remove('speaking');
+      setAgentSpeaking(false);
     });
   })
   .catch(function(e) {

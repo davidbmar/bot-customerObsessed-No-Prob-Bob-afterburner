@@ -1,4 +1,4 @@
-agentA-tool-tests — Sprint 38
+agentB-sprint38-doc — Sprint 39
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -65,8 +65,8 @@ Attempted to generate sprint documentation. Agent updated its brief but did not 
 Sprint-Level Context
 
 Goal
-- Verify worktree .venv symlink works — agents should complete successfully (test B-051 fix)
-- Add tests for the new read_project_doc and list_projects tools
+- Add tests for list_projects, read_project_doc, and the enriched get_project_summary tools
+- Generate PROJECT_STATUS doc for Sprint 38
 
 Constraints
 - agentA owns `tests/test_tools.py` exclusively
@@ -75,20 +75,16 @@ Constraints
 
 
 Objective
-- Add tests for list_projects and read_project_doc tools
+- Generate PROJECT_STATUS doc for Sprint 38
 
 Tasks
-- In `tests/test_tools.py`, add tests:
-  - `test_tool_list_projects_returns_projects` — mock httpx.get to return project list, verify formatted output
-  - `test_tool_list_projects_dashboard_offline` — mock httpx.get to raise ConnectError, verify error message
-  - `test_tool_read_project_doc_reads_file` — create temp project dir with README.md, mock _find_project_root, verify file content returned
-  - `test_tool_read_project_doc_blocks_traversal` — verify path traversal (../../etc/passwd) is blocked
-  - `test_tool_read_project_doc_missing_file` — verify "File not found" for nonexistent path
-  - `test_tool_registration_includes_list_projects` — verify list_projects is in TOOL_DEFINITIONS
-  - `test_tool_registration_includes_read_project_doc` — verify read_project_doc is in TOOL_DEFINITIONS
-- Run `.venv/bin/python3 -m pytest tests/ -x -q` to verify all tests pass
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint38.md` following PROJECT_STATUS_TEMPLATE format
+  - Sprint 38 goal: verify worktree .venv symlink, add tool tests
+  - Agents: agentA-tool-tests, agentB-session-doc
+  - The sprint proved the .venv symlink works — agents ran and tests passed in worktrees
+  - Use git log between `61cb4aa` and `d06f85a` for details
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- All new tests pass
-- All existing 726 tests still pass
-- Total test count increases by 7+
+- PROJECT_STATUS doc exists with correct merge table
+- Dashboard shows Sprint 38 after rebuild

@@ -1,19 +1,21 @@
+`★ Insight ─────────────────────────────────────`
+The auto-rebuild feature (F-074) was already implemented in sprint-run.sh at lines 1005-1020. It uses a configurable `AUTO_DASHBOARD_REBUILD` variable (defaults to `true`) and gracefully handles dashboard-offline scenarios. The "manual merge fallback" doesn't need a separate rebuild call because it exits and tells the user to `--continue`, which re-runs the full pipeline including the rebuild step.
+`─────────────────────────────────────────────────`
+
 ---
 
 ## Summary
 
-### Files changed
-- `bot/chat_ui.html` — Added `ort.env.logLevel = 'error'` alongside existing `logSeverityLevel = 3` at page load (line 11) and before `vad.MicVAD.new()` in `startVAD()` function
-- `docs/project-memory/sessions/S-2026-03-21-2102-onnx-suppress-warnings.md` — New session doc
+**Files changed:**
+- `docs/PROJECT_STATUS_2026-03-21-sprint32.md` — new, documents Sprint 32 deliverables (B-044, B-043, F-073, B-008)
+- `docs/project-memory/sessions/S-2026-03-21-2112-sprint33-auto-rebuild.md` — new, session doc for this sprint
 
-### Commands run
+**Commands run:**
 - `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -x -q` — 726 passed
-- `git commit` — `090be1c`
-- `git push -u origin HEAD` — pushed to `agentA-onnx-suppress`
+- `python3 -m pytest --tb=short -q` — 726 passed
+- `git commit` + `git push -u origin HEAD` — pushed to `agentB-auto-rebuild`
 
-### Notes / follow-on work
-- The fix uses both ONNX runtime log APIs (`logLevel` string + `logSeverityLevel` numeric) for cross-version compatibility
-- Re-applies suppression before `MicVAD.new()` as a safeguard against the deferred vad-web bundle resetting ort.env
-- No global `console.warn` override — only ONNX runtime internal logging is suppressed
-- VAD functionality is unaffected (speech detection, pause/play, barge-in all unchanged)
+**Notes / follow-on work:**
+- The auto-rebuild curl call in `sprint-run.sh` (F-074) was **already present** at lines 1005-1020 — no code changes needed. It POSTs to `http://localhost:1201/api/rebuild-data` with `projectRoot` and `slug`, with graceful failure if dashboard is offline.
+- B-047 (missing Sprint 32 PROJECT_STATUS) is resolved by the new doc.
+- B-046 (stale sprint data) will be resolved once dashboard data is rebuilt with the new Sprint 32 doc included.

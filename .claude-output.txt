@@ -1,21 +1,25 @@
-`★ Insight ─────────────────────────────────────`
-- **data-attribute pattern**: The codebase uses `dataset.markdown` as a shadow copy of the original markdown source text. This is a common pattern in chat UIs — the rendered HTML goes in `.innerHTML` for display, but the raw source is stashed in a `data-*` attribute so it can be re-rendered later (e.g., after restore from localStorage). The bug was that `saveConversation()` read `.textContent` (which strips formatting) instead of the stashed source.
-- **Event-driven sidebar refresh**: Rather than using MutationObservers or a pub/sub system, the codebase uses explicit `refreshConversationList()` calls at mutation points. This is simpler but requires remembering to add the call at every place that changes state — exactly the kind of thing that gets missed (as it was here in `saveConversation` and `newConversation`).
-`─────────────────────────────────────────────────`
+All done. Here's the summary:
 
 ---
 
-## Summary
+## Files Changed
 
-**Files changed:**
-- `bot/chat_ui.html` — 3 fixes (markdown preservation, sidebar refresh, docs stats)
-- `docs/project-memory/backlog/README.md` — marked B-030, B-031, B-032, F-058 as Complete
+| File | Change |
+|------|--------|
+| `tests/test_sprint23_server.py` | **New** — 11 tests: tool result formatting (B-033 guard), conversation endpoint robustness, /api/stats |
+| `bot/server.py` | Added `GET /api/stats` endpoint + `_count_sprints()`, `_count_tests()`, `_count_features()` helpers |
+| `docs/project-memory/backlog/README.md` | Added F-060, updated B-032 status |
+| `docs/project-memory/sessions/S-2026-03-21-1737-sprint23-server-polish.md` | Session doc |
 
-**Commands run:**
+## Commands Run
+
 - `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -v` — 636 passed
+- `pytest tests/test_sprint23_server.py -v` — 11 passed
+- `pytest tests/ -v` — **654 passed**
 - `git commit` + `git push -u origin HEAD`
 
-**Notes / follow-on work:**
-- B-028 (Active Project dropdown empty in Settings) is assigned to agentB per the constraints
-- The docs stats line is still hardcoded HTML; a future enhancement could fetch counts dynamically (the brief suggested adding `id="docsStats"` — skipped as optional to keep changes scoped)
+## Notes / Follow-on Work
+
+- **Frontend integration**: The `/api/stats` endpoint is ready for the Docs panel to call instead of hardcoded values (agentA / future sprint)
+- **B-033 regression guard**: 4 tests verify Anthropic format (tool_use + tool_result blocks with `id`) vs OpenAI format (role: tool) depending on `ToolCall.id`
+- **B-034** (paragraph spacing) is agentA's territory per the brief constraints

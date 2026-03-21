@@ -38,6 +38,8 @@ Track bugs and feature requests here.
 | B-030 | Conversation restore fails — clicking saved conversation in sidebar shows only welcome message, not the actual history (sidebar shows "9 msgs" but chat area shows 1) | High | Complete (Sprint 22) |
 | B-031 | New conversations not saved to sidebar — after +New Chat and sending messages, conversation doesn't appear as new sidebar entry | High | Complete (Sprint 22) |
 | B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22) |
+| B-033 | Tool result message uses OpenAI format for Claude API — causes 400 error when bot calls Afterburner tools with Claude provider | Critical | Fixed (hotfix) |
+| B-034 | Restored bot messages lose paragraph spacing — old conversations saved via textContent have "word.Next sentence" instead of paragraph breaks | Medium | Open |
 
 ## Features
 

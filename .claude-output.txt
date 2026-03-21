@@ -1,22 +1,28 @@
 `★ Insight ─────────────────────────────────────`
-- **Code block extraction before splitting**: The original `renderMarkdownToDOM` split all text by `\n\n+` first, then tried to match code blocks. This broke any fenced code block containing blank lines (common in real code). The fix extracts code blocks in a first pass, then splits the remaining text segments.
-- **XSS-safe rendering**: The entire markdown renderer uses `document.createElement()` + `textContent` exclusively — never `innerHTML`. This means even if an LLM outputs `<script>alert('xss')</script>`, it renders as literal text, not executable HTML.
-- **Date grouping state management**: Every place that clears the message container (`newConversation`, `clearHistory`, `switchToConversation`, `deleteConversation`, `restoreConversation`) must also reset `lastMessageDateStr`, otherwise date separators won't appear after switching contexts.
+**Regex backreference gotcha**: The original repeated-word regex `^(\w+\s*)\1{2,}$` captures the trailing space as part of the group, so the backreference `\1` requires that exact space count in every repetition — including the last one before `$`. The fix `^(\w+)(?:\s+\1){2,}\s*$` separates the word capture from the whitespace, so "the the the" matches because `\1` is just "the" and `\s+` handles inter-word spacing independently.
+
+**Filtered responses as 200, not errors**: Returning `{"filtered": true}` with HTTP 200 (not 4xx) is intentional — the client recorded audio, the server transcribed it successfully, the result just wasn't worth sending to the LLM. This lets the UI silently drop garbage without showing error states to the user.
 `─────────────────────────────────────────────────`
 
 ---
 
 ## Summary
 
-**Files changed:**
-- `bot/chat_ui.html` — markdown rendering fixes + date grouping
-- `docs/project-memory/backlog/README.md` — F-044, F-045 marked Complete
-- `docs/project-memory/sessions/S-2026-03-20-0807-markdown-and-dates.md` — session doc (new)
+### Files changed
+- **`bot/input_filter.py`** (NEW) — STT quality classifier with `InputQuality` enum and `classify()` function
+- **`bot/fast_path.py`** (NEW) — Instant answers for "help", "reset", "who are you" without LLM
+- **`bot/server.py`** — Wired filter + fast path into `/api/voice/transcribe`; response now includes `filtered`, `quality`, `duration_s`, `fast_path_response`
+- **`tests/test_input_filter.py`** (NEW) — 63 tests
+- **`tests/test_fast_path.py`** (NEW) — 38 tests
+- **`docs/project-memory/backlog/README.md`** — F-048, F-052 marked Complete (Sprint 20)
+- **`docs/project-memory/sessions/S-2026-03-21-0617-sprint20-input-filter-fastpath.md`** (NEW)
 
-**Commands run:**
-- `python3 -m pytest tests/ -v` — 470 passed
+### Commands run
+- `git pull origin main`
+- `python3 -m pytest tests/ -v` → **630 passed**, 1 pre-existing failure
 - `git commit` + `git push -u origin HEAD`
 
-**Notes / follow-on work:**
-- The markdown renderer covers the required subset (**bold**, *italic*, `code`, ```code blocks```, lists, headers). More complex markdown (tables, blockquotes, nested lists) is not supported — could be added in a future sprint if needed.
-- Date separators work for both new messages and restored conversations. Existing saved conversations without `dateISO` will group all messages under the current date on first restore, then persist correct dates going forward.
+### Notes / follow-on work
+- **1 pre-existing test failure**: `test_sprint18_ui_polish.py::TestProjectStatusDocs::test_total_status_docs_count` — not related to this branch
+- **Chat endpoint**: Fast path is only wired into the voice transcribe endpoint. Could also be added to `/api/chat` for text-based fast paths
+- **Fixed regex bug**: The repeated-word hallucination pattern from the reference didn't actually match "the the the" — fixed with a non-capturing group for whitespace

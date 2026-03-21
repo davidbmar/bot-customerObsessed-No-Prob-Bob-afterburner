@@ -33,7 +33,9 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from .fast_path import try_fast_path
 from .gateway import Gateway
+from .input_filter import InputQuality, classify as classify_input
 from .personality import PersonalityLoader
 
 log = logging.getLogger(__name__)
@@ -546,7 +548,12 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._json_response({"voices": [], "error": "TTS not installed"})
 
     def _handle_voice_transcribe(self) -> None:
-        """Transcribe uploaded audio (base64 PCM or WAV)."""
+        """Transcribe uploaded audio (base64 PCM or WAV).
+
+        After transcription, runs the input quality filter and fast path:
+        - GARBAGE/LOW_QUALITY → returns filtered=true, skips LLM
+        - Fast path match → returns fast_path_response with instant answer
+        """
         body = self._read_body()
         if body is None:
             return
@@ -568,13 +575,34 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
                     sample_rate = wf.getframerate()
                     audio_bytes = wf.readframes(wf.getnframes())
 
+            # Calculate audio duration from PCM bytes (int16 = 2 bytes/sample)
+            audio_duration_s = len(audio_bytes) / (sample_rate * 2) if sample_rate else 0.0
+
             text, no_speech_prob, avg_logprob, timing = transcribe(audio_bytes, sample_rate)
-            self._json_response({
-                "text": text,
+
+            # Run input quality filter
+            quality = classify_input(text, no_speech_prob, avg_logprob, audio_duration_s)
+            filtered = quality != InputQuality.VALID
+
+            response: dict = {
+                "text": text if not filtered else "",
                 "no_speech_prob": no_speech_prob,
                 "avg_logprob": avg_logprob,
                 "timing": timing,
-            })
+                "filtered": filtered,
+                "quality": quality.value,
+                "duration_s": round(audio_duration_s, 3),
+            }
+
+            if filtered:
+                response["reason"] = quality.value
+            else:
+                # Check fast path for instant answers
+                fast_response = try_fast_path(text)
+                if fast_response is not None:
+                    response["fast_path_response"] = fast_response
+
+            self._json_response(response)
         except ImportError:
             self._json_response({"error": "STT not installed (pip install faster-whisper)"}, status=501)
         except Exception as e:

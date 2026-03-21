@@ -2963,10 +2963,20 @@ function openSettings() {
     .then(function(data) {
       var sel = document.getElementById('settingsProject');
       while (sel.firstChild) sel.removeChild(sel.firstChild);
-      (data.projects || []).forEach(function(p) {
+      var projects = data.projects || [];
+      if (projects.length === 0) {
+        var empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = 'No projects registered';
+        empty.disabled = true;
+        sel.appendChild(empty);
+      }
+      projects.forEach(function(p) {
         var opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
+        var slug = (typeof p === 'string') ? p : p.slug;
+        var name = (typeof p === 'string') ? p : (p.name || p.slug);
+        opt.value = slug;
+        opt.textContent = name;
         sel.appendChild(opt);
       });
       if (data.active_project) {

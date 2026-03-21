@@ -324,12 +324,21 @@ def _find_project_root(slug: str) -> Path | None:
     if not projects_json.exists():
         return None
     try:
-        projects = json.loads(projects_json.read_text())
+        data = json.loads(projects_json.read_text())
+        # Handle both formats: plain list or {projects: [...], activeProject: "..."}
+        if isinstance(data, dict):
+            projects = data.get("projects", [])
+        elif isinstance(data, list):
+            projects = data
+        else:
+            return None
         for p in projects:
+            if not isinstance(p, dict):
+                continue
             if p.get("slug") == slug:
                 root = p.get("rootPath", "").replace("~", str(Path.home()))
                 return Path(root)
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError, TypeError):
         pass
     return None
 

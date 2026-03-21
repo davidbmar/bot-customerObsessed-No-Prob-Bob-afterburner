@@ -162,10 +162,15 @@ def _auto_discover_projects() -> dict[str, str]:
     if DASHBOARD_PROJECTS_PATH.exists():
         try:
             data = json.loads(DASHBOARD_PROJECTS_PATH.read_text())
-            if not isinstance(data, list):
+            # Handle both formats: plain list or {projects: [...]}
+            if isinstance(data, dict):
+                entries = data.get("projects", [])
+            elif isinstance(data, list):
+                entries = data
+            else:
                 return {}
             projects = {}
-            for entry in data:
+            for entry in entries:
                 if not isinstance(entry, dict):
                     continue
                 slug = entry.get("slug", "")

@@ -75,6 +75,7 @@ def _classify_llm_error(exc: Exception) -> tuple[int, dict]:
     return 500, {"error": str(exc)}
 HOST = "127.0.0.1"
 CHAT_UI_PATH = Path(__file__).parent / "chat_ui.html"
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 class BotHTTPHandler(SimpleHTTPRequestHandler):
@@ -115,6 +116,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_auth_session_check()
         elif path == "/api/voice/voices":
             self._handle_get_voices()
+        elif path == "/favicon.ico":
+            self._serve_static("favicon.ico", "image/x-icon")
+        elif path == "/favicon.svg":
+            self._serve_static("favicon.svg", "image/svg+xml")
         else:
             self.send_error(404)
 
@@ -650,18 +655,39 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             log.exception("TTS error")
             self._json_response({"error": str(e)}, status=500)
 
+    def _serve_static(self, filename: str, content_type: str) -> None:
+        """Serve a file from the bot/static/ directory."""
+        filepath = STATIC_DIR / filename
+        if not filepath.exists():
+            self.send_error(404)
+            return
+        data = filepath.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _serve_chat_ui(self) -> None:
         """Serve the self-contained chat UI HTML, injecting config."""
         if not CHAT_UI_PATH.exists():
             self.send_error(500, "chat_ui.html not found")
             return
         content = CHAT_UI_PATH.read_text()
-        # Inject Google Client ID so the Sign-In button works
+        # Inject favicon and Google Client ID
         google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
-        content = content.replace(
-            "</head>",
-            f'<script>window.__GOOGLE_CLIENT_ID__ = "{google_client_id}";</script>\n</head>',
+        inject = (
+            '<link rel="icon" type="image/svg+xml" href="/favicon.svg">\n'
+            '<link rel="icon" type="image/x-icon" href="/favicon.ico">\n'
+            f'<script>window.__GOOGLE_CLIENT_ID__ = "{google_client_id}";</script>\n'
+            '</head>'
         )
+        content = content.replace("</head>", inject)
+        # Log localhost auth bypass
+        host = self.headers.get("Host", "")
+        if not google_client_id and ("localhost" in host or "127.0.0.1" in host):
+            log.info("Auth disabled (no GOOGLE_CLIENT_ID set, localhost access)")
         content_bytes = content.encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")

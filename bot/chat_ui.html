@@ -1417,6 +1417,39 @@
       <p style="font-size:12px;color:var(--text-muted);margin-top:2px">Play a chime when the bot responds (only when tab is not focused)</p>
     </div>
 
+    <!-- Voice Detection settings (F-061) -->
+    <h3 style="margin:18px 0 8px;color:var(--accent);font-size:14px;border-top:1px solid var(--border-color);padding-top:14px">Voice Detection</h3>
+
+    <div class="settings-group">
+      <label>Speech Sensitivity</label>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">How confident VAD must be that audio is speech. Lower = catches quieter speech but may false-trigger.</p>
+      <input type="range" id="settingsVadSensitivity" min="0.50" max="0.95" step="0.01" value="0.80" oninput="updateVadSensitivityLabel(this.value)">
+      <div class="range-labels">
+        <span>0.50</span>
+        <span id="vadSensitivityValue">0.80</span>
+        <span>0.95</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label>Min Speech Duration</label>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">How long speech must sustain before it's confirmed. Higher = fewer false triggers.</p>
+      <input type="range" id="settingsVadMinSpeech" min="1" max="15" step="1" value="5" oninput="updateVadMinSpeechLabel(this.value)">
+      <div class="range-labels">
+        <span>1</span>
+        <span id="vadMinSpeechValue">5</span>
+        <span>15</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label for="settingsBargeIn" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="settingsBargeIn" checked onchange="toggleBargeIn(this.checked)" style="width:16px;height:16px;cursor:pointer">
+        Allow barge-in
+      </label>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:2px">Allow voice to interrupt the bot while it's speaking</p>
+    </div>
+
     <div class="settings-group">
       <label>Conversation ID</label>
       <div class="conv-id-display" id="settingsConvId"></div>
@@ -3664,8 +3697,8 @@ function startVoiceRecording() {
   if (isVoiceRecording) return;
   console.log('[voice] startVoiceRecording called');
 
-  // Interrupt bot if it's speaking (barge-in)
-  if (isBotSpeaking) {
+  // Interrupt bot if it's speaking (barge-in) — respect toggle
+  if (isBotSpeaking && isBargeInEnabled()) {
     stopAgentSpeaking();
   }
 
@@ -3932,6 +3965,40 @@ function updateSilenceLabel(val) {
   localStorage.setItem('silenceThreshold', val);
 }
 
+// --- F-061: Voice Detection settings (VAD sensitivity, min speech, barge-in) ---
+function getVadSensitivity() {
+  return parseFloat(localStorage.getItem('vadSensitivity') || '0.80');
+}
+function getVadMinSpeech() {
+  return parseInt(localStorage.getItem('vadMinSpeech') || '5', 10);
+}
+function isBargeInEnabled() {
+  var v = localStorage.getItem('bargeInEnabled');
+  return v === null ? true : v === 'true';
+}
+
+function updateVadSensitivityLabel(val) {
+  val = parseFloat(val).toFixed(2);
+  document.getElementById('vadSensitivityValue').textContent = val;
+  localStorage.setItem('vadSensitivity', val);
+  restartVADIfActive();
+}
+function updateVadMinSpeechLabel(val) {
+  val = parseInt(val, 10);
+  document.getElementById('vadMinSpeechValue').textContent = val;
+  localStorage.setItem('vadMinSpeech', String(val));
+  restartVADIfActive();
+}
+function toggleBargeIn(on) {
+  localStorage.setItem('bargeInEnabled', on ? 'true' : 'false');
+}
+
+function restartVADIfActive() {
+  if (!vadInstance) return;
+  stopVAD();
+  setTimeout(startVAD, 200);
+}
+
 function setVadState(state, label) {
   var dot = document.getElementById('vadDot');
   var lbl = document.getElementById('vadLabel');
@@ -3980,13 +4047,13 @@ function startVAD() {
   var redemptionFrames = Math.round(threshold / 0.064);
 
   vad.MicVAD.new({
-    positiveSpeechThreshold: 0.8,
+    positiveSpeechThreshold: getVadSensitivity(),
     negativeSpeechThreshold: 0.3,
     redemptionFrames: redemptionFrames,
-    minSpeechFrames: 5,
+    minSpeechFrames: getVadMinSpeech(),
     onSpeechStart: function() {
       console.log('[vad] speech start, botSpeaking:', isBotSpeaking);
-      if (isBotSpeaking) {
+      if (isBotSpeaking && isBargeInEnabled()) {
         console.log('[vad] barge-in: stopping bot speech');
         stopAgentSpeaking();
       }
@@ -4203,6 +4270,20 @@ function restoreHandsfreePrefs() {
     document.getElementById('settingsSilenceThreshold').value = savedThreshold;
     document.getElementById('silenceThresholdValue').textContent = savedThreshold + 's';
   }
+
+  // F-061: Restore voice detection settings
+  var savedSensitivity = localStorage.getItem('vadSensitivity');
+  if (savedSensitivity) {
+    document.getElementById('settingsVadSensitivity').value = savedSensitivity;
+    document.getElementById('vadSensitivityValue').textContent = parseFloat(savedSensitivity).toFixed(2);
+  }
+  var savedMinSpeech = localStorage.getItem('vadMinSpeech');
+  if (savedMinSpeech) {
+    document.getElementById('settingsVadMinSpeech').value = savedMinSpeech;
+    document.getElementById('vadMinSpeechValue').textContent = savedMinSpeech;
+  }
+  var bargeInCb = document.getElementById('settingsBargeIn');
+  if (bargeInCb) bargeInCb.checked = isBargeInEnabled();
 
   var savedHandsfree = localStorage.getItem('handsfreeMode');
   if (savedHandsfree === 'true') {

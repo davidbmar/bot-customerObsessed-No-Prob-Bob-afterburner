@@ -1,19 +1,17 @@
----
+Done. Here's the summary:
 
-## Summary
+## Files changed
+- `bot/chat_ui.html` — Fixed the `openSettings()` project list handler to correctly use `p.slug` / `p.name` from API response objects instead of treating project entries as plain strings
+- `docs/project-memory/sessions/S-2026-03-21-2114-fix-project-dropdown.md` — Session doc
 
-### Files changed
-- `bot/chat_ui.html` — Added `ort.env.logLevel = 'error'` alongside existing `logSeverityLevel = 3` at page load (line 11) and before `vad.MicVAD.new()` in `startVAD()` function
-- `docs/project-memory/sessions/S-2026-03-21-2102-onnx-suppress-warnings.md` — New session doc
+## Commands run
+- `git fetch origin main && git merge origin/main` — synced with main
+- `python3 -m pytest tests/ -x -q` — **726 passed**
+- `git push -u origin HEAD` — pushed branch
 
-### Commands run
-- `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -x -q` — 726 passed
-- `git commit` — `090be1c`
-- `git push -u origin HEAD` — pushed to `agentA-onnx-suppress`
+## What was wrong
+The `/api/projects` endpoint returns objects like `{"slug": "noprobbob", "name": "Noprobbob"}`, but the frontend JavaScript was using each project entry as a raw value (`opt.value = p`), producing `[object Object]` in the dropdown. Fixed to destructure `p.slug` and `p.name` properly (B-045, F-075).
 
-### Notes / follow-on work
-- The fix uses both ONNX runtime log APIs (`logLevel` string + `logSeverityLevel` numeric) for cross-version compatibility
-- Re-applies suppression before `MicVAD.new()` as a safeguard against the deferred vad-web bundle resetting ort.env
-- No global `console.warn` override — only ONNX runtime internal logging is suppressed
-- VAD functionality is unaffected (speech detection, pause/play, barge-in all unchanged)
+## Notes / follow-on work
+- The project switch POST to `/api/projects/switch` was already correctly implemented — it sends `{slug: project}` which matches the backend expectation. No changes needed there.
+- The fix is backwards-compatible: if the API ever returns plain strings, the `typeof p === 'string'` guard handles it gracefully.

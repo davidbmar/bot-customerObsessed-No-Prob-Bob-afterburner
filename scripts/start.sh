@@ -59,6 +59,9 @@ else
   exit 1
 fi
 
+# ── Install deps (fast no-op when already satisfied) ─────────
+pip install -q -e ".[dev]"
+
 # ── Start server ─────────────────────────────────────────────
 if $BACKGROUND; then
   mkdir -p "$REPO_ROOT/logs"

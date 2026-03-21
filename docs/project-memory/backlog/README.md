@@ -35,8 +35,8 @@ Track bugs and feature requests here.
 | B-027 | Copy button only appears on first bot message, not on subsequent bot messages | Medium | Complete (Sprint 21) |
 | B-028 | Active Project dropdown in Settings panel is empty — should list available projects or be hidden when only one project exists | Low | Complete (Sprint 22) |
 | B-029 | Console shows 10 ONNX runtime warnings on every page load when VAD initializes — noisy but harmless | Low | Open |
-| B-035 | pyproject.toml [dev] group missing anthropic, openai, google-auth — venv rebuild breaks login and LLM providers | High | Open |
-| B-036 | scripts/start.sh doesn't install optional deps — new clone requires manual pip install of anthropic/google-auth | Medium | Open |
+| B-035 | pyproject.toml [dev] group missing anthropic, openai, google-auth — venv rebuild breaks login and LLM providers | High | Complete (Sprint 27) |
+| B-036 | scripts/start.sh doesn't install optional deps — new clone requires manual pip install of anthropic/google-auth | Medium | Complete (Sprint 27) |
 | B-030 | Conversation restore fails — clicking saved conversation in sidebar shows only welcome message, not the actual history (sidebar shows "9 msgs" but chat area shows 1) | High | Complete (Sprint 22) |
 | B-031 | New conversations not saved to sidebar — after +New Chat and sending messages, conversation doesn't appear as new sidebar entry | High | Complete (Sprint 22) |
 | B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22, /api/stats added Sprint 23) |

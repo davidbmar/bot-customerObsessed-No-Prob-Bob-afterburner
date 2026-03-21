@@ -1,16 +1,21 @@
-All done.
+All tasks complete.
 
-## Files changed
-- `bot/chat_ui.html` — Added `.word-count-indicator` CSS, HTML element, and `updateWordCount()` JS function
-- `docs/project-memory/backlog/README.md` — Marked F-067 as Complete (Sprint 27)
-- `docs/project-memory/sessions/S-2026-03-21-1845-word-count-indicator.md` — Session doc (new)
-- `AGENT_BRIEF.md` — Already tracked as modified
+---
 
-## Commands run
-- `git pull origin main` — up to date
-- `python3 -m pytest tests/ -v` — 689 passed
-- `git push -u origin HEAD` — pushed
+## Summary
 
-## Notes / follow-on work
-- Token estimate uses `words × 1.3` heuristic as specified. If more accurate tokenization is needed later, a proper tokenizer library (e.g. tiktoken) could be integrated server-side.
-- The indicator appears below the input area, right-aligned, in 11px muted text — disappears when input is empty.
+### Files changed
+- `personalities/customer-discovery.md` — added `## Capabilities` section with voice awareness
+- `personalities/base.md` — added same `## Capabilities` section (all personalities inherit voice awareness)
+- `bot/chat_ui.html` — added `id="docsStats"` to stats paragraph; updated `openDocs()` to fetch `/api/stats` dynamically with hardcoded fallback
+- `docs/project-memory/backlog/README.md` — marked B-037 as Complete (Sprint 28)
+- `docs/project-memory/sessions/S-2026-03-21-1906-voice-personality-dynamic-stats.md` — new session doc
+
+### Commands run
+- `git pull origin main` — already up to date
+- `pytest tests/ -v` — 693 tests passed
+- `git push -u origin HEAD` — branch pushed
+
+### Notes / follow-on work
+- The Capabilities section is in both `base.md` and `customer-discovery.md`. Since customer-discovery extends base, it's slightly redundant — but explicit is better than implicit for system prompt instructions that affect user experience.
+- The `/api/stats` endpoint (F-060, Sprint 23) must be running for dynamic stats to work; the hardcoded fallback covers offline/dev scenarios.

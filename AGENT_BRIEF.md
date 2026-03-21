@@ -1,4 +1,4 @@
-agentA-server-polish — Sprint 21
+Sprint 21 — merged (agentA-server-polish + agentB-chat-ux-fixes)
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -27,32 +27,4 @@ Constraints
 - agentA owns bot/server.py, bot/auth.py, bot/static/ (NEW), tests/ — agentB MUST NOT touch these
 - agentB owns bot/chat_ui.html ONLY — agentA MUST NOT touch chat_ui.html
 
-
-Objective
-- Add favicon, localhost auth bypass, fix server-side polish items
-
-Tasks
-1. **Add favicon** (F-056):
-   - Create a simple SVG favicon in `bot/static/favicon.svg` — a chat bubble or robot icon
-   - Also create `bot/static/favicon.ico` (can be a minimal 16x16 ICO or just serve the SVG)
-   - Add a route in `bot/server.py` to serve `/favicon.ico` from `bot/static/`
-   - Add `<link rel="icon">` injection when serving `chat_ui.html` (similar to how Google Client ID is injected)
-
-2. **Localhost auth bypass** (F-057):
-   - In `bot/server.py` where `__GOOGLE_CLIENT_ID__` is injected into the HTML:
-     - If `GOOGLE_CLIENT_ID` env var is empty/unset, inject `window.__GOOGLE_CLIENT_ID__ = ""` so the frontend skips the auth overlay
-     - This already works per the frontend logic (line ~3297: `if (window.__GOOGLE_CLIENT_ID__ && window.google)`)
-     - But ALSO: if the request comes from `localhost` or `127.0.0.1` AND no `GOOGLE_CLIENT_ID` is set, log a message: "Auth disabled (no GOOGLE_CLIENT_ID set, localhost access)"
-   - Verify: when `.env` has no `GOOGLE_CLIENT_ID`, the chat loads without the auth overlay
-
-3. **Write tests** for favicon serving:
-   - Test that GET `/favicon.ico` returns 200 with content
-   - Test that the HTML includes `<link rel="icon">`
-
-4. **Update backlog** — Mark F-056, F-057 as Complete (Sprint 21)
-
-Acceptance Criteria
-- `curl http://localhost:1203/favicon.ico` returns 200
-- Chat page HTML includes `<link rel="icon">`
-- With `GOOGLE_CLIENT_ID` unset, chat loads without auth overlay on localhost
 - `.venv/bin/python3 -m pytest tests/ -v` — all tests pass

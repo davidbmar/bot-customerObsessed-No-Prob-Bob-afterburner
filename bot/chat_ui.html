@@ -706,6 +706,16 @@
     100% { border-top-color: var(--text-muted); }
   }
 
+  /* Voice waveform visualization */
+  .vad-waveform {
+    width: 48px;
+    height: 20px;
+    display: none;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .vad-waveform.active { display: inline-block; }
+
   /* Transcription preview */
   .vad-transcript-preview {
     display: none;
@@ -1301,9 +1311,10 @@
         <div class="vad-status" id="vadStatus">
           <span class="vad-dot" id="vadDot"></span>
           <span id="vadLabel">Listening...</span>
+          <canvas class="vad-waveform" id="vadWaveform" width="48" height="20"></canvas>
         </div>
       </div>
-      <button id="sendBtn" onclick="sendMessage()">Send</button>
+      <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
     </div>
   </div>
 
@@ -1970,6 +1981,34 @@ function _appendFormattedLine(parent, text) {
   }
 }
 
+// Reusable copy button for assistant messages
+function addCopyButton(messageEl, bodyEl) {
+  var copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.onclick = function() {
+    var md = bodyEl.dataset.markdown || bodyEl.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(md).then(function() {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = md;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+    }
+  };
+  messageEl.appendChild(copyBtn);
+}
+
 function addMessage(role, text, debugData, msgDate) {
   var now = msgDate ? new Date(msgDate) : new Date();
   var container = document.getElementById('messages');
@@ -2008,31 +2047,7 @@ function addMessage(role, text, debugData, msgDate) {
 
   // Copy button for assistant messages
   if (role === 'assistant') {
-    var copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = 'Copy';
-    copyBtn.onclick = function() {
-      var md = body.dataset.markdown || body.textContent;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(md).then(function() {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
-        });
-      } else {
-        // Fallback for non-HTTPS contexts
-        var ta = document.createElement('textarea');
-        ta.value = md;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        copyBtn.textContent = 'Copied!';
-        setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
-      }
-    };
-    el.appendChild(copyBtn);
+    var copyBtn = addCopyButton(el, body);
   }
 
   group.appendChild(el);
@@ -2210,7 +2225,7 @@ function sendMessage() {
     // SSE failed, fall back to non-streaming
     return sendMessageNonStream(text);
   }).finally(function() {
-    btn.disabled = false;
+    updateSendButton();
     input.focus();
   });
 }
@@ -2287,6 +2302,7 @@ function sendMessageStream(text) {
           if (fullText) {
             body.dataset.markdown = fullText;
             renderMarkdownToDOM(fullText, body);
+            addCopyButton(el, body);
             saveConversation();
           }
           return;
@@ -2318,6 +2334,7 @@ function sendMessageStream(text) {
             // Re-render with markdown and store source for copy
             body.dataset.markdown = fullText;
             renderMarkdownToDOM(fullText, body);
+            addCopyButton(el, body);
 
             // Add debug data
             var debugData = {
@@ -3252,11 +3269,25 @@ function startTitleEdit(el) {
   }, { once: true });
 }
 
-// Auto-resize textarea
-document.getElementById('input').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
+// Auto-resize textarea and toggle Send button
+function updateSendButton() {
+  var input = document.getElementById('input');
+  var btn = document.getElementById('sendBtn');
+  btn.disabled = !input.value.trim();
+}
+
+(function() {
+  var inputEl = document.getElementById('input');
+  function onInputChange() {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    updateSendButton();
+  }
+  inputEl.addEventListener('input', onInputChange);
+  inputEl.addEventListener('keyup', updateSendButton);
+  inputEl.addEventListener('change', updateSendButton);
+  inputEl.addEventListener('paste', function() { setTimeout(updateSendButton, 0); });
+})();
 
 // ==========================================================================
 // AUTH — Google Sign-In + session token persistence
@@ -3443,6 +3474,14 @@ function stopAgentSpeaking() {
   }
   setAgentSpeaking(false);
 }
+
+// Escape key stops bot speaking (works even when typing)
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && isBotSpeaking) {
+    e.preventDefault();
+    stopAgentSpeaking();
+  }
+});
 
 // --- Transcription preview (shows what the mic is hearing) ---
 function showTranscriptionPreview(text) {
@@ -3793,6 +3832,7 @@ function setVadState(state, label) {
 
   // Remove all vad- classes from inputArea
   inputArea.className = 'input-area';
+  stopWaveform();
 
   dot.className = 'vad-dot';
   if (state === 'listening') {
@@ -3802,6 +3842,7 @@ function setVadState(state, label) {
     dot.classList.add('recording');
     inputArea.classList.add('vad-recording');
     lbl.textContent = label || 'Hearing speech...';
+    startWaveform();
   } else if (state === 'processing') {
     dot.classList.add('processing');
     inputArea.classList.add('vad-processing');
@@ -3857,6 +3898,15 @@ function startVAD() {
     vadInstance.start();
     setVadState('listening');
     console.log('[vad] started with redemptionFrames:', redemptionFrames);
+    // Connect waveform analyser to VAD's mic stream
+    if (micVAD.stream) {
+      setupWaveformAnalyser(micVAD.stream);
+    } else {
+      // Fallback: request a mic stream for visualization
+      navigator.mediaDevices.getUserMedia({audio: true}).then(function(s) {
+        setupWaveformAnalyser(s);
+      }).catch(function() { console.warn('[waveform] mic access failed'); });
+    }
   }).catch(function(err) {
     console.error('[vad] init failed:', err);
     showToast('VAD init failed: ' + err.message);
@@ -3870,6 +3920,67 @@ function stopVAD() {
     vadInstance.destroy();
     vadInstance = null;
     console.log('[vad] stopped');
+  }
+  stopWaveform();
+}
+
+// --- Voice activity waveform visualization ---
+var waveformAnimId = null;
+var waveformAnalyser = null;
+var waveformSource = null;
+var waveformCtx = null;
+
+function setupWaveformAnalyser(stream) {
+  try {
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    waveformAnalyser = audioCtx.createAnalyser();
+    waveformAnalyser.fftSize = 64;
+    waveformSource = audioCtx.createMediaStreamSource(stream);
+    waveformSource.connect(waveformAnalyser);
+    console.log('[waveform] analyser connected');
+  } catch(e) {
+    console.warn('[waveform] setup failed:', e);
+  }
+}
+
+function startWaveform() {
+  var canvas = document.getElementById('vadWaveform');
+  if (!canvas || !waveformAnalyser) return;
+  canvas.classList.add('active');
+  waveformCtx = canvas.getContext('2d');
+  var analyser = waveformAnalyser;
+  var bufLen = analyser.frequencyBinCount;
+  var dataArray = new Uint8Array(bufLen);
+  var barCount = 5;
+  var barWidth = Math.floor(canvas.width / barCount) - 2;
+
+  function draw() {
+    waveformAnimId = requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+    waveformCtx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < barCount; i++) {
+      var idx = Math.floor(i * bufLen / barCount);
+      var val = dataArray[idx] / 255;
+      var barH = Math.max(2, val * canvas.height);
+      var x = i * (barWidth + 2);
+      var y = (canvas.height - barH) / 2;
+      waveformCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--error').trim() || '#ef4444';
+      waveformCtx.fillRect(x, y, barWidth, barH);
+    }
+  }
+  draw();
+}
+
+function stopWaveform() {
+  if (waveformAnimId) {
+    cancelAnimationFrame(waveformAnimId);
+    waveformAnimId = null;
+  }
+  var canvas = document.getElementById('vadWaveform');
+  if (canvas) {
+    canvas.classList.remove('active');
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
 

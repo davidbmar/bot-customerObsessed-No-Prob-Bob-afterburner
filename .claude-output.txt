@@ -1,6 +1,4 @@
-`★ Insight ─────────────────────────────────────`
-**Integration test pattern**: The tests use `create_app(gateway, port=0)` which lets the OS pick a free port — this avoids port conflicts in CI. The `live_server` fixture starts a real threaded HTTP server so we test actual HTTP behavior (headers, status codes, content) rather than mocking at the handler level. This gives higher confidence than unit tests for routing changes.
-`─────────────────────────────────────────────────`
+Sprint 21 — merged agentA-server-polish + agentB-chat-ux-fixes
 
 ---
 
@@ -11,15 +9,15 @@
 - **`bot/static/favicon.ico`** (new) — 16x16 ICO favicon
 - **`bot/server.py`** — Added `STATIC_DIR`, `/favicon.ico` + `/favicon.svg` routes, `_serve_static()` method, `<link rel="icon">` injection, localhost auth bypass logging
 - **`tests/test_favicon_and_auth.py`** (new) — 5 integration tests for favicon serving and auth bypass
-- **`docs/project-memory/backlog/README.md`** — Marked F-056, F-057, B-026 as Complete (Sprint 21)
-- **`docs/project-memory/sessions/S-2026-03-21-1654-sprint21-favicon-auth-bypass.md`** (new) — Session doc
+- **`bot/chat_ui.html`** — all 4 UX fixes (copy button, escape key, waveform, send button)
+- **`docs/project-memory/backlog/README.md`** — 7 items marked Complete (Sprint 21)
+- **`docs/project-memory/sessions/S-2026-03-21-1654-sprint21-favicon-auth-bypass.md`** (new) — agentA session doc
+- **`docs/project-memory/sessions/S-2026-03-21-1657-sprint21-chat-ux-fixes.md`** (new) — agentB session doc
 
-### Commands run
-- `git pull origin main` — already up to date
-- `pytest tests/ -v` — 636 passed
-- `git commit` + `git push -u origin HEAD`
-
-### Notes / follow-on work
-- The favicon uses an indigo (#6366f1) chat bubble design — can be replaced with a custom brand icon later
-- Auth bypass is automatic: when `GOOGLE_CLIENT_ID` is unset, the frontend skips the auth overlay (no code change needed in `chat_ui.html` — agentB's territory)
-- The `_serve_static()` method is generic enough to serve additional static assets if needed in the future
+### What was implemented
+1. **Favicon** (F-056, B-026): SVG chat bubble + ICO, served via new static route
+2. **Localhost auth bypass** (F-057): Skip Google SSO when GOOGLE_CLIENT_ID is unset
+3. **Copy button on all bot messages** (B-027, F-055): Extracted `addCopyButton()` helper, called from `addMessage()`, streaming `done` event, and stream early-exit path
+4. **Escape key stops bot speaking** (F-054): Global `keydown` listener
+5. **Voice waveform** (F-053): Canvas with 5 animated frequency bars using `AnalyserNode`
+6. **Send button on paste/autofill** (B-025): Button toggled by `updateSendButton()` on `input`/`keyup`/`change`/`paste` events

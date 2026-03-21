@@ -3345,11 +3345,35 @@ function sendVoiceToServer(audioB64, sampleRate) {
 }
 
 // TTS: speak agent responses aloud
+function stripMarkdownForSpeech(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, '')        // remove code blocks
+    .replace(/`([^`]+)`/g, '$1')           // inline code: keep text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')     // **bold** -> bold
+    .replace(/\*([^*]+)\*/g, '$1')         // *italic* -> italic
+    .replace(/__([^_]+)__/g, '$1')         // __bold__ -> bold
+    .replace(/_([^_]+)_/g, '$1')           // _italic_ -> italic
+    .replace(/~~([^~]+)~~/g, '$1')         // ~~strike~~ -> strike
+    .replace(/^#{1,6}\s+/gm, '')           // # headings -> text
+    .replace(/^\s*[-*+]\s+/gm, '')         // bullet lists -> text
+    .replace(/^\s*\d+\.\s+/gm, '')         // numbered lists -> text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [link](url) -> link
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // images -> remove
+    .replace(/^>\s+/gm, '')               // blockquotes -> text
+    .replace(/---+/g, '')                  // horizontal rules -> remove
+    .replace(/\|/g, ', ')                  // table pipes -> commas
+    .replace(/\n{3,}/g, '\n\n')            // collapse extra newlines
+    .trim();
+}
+
 function speakResponse(text) {
+  var cleanText = stripMarkdownForSpeech(text);
+  if (!cleanText) return;
+
   fetch(API + '/api/voice/synthesize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: text })
+    body: JSON.stringify({ text: cleanText })
   })
   .then(function(r) {
     if (!r.ok) return null;

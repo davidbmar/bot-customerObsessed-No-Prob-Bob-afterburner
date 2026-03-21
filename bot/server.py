@@ -591,8 +591,22 @@ def main() -> None:
     )
     srv = start_server(gw, port=cfg.server_port)
 
+    # Start Telegram polling if configured
+    poller = None
+    if cfg.telegram_enabled and cfg.telegram_token:
+        from .polling import TelegramPoller
+        poller = TelegramPoller(cfg.telegram_token, gw)
+        if poller.health_check():
+            poller.start()
+            logging.info("Telegram polling enabled")
+        else:
+            logging.warning("Telegram token invalid — polling disabled")
+            poller = None
+
     def _shutdown(sig, frame):  # type: ignore[no-untyped-def]
         logging.info("Shutting down...")
+        if poller:
+            poller.stop()
         srv.shutdown()
         sys.exit(0)
 

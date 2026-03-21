@@ -1208,7 +1208,7 @@
     <button class="btn-small" onclick="openSettings()" title="Settings" style="font-size:20px;padding:4px 12px;line-height:1">&#9881;</button>
     <button class="btn-small" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:16px;padding:4px 8px;line-height:1">&#9790;</button>
     <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panels">Debug</button>
-    <a href="https://github.com/davidbmar/bot-customerObsessed-No-Prob-Bob-afterburner#setup-guide" target="_blank" class="btn-small" title="Setup Guide" style="text-decoration:none;font-size:14px;padding:4px 8px">Setup</a>
+    <button class="btn-small" onclick="openDocs()" title="Developer Docs" style="font-size:14px;padding:4px 8px">Docs</button>
     <div class="user-badge" id="userBadge" style="display:none">
       <img id="topbarAvatar" src="" alt="">
       <span id="topbarName"></span>
@@ -1354,6 +1354,100 @@
       <button class="btn-settings danger" onclick="clearHistory()">Clear History</button>
     </div>
     <div id="testResult"></div>
+  </div>
+</div>
+
+<!-- Docs Panel -->
+<div class="settings-overlay" id="docsOverlay" onclick="if(event.target===this)closeDocs()">
+  <div class="settings-panel" style="width:560px;max-width:95vw">
+    <h2>
+      Developer Docs
+      <button class="close-btn" onclick="closeDocs()">&times;</button>
+    </h2>
+
+    <div style="overflow-y:auto;font-size:13px;line-height:1.6;color:var(--text)">
+
+      <h3 style="margin:0 0 8px;color:var(--accent)">Architecture</h3>
+      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre">
+┌──────────────────────────────────────────┐
+│       python3 -m bot.server (:1203)      │
+│                                          │
+│  Web Chat ─┐                             │
+│  Telegram ─┼──▶ Gateway ──▶ LLM         │
+│  CLI ──────┘    │             │          │
+│                 │    Ollama / Claude /    │
+│            Memory    ChatGPT             │
+│            Tools (6 Afterburner APIs)    │
+│                                          │
+│  Voice Pipeline        Auth + Storage    │
+│  ├─ STT: Whisper       ├─ Google SSO    │
+│  ├─ TTS: Piper         ├─ SQLite        │
+│  ├─ Input Filter       └─ Sessions      │
+│  └─ VAD (browser)                        │
+└──────────────────────────────────────────┘</pre>
+      <p>All interfaces share the same brain. Switching LLM in the web UI changes it for Telegram too.</p>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Quick Start</h3>
+      <ol style="padding-left:20px;margin:0">
+        <li>Install <a href="https://ollama.com" target="_blank" style="color:var(--accent)">Ollama</a> and run <code style="background:var(--bg);padding:2px 4px;border-radius:3px">ollama pull qwen3:4b</code></li>
+        <li>Clone: <code style="background:var(--bg);padding:2px 4px;border-radius:3px">git clone https://github.com/davidbmar/bot-customerObsessed-No-Prob-Bob-afterburner.git</code></li>
+        <li>Install: <code style="background:var(--bg);padding:2px 4px;border-radius:3px">python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"</code></li>
+        <li>Start: <code style="background:var(--bg);padding:2px 4px;border-radius:3px">bash scripts/start.sh</code></li>
+        <li>Open: <code style="background:var(--bg);padding:2px 4px;border-radius:3px">http://localhost:1203/chat</code></li>
+      </ol>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">LLM Providers</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:4px">Provider</th><th>Cost</th><th>Speed</th></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px">Qwen 3.5 (Ollama)</td><td>Free</td><td>~20-40s</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px">Claude Haiku</td><td>~$0.001/msg</td><td>~2s</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px">Claude Sonnet</td><td>~$0.01/msg</td><td>~3s</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px">Claude Opus</td><td>~$0.05/msg</td><td>~5s</td></tr>
+        <tr><td style="padding:4px">ChatGPT</td><td>~$0.005/msg</td><td>~2s</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Voice</h3>
+      <p style="margin:0"><strong>Push-to-talk:</strong> Hold the mic button to speak. Release to send.</p>
+      <p style="margin:4px 0"><strong>Hands-free:</strong> Toggle on — speaks naturally, auto-detects speech via VAD.</p>
+      <p style="margin:4px 0"><strong>Echo cancel:</strong> Mic pauses while bot speaks back.</p>
+      <p style="margin:4px 0"><strong>Input filter:</strong> Garbage ("um", silence, noise) is dropped before hitting the LLM.</p>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Telegram</h3>
+      <ol style="padding-left:20px;margin:0">
+        <li>Message <strong>@BotFather</strong> on Telegram, send <code style="background:var(--bg);padding:2px 4px;border-radius:3px">/newbot</code></li>
+        <li>Add token to <code style="background:var(--bg);padding:2px 4px;border-radius:3px">.env</code>: <code style="background:var(--bg);padding:2px 4px;border-radius:3px">TELEGRAM_BOT_TOKEN=your-token</code></li>
+        <li>Restart server — Telegram polling starts automatically</li>
+      </ol>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Key API Endpoints</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>POST /api/chat/stream</code></td><td>Chat with SSE streaming</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>POST /api/voice/transcribe</code></td><td>Speech to text</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>POST /api/voice/synthesize</code></td><td>Text to speech</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>POST /api/llm/switch</code></td><td>Switch LLM provider</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>GET /api/health</code></td><td>Server status</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:4px"><code>POST /api/tools/save_discovery</code></td><td>Save as seed doc</td></tr>
+        <tr><td style="padding:4px"><code>POST /api/auth/google</code></td><td>Google Sign-In</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Config</h3>
+      <p style="margin:0">All config in <code style="background:var(--bg);padding:2px 4px;border-radius:3px">.env</code> (project root):</p>
+      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px;margin:4px 0">PORT=1203
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+ALLOWED_EMAILS=you@gmail.com
+TELEGRAM_BOT_TOKEN=123:ABC...</pre>
+
+      <h3 style="margin:16px 0 8px;color:var(--accent)">Links</h3>
+      <ul style="padding-left:20px;margin:0">
+        <li><a href="https://github.com/davidbmar/bot-customerObsessed-No-Prob-Bob-afterburner" target="_blank" style="color:var(--accent)">GitHub — No Prob Bob</a></li>
+        <li><a href="https://github.com/davidbmar/traceable-searchable-adr-memory-index" target="_blank" style="color:var(--accent)">GitHub — Afterburner Framework</a></li>
+        <li><a href="https://d3gb25yycyv0d9.cloudfront.net" target="_blank" style="color:var(--accent)">Published Dashboard</a></li>
+      </ul>
+
+      <p style="margin:16px 0 0;color:var(--text-muted);font-size:11px">Built across 20 sprints · 631 tests · 57 features · 9 eval scenarios</p>
+    </div>
   </div>
 </div>
 
@@ -2397,6 +2491,13 @@ function clearHistory() {
   clearContainer(document.getElementById('messages'));
   closeSettings();
   document.getElementById('input').focus();
+}
+
+function openDocs() {
+  document.getElementById('docsOverlay').classList.add('open');
+}
+function closeDocs() {
+  document.getElementById('docsOverlay').classList.remove('open');
 }
 
 function openSettings() {

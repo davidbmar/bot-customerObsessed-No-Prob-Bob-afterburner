@@ -10,8 +10,8 @@ Constraints
 - No two agents may modify the same files
 
 Merge Order
-1. agentB-backlog-tools (independent changes — framework script + bot tools)
-2. agentA-pause-play (UI changes to chat_ui.html)
+1. agentB-backlog-tools
+2. agentA-pause-play
 
 Merge Verification
 - python3 -m pytest tests/ -x -q

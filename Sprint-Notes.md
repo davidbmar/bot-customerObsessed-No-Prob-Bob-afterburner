@@ -1,10 +1,10 @@
-# Sprint 32 — Agent Notes
+# Sprint 33 — Agent Notes
 
-*Started: 2026-03-21 21:00 UTC*
+*Started: 2026-03-21 21:11 UTC*
 
 Phase 1 Agents: 2
-- agentA-onnx-suppress
-- agentB-sprint-docs
+- agentA-project-dropdown
+- agentB-auto-rebuild
 
 Phase 2 Agents: 0
 (none)
@@ -13,51 +13,44 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-onnx-suppress
+## agentB-auto-rebuild
 
-*Completed: 2026-03-21 21:03 UTC*
+*Completed: 2026-03-21 21:14 UTC*
 
-### Files changed
-- `bot/chat_ui.html` — Added `ort.env.logLevel = 'error'` alongside existing `logSeverityLevel = 3` at page load (line 11) and before `vad.MicVAD.new()` in `startVAD()` function
-- `docs/project-memory/sessions/S-2026-03-21-2102-onnx-suppress-warnings.md` — New session doc
+**Files changed:**
+- `docs/PROJECT_STATUS_2026-03-21-sprint32.md` — new, documents Sprint 32 deliverables (B-044, B-043, F-073, B-008)
+- `docs/project-memory/sessions/S-2026-03-21-2112-sprint33-auto-rebuild.md` — new, session doc for this sprint
 
-### Commands run
+**Commands run:**
 - `git pull origin main` — already up to date
-- `python3 -m pytest tests/ -x -q` — 726 passed
-- `git commit` — `090be1c`
-- `git push -u origin HEAD` — pushed to `agentA-onnx-suppress`
+- `python3 -m pytest --tb=short -q` — 726 passed
+- `git commit` + `git push -u origin HEAD` — pushed to `agentB-auto-rebuild`
 
-### Notes / follow-on work
-- The fix uses both ONNX runtime log APIs (`logLevel` string + `logSeverityLevel` numeric) for cross-version compatibility
-- Re-applies suppression before `MicVAD.new()` as a safeguard against the deferred vad-web bundle resetting ort.env
-- No global `console.warn` override — only ONNX runtime internal logging is suppressed
-- VAD functionality is unaffected (speech detection, pause/play, barge-in all unchanged)
+**Notes / follow-on work:**
+- The auto-rebuild curl call in `sprint-run.sh` (F-074) was **already present** at lines 1005-1020 — no code changes needed. It POSTs to `http://localhost:1201/api/rebuild-data` with `projectRoot` and `slug`, with graceful failure if dashboard is offline.
+- B-047 (missing Sprint 32 PROJECT_STATUS) is resolved by the new doc.
+- B-046 (stale sprint data) will be resolved once dashboard data is rebuilt with the new Sprint 32 doc included.
 
 
 ---
 
-## agentB-sprint-docs
+## agentA-project-dropdown
 
-*Completed: 2026-03-21 21:03 UTC*
+*Completed: 2026-03-21 21:14 UTC*
 
-```
-All tasks complete. Here's the summary:
+## Files changed
+- `bot/chat_ui.html` — Fixed the `openSettings()` project list handler to correctly use `p.slug` / `p.name` from API response objects instead of treating project entries as plain strings
+- `docs/project-memory/sessions/S-2026-03-21-2114-fix-project-dropdown.md` — Session doc
 
-## Files Changed
-- **`docs/PROJECT_STATUS_2026-03-21-sprint30.md`** (new) — Sprint 30 summary: conversation summary banner (F-070), ONNX warning suppression (B-029)
-- **`docs/PROJECT_STATUS_2026-03-21-sprint31.md`** (new) — Sprint 31 summary: pause/play fix (B-039/B-040/F-071/B-041), dashboard backlog fix (B-015/B-042)
-- **`.sprint/scripts/sprint-run.sh`** (modified) — Replaced `local -A notified_agents=()` with portable string-contains approach (B-008)
-- **`docs/project-memory/sessions/S-2026-03-21-2100-sprint32-docs-zsh-fix.md`** (new) — Session doc
-
-## Commands Run
-- `git pull origin main` — already up to date
-- `bash -n .sprint/scripts/sprint-run.sh` — syntax check passed (Bash 3.2)
-- `zsh -c '...'` — verified portable notification logic works in zsh
+## Commands run
+- `git fetch origin main && git merge origin/main` — synced with main
 - `python3 -m pytest tests/ -x -q` — **726 passed**
-- `git push -u origin HEAD` — pushed to `agentB-sprint-docs`
+- `git push -u origin HEAD` — pushed branch
 
-## Notes / Follow-on Work
-- The `zsh -c 'source sprint-run.sh --help'` still fails because the script uses `BASH_SOURCE[0]` (a Bash-only variable). The script's shebang is `#!/usr/bin/env bash` so it's meant to run under Bash, not be sourced from zsh. The actual B-008 issue (`local -A` crash) is fixed — it now works on macOS Bash 3.2.
-- After sprint merge, run dashboard data rebuild so Sprints 30-31 appear in the dashboard.
-```
+## What was wrong
+The `/api/projects` endpoint returns objects like `{"slug": "noprobbob", "name": "Noprobbob"}`, but the frontend JavaScript was using each project entry as a raw value (`opt.value = p`), producing `[object Object]` in the dropdown. Fixed to destructure `p.slug` and `p.name` properly (B-045, F-075).
+
+## Notes / follow-on work
+- The project switch POST to `/api/projects/switch` was already correctly implemented — it sends `{slug: project}` which matches the backend expectation. No changes needed there.
+- The fix is backwards-compatible: if the API ever returns plain strings, the `typeof p === 'string'` guard handles it gracefully.
 

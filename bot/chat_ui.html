@@ -2497,7 +2497,7 @@ var lastSentText = '';
 var currentAbortController = null;
 var isStreaming = false;
 var streamAborted = false;
-var vadPaused = false;
+var vadPaused = true;
 
 function sendMessage() {
   unlockTTSAudio();  // iOS Safari: unlock audio on user gesture
@@ -2548,14 +2548,15 @@ function toggleVadPause() {
   if (isStreaming) return;
   vadPaused = !vadPaused;
   if (vadPaused) {
+    stopAgentSpeakingOnly();
     if (vadInstance) vadInstance.pause();
-    sendBtn = document.getElementById('sendBtn');
+    var sendBtn = document.getElementById('sendBtn');
     sendBtn.textContent = '\u25B6';
     sendBtn.title = 'Resume listening';
     setVadState('paused');
   } else {
     if (vadInstance) vadInstance.start();
-    sendBtn = document.getElementById('sendBtn');
+    var sendBtn = document.getElementById('sendBtn');
     sendBtn.textContent = '\u23F8';
     sendBtn.title = 'Pause listening';
     setVadState('listening');
@@ -3976,17 +3977,29 @@ function setAgentSpeaking(speaking) {
     stopBtn.style.display = 'none';
     agentAudio = null;
     if (typeof handsfreeActive !== 'undefined' && handsfreeActive) {
-      setVadState('listening');
+      if (vadPaused) {
+        setVadState('paused');
+      } else {
+        setVadState('listening');
+      }
     }
   }
 }
 
-function stopAgentSpeaking() {
+function stopAgentSpeakingOnly() {
   if (agentAudio) {
     agentAudio.pause();
     agentAudio.currentTime = 0;
   }
   setAgentSpeaking(false);
+}
+
+function stopAgentSpeaking() {
+  stopAgentSpeakingOnly();
+  vadPaused = true;
+  if (vadInstance) vadInstance.pause();
+  if (handsfreeActive) setVadState('paused');
+  updateSendButton();
 }
 
 // Escape key stops bot speaking or generating (works even when typing)
@@ -4435,6 +4448,7 @@ function toggleHandsfree() {
     talkBtn.style.display = 'none';
     vadStatus.classList.add('visible');
     localStorage.setItem('handsfreeMode', 'true');
+    vadPaused = false;
     startVAD();
     updateSendButton();
   } else {
@@ -4526,7 +4540,9 @@ function setVadState(state, label) {
     inputArea.classList.add('vad-filtered');
     lbl.textContent = label || 'Filtered';
     setTimeout(function() {
-      if (handsfreeActive && !vadIsSpeaking) setVadState('listening');
+      if (handsfreeActive && !vadIsSpeaking) {
+        setVadState(vadPaused ? 'paused' : 'listening');
+      }
     }, 1000);
   }
 }
@@ -4552,7 +4568,7 @@ function startVAD() {
       console.log('[vad] speech start, botSpeaking:', isBotSpeaking);
       if (isBotSpeaking && isBargeInEnabled()) {
         console.log('[vad] barge-in: stopping bot speech');
-        stopAgentSpeaking();
+        stopAgentSpeakingOnly();
       }
       setVadState('recording');
     },
@@ -4570,14 +4586,20 @@ function startVAD() {
     },
     onVADMisfire: function() {
       console.log('[vad] misfire (too short)');
-      if (handsfreeActive && !vadIsSpeaking) setVadState('listening');
+      if (handsfreeActive && !vadIsSpeaking) setVadState(vadPaused ? 'paused' : 'listening');
       if (vadIsSpeaking) setVadState('speaking');
     }
   }).then(function(micVAD) {
     vadInstance = micVAD;
-    vadInstance.start();
-    setVadState('listening');
-    console.log('[vad] started with redemptionFrames:', redemptionFrames);
+    if (vadPaused) {
+      vadInstance.pause();
+      setVadState('paused');
+      console.log('[vad] started paused (user must click Play)');
+    } else {
+      vadInstance.start();
+      setVadState('listening');
+    }
+    console.log('[vad] initialized with redemptionFrames:', redemptionFrames);
     // Connect waveform analyser to VAD's mic stream
     if (micVAD.stream) {
       setupWaveformAnalyser(micVAD.stream);
@@ -4736,7 +4758,7 @@ ttsAudioEl.addEventListener('play', function() {
   vadIsSpeaking = true;
   if (vadInstance && handsfreeActive) {
     // Don't pause VAD — let it detect speech for barge-in
-    // The onSpeechStart handler checks isBotSpeaking and calls stopAgentSpeaking()
+    // The onSpeechStart handler checks isBotSpeaking and calls stopAgentSpeakingOnly()
     setVadState('speaking');
     console.log('[vad] TTS playing, VAD still active for barge-in');
   }
@@ -4745,17 +4767,28 @@ ttsAudioEl.addEventListener('play', function() {
 ttsAudioEl.addEventListener('ended', function() {
   vadIsSpeaking = false;
   if (vadInstance && handsfreeActive) {
-    vadInstance.start();
-    setVadState('listening');
-    console.log('[vad] resumed after TTS ended');
+    if (vadPaused) {
+      vadInstance.pause();
+      setVadState('paused');
+      console.log('[vad] TTS ended, staying paused (user paused)');
+    } else {
+      vadInstance.start();
+      setVadState('listening');
+      console.log('[vad] resumed after TTS ended');
+    }
   }
 });
 
 ttsAudioEl.addEventListener('error', function() {
   vadIsSpeaking = false;
   if (vadInstance && handsfreeActive) {
-    vadInstance.start();
-    setVadState('listening');
+    if (vadPaused) {
+      vadInstance.pause();
+      setVadState('paused');
+    } else {
+      vadInstance.start();
+      setVadState('listening');
+    }
   }
 });
 
@@ -4784,8 +4817,16 @@ function restoreHandsfreePrefs() {
   var savedHandsfree = localStorage.getItem('handsfreeMode');
   if (savedHandsfree === 'true') {
     // Delay to ensure VAD library is loaded
+    // B-041: On page load, restore hands-free but start paused — user must click Play
     setTimeout(function() {
-      if (!handsfreeActive) toggleHandsfree();
+      if (!handsfreeActive) {
+        vadPaused = true;
+        toggleHandsfree();
+        vadPaused = true;
+        if (vadInstance) vadInstance.pause();
+        setVadState('paused');
+        updateSendButton();
+      }
     }, 1500);
   }
 }

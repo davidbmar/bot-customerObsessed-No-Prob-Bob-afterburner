@@ -1,4 +1,4 @@
-agentA-ui-polish — Sprint 35
+agentB-sprint-docs — Sprint 36
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -77,24 +77,34 @@ Generated PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent hi
 Sprint-Level Context
 
 Goal
-- Fix sprint-config.sh to use venv python so sprint-run.sh verification passes (B-048)
-- Generate PROJECT_STATUS docs for Sprints 33-34 so dashboard shows all sprints (B-049)
+- Generate PROJECT_STATUS docs for Sprints 33-35 so dashboard is complete (B-049)
+- Add "list all projects" capability to bot tools so users can ask "what projects are there?" (F-076)
 
 Constraints
-- agentA owns `bot/chat_ui.html` exclusively
-- agentB owns `.sprint/scripts/` and `docs/` files
+- agentA owns `bot/tools.py` and `bot/llm.py` exclusively
+- agentB owns `docs/` files exclusively
 - No two agents may modify the same files
 
 
 Objective
-- Minor UI polish: ensure the Active Project dropdown pre-selects the current active project correctly
+- Generate PROJECT_STATUS docs for Sprints 33, 34, and 35 (B-049)
 
 Tasks
-- In `bot/chat_ui.html`, when populating the Active Project dropdown from `/api/projects`, set the `selected` attribute on the option matching `active_project` from the response
-- If no active project is set, default to the first project in the list
-- After user selects a project and clicks "Save & Switch", the dropdown should reflect the new selection on next Settings open
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint33.md` following PROJECT_STATUS_TEMPLATE format
+  - Sprint 33 delivered: auto-rebuild after sprint merge (F-074), Sprint 32 PROJECT_STATUS doc (B-047), Active Project dropdown UI fix (F-075)
+  - Agents: agentA-project-dropdown, agentB-auto-rebuild
+  - Use git log between commits `5b702b4` and `deeea3f` for details
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint34.md`
+  - Sprint 34 delivered: sprint-config venv test (B-048 partial), Active Project dropdown fix attempt
+  - Agents: agentA-project-fix, agentB-config-docs
+  - Use git log between commits `37e3950` and `f68fb2b` for details
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint35.md`
+  - Sprint 35 delivered: UI polish attempt (agents had minimal output)
+  - Agents: agentA-ui-polish, agentB-test-cmd-docs
+  - Use git log between commits `d47b78c` and `71e3c0a` for details
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- Active Project dropdown pre-selects the currently active project
-- Changing active project persists across Settings panel opens
-- No regressions in existing Settings panel behavior
+- All three PROJECT_STATUS docs exist with correct summaries
+- Dashboard shows Sprints 33-35 after rebuild (35 total sprints)
+- Docs follow PROJECT_STATUS_TEMPLATE format with merge table

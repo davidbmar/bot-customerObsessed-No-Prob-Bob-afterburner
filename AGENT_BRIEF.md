@@ -1,4 +1,4 @@
-agentA-new-tool-tests — Sprint 39
+agentA-auto-rebuild-switch — Sprint 40
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -65,34 +65,39 @@ Attempted to generate sprint documentation. Agent updated its brief but did not 
 Sprint-Level Context
 
 Goal
-- Add tests for list_projects, read_project_doc, and the enriched get_project_summary tools
-- Generate PROJECT_STATUS doc for Sprint 38
+- Auto-rebuild dashboard data when a project has none — bot triggers rebuild on first query (F-080)
+- Bot auto-switches active project when user asks about a different project (F-078)
 
 Constraints
-- agentA owns `tests/test_tools.py` exclusively
+- agentA owns `bot/tools.py` exclusively
 - agentB owns `docs/` files exclusively
 - No two agents may modify the same files
 
 
 Objective
-- Add comprehensive tests for list_projects, read_project_doc, and the enriched get_project_summary
+- Auto-rebuild when project has no dashboard data (F-080)
+- Auto-switch active project on query (F-078)
 
 Tasks
-- In `tests/test_tools.py`, import `tool_list_projects` and `tool_read_project_doc` from `bot.tools`
-- Add these tests:
-  1. `test_tool_list_projects_returns_formatted_list` — mock httpx.get to return project data, verify "Registered projects:" header and project entries in output
-  2. `test_tool_list_projects_dashboard_offline` — mock httpx.get to raise ConnectError, verify "Dashboard unavailable" message
-  3. `test_tool_read_project_doc_reads_readme` — create tmp dir with README.md, mock `_find_project_root` to return it, call `tool_read_project_doc(slug="test", path="README.md")`, verify content
-  4. `test_tool_read_project_doc_blocks_path_traversal` — call with `path="../../etc/passwd"`, verify "Cannot read files outside" message
-  5. `test_tool_read_project_doc_missing_file` — call with `path="nonexistent.md"`, verify "File not found" message
-  6. `test_tool_read_project_doc_missing_project` — call with unknown slug, verify "not found" message
-  7. `test_tool_registration_includes_list_projects` — verify "list_projects" in TOOL_DEFINITIONS names
-  8. `test_tool_registration_includes_read_project_doc` — verify "read_project_doc" in TOOL_DEFINITIONS names
-  9. `test_execute_tool_dispatches_list_projects` — verify execute_tool routes correctly
-  10. `test_get_project_summary_includes_sprint_data` — mock httpx.get for status API, verify sprint data included in output
-- Run `.venv/bin/python3 -m pytest tests/test_tools.py -v` to verify
+- In `bot/tools.py`, modify `tool_get_project_summary()`:
+  - After calling `/api/project/{slug}/status`, if it returns 404 or empty data (latestSprint=0, totalSprints=0), auto-trigger a rebuild:
+    ```python
+    httpx.post(f"{DASHBOARD_URL}/api/rebuild-data",
+               json={"projectRoot": str(project_root), "slug": slug},
+               timeout=30.0)
+    ```
+  - Then retry the status API call
+  - Log: "Auto-rebuilt dashboard data for {slug}"
+- In `bot/tools.py`, modify `tool_get_project_summary()` and `tool_get_sprint_status()`:
+  - After successfully returning data, if `_config` is available and `_config.active_project != slug`, auto-switch:
+    ```python
+    if _config and hasattr(_config, 'switch_project'):
+        _config.switch_project(slug)
+    ```
+  - This way when user asks "status of grassyknoll", the active project switches to grassyknoll
+- Add a test: `test_get_project_summary_triggers_rebuild` — mock status API to return empty first, then full data after rebuild call
 
 Acceptance Criteria
-- All 10 new tests pass
-- All existing tests still pass
-- Test count increases from 726 to 736+
+- Asking about a project with no dashboard data auto-triggers rebuild
+- Active project switches when user queries a different project
+- All existing tests pass + 1 new test

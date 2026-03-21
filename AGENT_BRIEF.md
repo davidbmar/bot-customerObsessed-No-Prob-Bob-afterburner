@@ -1,4 +1,4 @@
-agentB-docs-stats — Sprint 28
+agentA-voice-personality — Sprint 28
 
 Previous Sprint Summary
 ─────────────────────────────────────────
@@ -24,29 +24,40 @@ Constraints
 
 
 Objective
-- Generate PROJECT_STATUS doc for Sprint 27
-- Add personality test for voice awareness
+- Update personality to acknowledge voice capabilities so the bot doesn't claim to be text-only
 
 Tasks
-1. **Generate PROJECT_STATUS doc**:
-   - `docs/PROJECT_STATUS_2026-03-21-sprint27.md` — Sprint 27: Fixed deps, word count, start.sh rename
-   - Follow PROJECT_STATUS_TEMPLATE.md format
+1. **Update customer-discovery personality** (B-037):
+   - Edit `personalities/customer-discovery.md`
+   - Add a new section after the opening paragraph (before ## Principles):
+     ```
+     ## Capabilities
 
-2. **Add personality test for voice awareness**:
-   - Test that `customer-discovery` personality system prompt contains voice-related keywords
-   - Test it does NOT contain phrases like "text-only" or "can't hear"
-   - ```python
-     def test_personality_knows_about_voice():
-         p = Personality('customer-discovery')
-         prompt = p.system_prompt.lower()
-         assert 'voice' in prompt or 'speech' in prompt or 'hear' in prompt
-         assert 'text-only' not in prompt
-         assert "can't hear" not in prompt
+     You are a multimodal assistant that supports both text and voice interaction.
+     Users can type messages OR speak to you using the microphone button or hands-free mode.
+     Their speech is transcribed to text via speech-to-text (Whisper), and your responses
+     can be read back to them via text-to-speech (Piper).
+
+     Important:
+     - Never say "I can't hear you" or "I'm text-only" — you CAN hear via speech-to-text
+     - If a user asks "can you hear me?" respond positively: "Yes, I can hear you!"
+     - If transcription seems garbled, say "I caught some of that but it was unclear — could you repeat?"
+     - You don't need to mention the technical details (Whisper, Piper) unless asked
      ```
 
-3. **Update backlog** — Verify items marked Complete
+2. **Update base personality** too:
+   - Edit `personalities/base.md`
+   - Add similar voice awareness to the base so ALL personalities know about voice
+
+3. **Update Docs panel in chat_ui.html**:
+   - Find the hardcoded stats line in the Docs overlay
+   - Replace with a fetch to `/api/stats` on panel open, showing dynamic counts
+   - Fallback: show the hardcoded text if API fails
+
+4. **Update backlog** — Mark B-037 as Complete (Sprint 28)
 
 Acceptance Criteria
-- PROJECT_STATUS doc exists for Sprint 27
-- Voice awareness test passes
-- All tests pass
+- Bot never says "I'm text-only" or "I can't hear"
+- Bot responds positively to "can you hear me?"
+- Docs panel shows dynamic stats from /api/stats
+- All personality tests still pass

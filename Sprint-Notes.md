@@ -1,10 +1,10 @@
-# Sprint 19 — Agent Notes
+# Sprint 20 — Agent Notes
 
-*Started: 2026-03-20 08:02 UTC*
+*Started: 2026-03-21 06:13 UTC*
 
 Phase 1 Agents: 2
-- agentA-export-and-history
-- agentB-markdown-and-dates
+- agentA-input-filter-fastpath
+- agentB-hands-free-vad
 
 Phase 2 Agents: 0
 (none)
@@ -13,53 +13,48 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-export-and-history
+## agentB-hands-free-vad
 
-*Completed: 2026-03-20 08:07 UTC*
+*Completed: 2026-03-21 06:18 UTC*
 
-```
-All tasks complete. Here's the summary:
+### Files changed
+- `bot/chat_ui.html` — All 7 tasks from the brief implemented (VAD, toggle, echo cancellation, silence threshold, visual feedback, filtered responses)
+- `docs/project-memory/backlog/README.md` — F-049, F-050, F-051 marked Complete (Sprint 20)
+- `docs/project-memory/sessions/S-2026-03-21-0617-hands-free-vad.md` — Session doc created
 
----
-
-## Files Changed
-| File | Change |
-|------|--------|
-| `bot/tools.py` | Added `structured`, `messages`, `provider` params to `tool_save_discovery`; added `_format_structured_discovery()` and `_extract_section()` helpers |
-| `bot/server.py` | Updated `_handle_save_discovery` to pass `structured=True` with parsed messages and provider |
-| `tests/test_tools.py` | Added 15 new tests for structured export (extract_section, format_structured_discovery, save_discovery with structured=True) |
-| `tests/test_sprint18_ui_polish.py` | Updated PROJECT_STATUS count assertion from 17 → 18 |
-| `docs/PROJECT_STATUS_2026-03-20-sprint18.md` | Generated Sprint 18 status doc |
-| `docs/project-memory/backlog/README.md` | Marked F-047 as Complete (Sprint 19) |
-
-## Commands Run
-- `git pull origin main` — sync with main
-- `python3 scripts/generate_sprint_history.py 18 18` — generate Sprint 18 PROJECT_STATUS
-- `pytest tests/ -v` — **485 passed, 0 failures**
-- `git push -u origin HEAD` — pushed to remote
-
-## Notes / Follow-on Work
-- The structured export extracts sections from bot synthesis messages via regex. If the bot hasn't triggered synthesis yet (< 5 exchanges), placeholder text `[Not yet extracted from conversation]` is used — the raw conversation is always included.
-- agentB owns `chat_ui.html` for F-044 (markdown rendering) and F-045 (date grouping) — those were not touched here.
-```
-
-
----
-
-## agentB-markdown-and-dates
-
-*Completed: 2026-03-20 08:08 UTC*
-
-**Files changed:**
-- `bot/chat_ui.html` — markdown rendering fixes + date grouping
-- `docs/project-memory/backlog/README.md` — F-044, F-045 marked Complete
-- `docs/project-memory/sessions/S-2026-03-20-0807-markdown-and-dates.md` — session doc (new)
-
-**Commands run:**
-- `python3 -m pytest tests/ -v` — 470 passed
+### Commands run
+- `git pull origin main` — synced with main
+- `.venv/bin/python3 -m pytest tests/ -v` — 519 passed, 10 failed (pre-existing: missing openai/anthropic packages, stale doc count assertion)
 - `git commit` + `git push -u origin HEAD`
 
-**Notes / follow-on work:**
-- The markdown renderer covers the required subset (**bold**, *italic*, `code`, ```code blocks```, lists, headers). More complex markdown (tables, blockquotes, nested lists) is not supported — could be added in a future sprint if needed.
-- Date separators work for both new messages and restored conversations. Existing saved conversations without `dateISO` will group all messages under the current date on first restore, then persist correct dates going forward.
+### Notes / follow-on work
+- 10 test failures are all pre-existing (missing `openai`/`anthropic` pip packages and a stale `test_total_status_docs_count` expecting 18 docs but 19 exist). None related to this change.
+- VAD WASM loading may need explicit path config if CDN caching misbehaves in some environments
+- Mobile Safari may restrict continuous mic access in background tabs — worth testing on device
+
+
+---
+
+## agentA-input-filter-fastpath
+
+*Completed: 2026-03-21 06:19 UTC*
+
+### Files changed
+- **`bot/input_filter.py`** (NEW) — STT quality classifier with `InputQuality` enum and `classify()` function
+- **`bot/fast_path.py`** (NEW) — Instant answers for "help", "reset", "who are you" without LLM
+- **`bot/server.py`** — Wired filter + fast path into `/api/voice/transcribe`; response now includes `filtered`, `quality`, `duration_s`, `fast_path_response`
+- **`tests/test_input_filter.py`** (NEW) — 63 tests
+- **`tests/test_fast_path.py`** (NEW) — 38 tests
+- **`docs/project-memory/backlog/README.md`** — F-048, F-052 marked Complete (Sprint 20)
+- **`docs/project-memory/sessions/S-2026-03-21-0617-sprint20-input-filter-fastpath.md`** (NEW)
+
+### Commands run
+- `git pull origin main`
+- `python3 -m pytest tests/ -v` → **630 passed**, 1 pre-existing failure
+- `git commit` + `git push -u origin HEAD`
+
+### Notes / follow-on work
+- **1 pre-existing test failure**: `test_sprint18_ui_polish.py::TestProjectStatusDocs::test_total_status_docs_count` — not related to this branch
+- **Chat endpoint**: Fast path is only wired into the voice transcribe endpoint. Could also be added to `/api/chat` for text-based fast paths
+- **Fixed regex bug**: The repeated-word hallucination pattern from the reference didn't actually match "the the the" — fixed with a non-capturing group for whitespace
 

@@ -1,9 +1,9 @@
-# Sprint 36 — Agent Notes
+# Sprint 37 — Agent Notes
 
-*Started: 2026-03-21 22:03 UTC*
+*Started: 2026-03-21 22:23 UTC*
 
 Phase 1 Agents: 2
-- agentA-list-projects
+- agentA-worktree-venv
 - agentB-sprint-docs
 
 Phase 2 Agents: 0
@@ -11,24 +11,24 @@ Phase 2 Agents: 0
 
 Automated summaries from each agent are appended below as they complete.
 
+
+---
 ---
 
+
+## agentA-worktree-venv
 ## agentB-sprint-docs
 
-*Completed: 2026-03-21 22:04 UTC*
+
+*Completed: 2026-03-21 22:23 UTC*
+*Completed: 2026-03-21 22:23 UTC*
+
 
 ```
+```
+Not logged in · Please run /login
 Not logged in · Please run /login
 ```
 
-
----
-
-## agentA-list-projects
-
-*Completed: 2026-03-21 22:04 UTC*
-
-```
-Not logged in · Please run /login
 ```
 

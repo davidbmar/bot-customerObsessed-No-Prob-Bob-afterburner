@@ -1,61 +1,55 @@
-# Sprint 33
+# Sprint 34
 
 Goal
-- Auto-rebuild dashboard data after sprint merges so bot always returns current sprint info (F-074, B-046)
-- Generate PROJECT_STATUS doc for Sprint 32 and fix Active Project dropdown (B-047, B-045, F-075)
+- Fix Active Project dropdown to show registered projects (B-045)
+- Fix sprint-config.sh to use venv python for test verification (B-048)
+- Generate PROJECT_STATUS doc for Sprint 33 (B-049)
 
 Constraints
-- agentA owns `bot/chat_ui.html` exclusively
+- agentA owns `bot/chat_ui.html` and `bot/config.py` exclusively
 - agentB owns `.sprint/scripts/` and `docs/` files
 - No two agents may modify the same files
 
 Merge Order
-1. agentB-auto-rebuild
-2. agentA-project-dropdown
+1. agentB-config-docs
+2. agentA-project-fix
 
 Merge Verification
-- python3 -m pytest tests/ -x -q
+- .venv/bin/python3 -m pytest tests/ -x -q
 
-## agentA-project-dropdown
+## agentA-project-fix
 
 Objective
-- Fix the empty Active Project dropdown in Settings panel (B-045, F-075)
+- Fix Active Project dropdown to correctly discover and display registered projects (B-045)
 
 Tasks
-- In `bot/chat_ui.html`, find the Active Project combobox in the Settings panel
-- On Settings panel open, fetch project list from `/api/projects` (the bot server proxies or the dashboard serves this)
-- Populate the dropdown with project slugs and names from the response
-- Pre-select the currently active project
-- When the user selects a different project, send a POST to update the active project in the bot config
-- If only one project is registered, still show it (don't hide the dropdown)
+- In `bot/config.py`, fix `_auto_discover_projects()` to handle the `projects.json` format which is `{"projects": [...], "activeProject": "slug"}` — currently expects a plain list
+- The function should extract the `projects` array from the dict, then iterate over entries extracting `slug` and `rootPath`
+- Also try the dashboard API at `http://127.0.0.1:1201/api/projects` as a discovery source — the dashboard is usually running
+- In `bot/chat_ui.html`, ensure the Active Project dropdown fetches from the bot server's `/api/projects` endpoint on Settings panel open
+- If projects are found, populate the dropdown with `{slug}: {name}` entries
+- Pre-select the active project
 
 Acceptance Criteria
-- Settings panel Active Project dropdown shows all registered Afterburner projects
-- Selecting a different project updates the active project for tool calls
-- Dropdown is populated on every Settings panel open (not cached stale)
+- Settings panel Active Project dropdown shows registered Afterburner projects (not "No projects registered")
+- Bot config correctly discovers projects from dashboard projects.json or API
+- Existing tests pass
 
-## agentB-auto-rebuild
+## agentB-config-docs
 
 Objective
-- Add auto-rebuild to sprint-run.sh so dashboard data is always current (F-074)
-- Generate PROJECT_STATUS for Sprint 32 (B-047)
+- Fix DEFAULT_TEST_CMD to use venv python (B-048)
+- Generate Sprint 33 PROJECT_STATUS doc (B-049)
 
 Tasks
-- In `.sprint/scripts/sprint-run.sh`, after the merge+push step, add a curl call to rebuild dashboard data:
-  ```bash
-  curl -sf -X POST http://localhost:1201/api/rebuild-data \
-    -H 'Content-Type: application/json' \
-    -d "{\"projectRoot\":\"$PROJECT_ROOT\",\"slug\":\"$PROJECT_SLUG\"}" || true
-  ```
-- Place the rebuild call right after `git push` in the merge phase
-- Also add it after manual merge completion (the fallback path)
-- Create `docs/PROJECT_STATUS_2026-03-21-sprint32.md` following PROJECT_STATUS_TEMPLATE format
-  - Sprint 32 delivered: ONNX warning suppression (B-044), PROJECT_STATUS docs for Sprints 30-31 (B-043/F-073), sprint-run.sh zsh fix (B-008)
+- In `.sprint/scripts/sprint-config.sh`, change `DEFAULT_TEST_CMD` to use `.venv/bin/python3 -m pytest tests/ -x -q` instead of the system python3 personality check
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint33.md` following PROJECT_STATUS_TEMPLATE format
+  - Sprint 33 delivered: auto-rebuild after merge (F-074), Sprint 32 PROJECT_STATUS doc (B-047), Active Project dropdown fix attempt (B-045/F-075)
   - Use git log for commit details
 - Create a session doc for this sprint
 
 Acceptance Criteria
-- `sprint-run.sh` calls `/api/rebuild-data` after merge+push
-- `docs/PROJECT_STATUS_2026-03-21-sprint32.md` exists with correct summary
-- Dashboard shows Sprint 32 after rebuild
-- Rebuild failure (dashboard offline) doesn't break sprint-run.sh (|| true)
+- `.sprint/scripts/sprint-config.sh` DEFAULT_TEST_CMD uses `.venv/bin/python3`
+- sprint-run.sh verification passes on macOS (no "No module named pytest" error)
+- `docs/PROJECT_STATUS_2026-03-21-sprint33.md` exists with correct summary
+- Dashboard shows Sprint 33 after rebuild

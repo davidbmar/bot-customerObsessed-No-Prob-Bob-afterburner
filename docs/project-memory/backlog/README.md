@@ -50,9 +50,11 @@ Track bugs and feature requests here.
 | B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Complete (Sprint 31) |
 | B-043 | Missing PROJECT_STATUS docs for Sprints 30-31 — dashboard only shows up to Sprint 29, needs generation | Medium | Complete (Sprint 32) |
 | B-044 | ONNX warnings still fire despite ort.env.logLevel='error' — WASM compilation warnings happen before JS config takes effect | Low | Open |
-| B-045 | Active Project dropdown in Settings panel is empty — shows blank combobox, no projects listed | Low | Open |
-| B-046 | Bot reports Sprint 29 as "latest" when Sprints 30-31 exist — dashboard API returns stale data until rebuild runs | Medium | Open |
-| B-047 | Missing PROJECT_STATUS doc for Sprint 32 — dashboard shows 31 sprints but Sprint 32 was completed | Medium | Open |
+| B-045 | Active Project dropdown shows "No projects registered" — _auto_discover_projects() can't parse projects.json dict format (expects list, gets {projects:[...]}) | Medium | Open |
+| B-046 | Bot reports Sprint 29 as "latest" when Sprints 30-32 exist — feedback_on_sprint reads stale sprints.json, needs rebuild after each sprint | Medium | Complete (Sprint 33, F-074 auto-rebuild) |
+| B-047 | Missing PROJECT_STATUS doc for Sprint 32 — dashboard shows 31 sprints but Sprint 32 was completed | Medium | Complete (Sprint 33) |
+| B-048 | sprint-config.sh DEFAULT_TEST_CMD uses system python3 instead of .venv/bin/python3 — sprint-run.sh verification fails on macOS | Medium | Open |
+| B-049 | Missing PROJECT_STATUS doc for Sprint 33 — needs generation for dashboard to show Sprint 33 | Medium | Open |
 
 ## Features
 

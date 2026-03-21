@@ -1,55 +1,54 @@
-# Sprint 31
+# Sprint 32
 
 Goal
-- Fix the broken pause/play hands-free behavior so Pause stops BOTH speaking AND listening (B-039, B-040, F-071)
-- Fix dashboard backlog showing 0 items by correcting the backlog file path in build-sprint-data.sh (B-015)
+- Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows full history (B-043, F-073)
+- Fix sprint-run.sh `local -A` crash on zsh so automated sprints complete end-to-end (B-008)
+- Suppress ONNX runtime console warnings from Silero VAD initialization (B-044)
 
 Constraints
 - agentA owns `bot/chat_ui.html` exclusively
-- agentB owns `scripts/build-sprint-data.sh` in the afterburner repo AND `bot/tools.py` in this repo
+- agentB owns `.sprint/scripts/sprint-run.sh` and `docs/` files
 - No two agents may modify the same files
 
 Merge Order
-1. agentB-backlog-tools
-2. agentA-pause-play
+1. agentB-sprint-docs
+2. agentA-onnx-suppress
 
 Merge Verification
 - python3 -m pytest tests/ -x -q
 
-## agentA-pause-play
+## agentA-onnx-suppress
 
 Objective
-- Fix Pause/Play toggle so it stops BOTH TTS and VAD listening (B-039, B-040, F-071)
-- Prevent hands-free from auto-starting on page load (B-041)
+- Suppress ONNX runtime console warnings that fire on every page load (B-044)
 
 Tasks
-- In `bot/chat_ui.html`, make the Pause button (⏸) call BOTH `stopAgentSpeaking()` AND set `vadPaused = true` so VAD stops capturing audio
-- Make the Play button (▶) set `vadPaused = false` to resume VAD listening
-- In the TTS `ended` event handler, do NOT reset `vadPaused` — respect user's explicit pause state
-- On page load, set `vadPaused = true` by default — user must click Play or the Hands-free toggle to start listening
-- The "Stop speaking" banner button (`#stopSpeakingBtn`) should also pause VAD (set `vadPaused = true`)
-- Add visual indicator: when paused, show "Paused" text next to the button instead of "Listening..."
+- In `bot/chat_ui.html`, wrap the Silero VAD ONNX model initialization to suppress console warnings
+- The ONNX runtime emits ~10 `[W:onnxruntime:...]` warnings from `ort.min.js` during model load — these are harmless but noisy
+- Options: (a) override `console.warn` temporarily during ONNX init, (b) use ONNX runtime's `logSeverityLevel` config to silence warnings, (c) set `ort.env.logLevel = 'error'` before model load
+- Prefer option (c) — `ort.env.logLevel = 'error'` is the cleanest approach
+- Verify no other warnings are suppressed (only ONNX init warnings)
 
 Acceptance Criteria
-- Clicking Pause stops TTS playback AND stops mic listening — no phantom messages
-- Clicking Play resumes listening — VAD starts detecting speech again
-- "Stop speaking" also pauses the mic
-- Fresh page load does NOT auto-listen — user must explicitly activate hands-free
-- Existing keyboard shortcut (Escape to stop speaking) also pauses VAD
+- Page load produces 0 console warnings from ONNX runtime
+- VAD still works correctly (speech detection, pause/play)
+- No other console output is suppressed
 
-## agentB-backlog-tools
+## agentB-sprint-docs
 
 Objective
-- Fix B-015: dashboard backlog shows 0 because build-sprint-data.sh looks for wrong file path
-- Fix B-042: bot tools show raw errors when dashboard API is unreachable
+- Generate PROJECT_STATUS docs for Sprints 30-31 (B-043, F-073)
+- Fix sprint-run.sh `local -A` crash on zsh (B-008)
 
 Tasks
-- In `scripts/build-sprint-data.sh` (AFTERBURNER REPO at ~/src/traceable-searchable-adr-memory-index), change `BACKLOG_FILE` from `${PROJECT_ROOT}/docs/project-memory/backlog.md` to also check `${PROJECT_ROOT}/docs/project-memory/backlog/README.md` (the actual location)
-- In `bot/tools.py` (THIS REPO), wrap the `httpx.get` calls in `tool_get_sprint_status` and `tool_feedback_on_sprint` with proper error handling so connection errors return a friendly message like "Dashboard unavailable, using local data" instead of raising exceptions
-- Run `bash ~/src/traceable-searchable-adr-memory-index/scripts/build-sprint-data.sh` against this project after fixing the path to verify backlog.json gets populated
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint30.md` following PROJECT_STATUS_TEMPLATE format, using Sprint 30 brief from `.sprint/history/` and git log for details
+- Create `docs/PROJECT_STATUS_2026-03-21-sprint31.md` following PROJECT_STATUS_TEMPLATE format, using Sprint 31 brief from `.sprint/history/` and git log for details
+- In `.sprint/scripts/sprint-run.sh`, replace `local -A` (bash 4+ only) with a zsh-compatible approach — use regular variables or arrays instead of associative arrays
+- Test the fix: `zsh -c 'source .sprint/scripts/sprint-run.sh --help'` should not error
+- Create a session doc for this sprint
 
 Acceptance Criteria
-- `dist/projects/bot-customerobsessed/data/backlog.json` contains actual bugs and features after rebuild
-- Dashboard Backlog page shows correct counts (not 0)
-- `tool_get_sprint_status("nonexistent")` returns a friendly error, not a stack trace
-- All existing tests pass: `python3 -m pytest tests/ -x -q`
+- `docs/PROJECT_STATUS_2026-03-21-sprint30.md` exists with correct sprint summary
+- `docs/PROJECT_STATUS_2026-03-21-sprint31.md` exists with correct sprint summary
+- `sprint-run.sh` no longer crashes with `local: -A: invalid option` on zsh
+- Dashboard shows Sprints 30 and 31 after rebuild

@@ -20,7 +20,7 @@ Track bugs and feature requests here.
 | B-012 | Tool naming inconsistency — feedback_on_sprint vs get_sprint_feedback pattern | Medium | Fixed (Sprint 9) |
 | B-013 | Debug panel visible by default on page load — F-019 (Sprint 10) may not have fully landed | Low | Complete (Sprint 16) |
 | B-014 | No PROJECT_STATUS docs exist — sprint-merge.sh never ran (all 11 sprints merged manually or via sprint-run.sh that crashed) | High | Complete (Sprint 12) |
-| B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Open |
+| B-015 | Dashboard backlog counts show 0 — build-sprint-data.sh doesn't parse backlog/README.md into backlog.json | Medium | Complete (Sprint 31) |
 | B-016 | Ollama Qwen 3.5 response latency ~22s for simple messages — acceptable but noticeable | Low | Open |
 | B-017 | `python3 bot/server.py` fails with relative import error — must use `python3 -m bot.server` (F-022 regression) | Medium | Complete (Sprint 13) |
 | B-018 | Token count inflated — shows 1378 out tokens for a 20-word response, likely counting thinking tokens or misreporting | Low | Complete (Sprint 14) |
@@ -44,10 +44,12 @@ Track bugs and feature requests here.
 | B-032 | Docs panel stats hardcoded — says "20 sprints · 631 tests · 57 features" instead of actual counts (now 21/636/59) | Low | Complete (Sprint 22, /api/stats added Sprint 23) |
 | B-033 | Tool result message uses OpenAI format for Claude API — causes 400 error when bot calls Afterburner tools with Claude provider | Critical | Fixed (hotfix) |
 | B-034 | Restored bot messages lose paragraph spacing — old conversations saved via textContent have "word.Next sentence" instead of paragraph breaks | Medium | Complete (Sprint 23) |
-| B-039 | Pause button doesn't stop VAD listening — clicking Pause (⏸) only cancels TTS but VAD immediately resumes and captures ambient noise, sending phantom messages to LLM | High | Open |
-| B-040 | Stop speaking doesn't pause mic — "Stop speaking" banner button cancels TTS but VAD re-triggers instantly, picking up background audio as new user input | High | Open |
-| B-041 | Hands-free auto-starts on page load — VAD begins listening immediately when page loads without user opting in, causing unintended voice captures | Medium | Open |
-| B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Open |
+| B-039 | Pause button doesn't stop VAD listening — clicking Pause (⏸) only cancels TTS but VAD immediately resumes and captures ambient noise, sending phantom messages to LLM | High | Complete (Sprint 31) |
+| B-040 | Stop speaking doesn't pause mic — "Stop speaking" banner button cancels TTS but VAD re-triggers instantly, picking up background audio as new user input | High | Complete (Sprint 31) |
+| B-041 | Hands-free auto-starts on page load — VAD begins listening immediately when page loads without user opting in, causing unintended voice captures | Medium | Complete (Sprint 31) |
+| B-042 | Bot tools return raw error instead of friendly message when dashboard API unreachable — get_sprint_status and get_project_summary show "Tool error: Expecting value" instead of helpful fallback | Medium | Complete (Sprint 31) |
+| B-043 | Missing PROJECT_STATUS docs for Sprints 30-31 — dashboard only shows up to Sprint 29, needs generation | Medium | Open |
+| B-044 | B-029 marked Complete but ONNX warnings still fire — 10 console warnings on every page load from Silero VAD WASM | Low | Open |
 
 ## Features
 
@@ -123,5 +125,6 @@ Track bugs and feature requests here.
 | F-068 | Keyboard shortcuts help — show available shortcuts (Enter=send, Escape=stop speaking, etc.) in a tooltip or modal | Low | Complete (Sprint 26) |
 | F-069 | Voice transcription discard button — show transcription preview with discard/confirm before auto-sending | High | Complete (Sprint 29) |
 | F-070 | Conversation summary banner — collapsible summary at top of long conversations showing key topics | Medium | Complete (Sprint 30) |
-| F-071 | Unified play/pause toggle for hands-free — single button that stops TTS AND pauses VAD on pause, resumes VAD on play; clear visual state (mic icon vs pause icon) | High | Open |
-| F-072 | Hands-free opt-in — require explicit user tap to activate hands-free mode instead of auto-starting on page load | Medium | Open |
+| F-071 | Unified play/pause toggle for hands-free — single button that stops TTS AND pauses VAD on pause, resumes VAD on play; clear visual state (mic icon vs pause icon) | High | Complete (Sprint 31) |
+| F-072 | Hands-free opt-in — require explicit user tap to activate hands-free mode instead of auto-starting on page load | Medium | Complete (Sprint 31) |
+| F-073 | Generate PROJECT_STATUS docs for Sprints 30-31 so dashboard shows all recent sprint history | Medium | Open |

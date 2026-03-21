@@ -1,0 +1,63 @@
+## Planning Context for Next Sprint
+
+This section provides the codebase inventory needed to plan the next sprint.
+
+### Database Migrations
+
+**Total migration files: 0 | Highest number: 000 | Next available: 001**
+
+Existing migrations:
+```
+```
+
+### API Routes
+
+**Registered routes in server.ts:**
+```
+(none found)
+```
+
+**Route files:** 
+
+### Intelligence Engine Modules
+
+```
+```
+
+### Barrel Exports (intelligence-engine)
+
+**0 export lines** in `services/intelligence-engine/src/index.ts`
+
+Export categories:
+```
+(no section comments)
+```
+
+### Packages (0)
+
+```
+```
+
+### Services (0)
+
+```
+```
+
+### iOS Directory Structure
+
+```
+```
+
+**0 Swift files**
+
+### Sprint Brief Rules
+
+- **Two-phase model**: Phase 1 = new files only (no index.ts, server.ts, api-types). Phase 2 = barrel exports, route wiring, OpenAPI types.
+- **Test naming**: `agentX_slug.test.ts` (uppercase letter, underscore, slug)
+- **Test imports**: Phase 1 imports directly from source, not barrels
+- **No file collisions**: No two agents may create or modify the same file
+- **Migration numbers**: Pre-assign unique numbers per agent
+- **Agent naming**: `agent<LETTER>-<slug>` (uppercase A-Z)
+- **iOS rules**: Use canonical components, RosaDesignSystem colors, don't modify five-tab nav
+- **Barrel + route wiring can be combined** into a single Phase 2 agent
+

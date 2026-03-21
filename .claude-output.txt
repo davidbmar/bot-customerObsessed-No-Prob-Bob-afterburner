@@ -1,7 +1,5 @@
 `★ Insight ─────────────────────────────────────`
-**VAD audio pipeline shortcut**: The push-to-talk path goes MediaRecorder (webm) → FileReader → AudioContext.decodeAudioData → OfflineAudioContext (resample to 16kHz) → PCM int16 → base64. The VAD path skips all of this because `vad-web` already provides a Float32Array at 16kHz in its `onSpeechEnd` callback — we just convert directly to Int16Array and base64-encode. This is significantly simpler and lower latency.
-
-**Echo cancellation simplicity**: Rather than using WebAudio's echo cancellation nodes or complex signal processing, we leverage the fact that VAD has `pause()`/`start()` methods. By listening to the existing `ttsAudioEl` play/ended events, we get echo cancellation with ~4 lines of event wiring.
+**Integration test pattern**: The tests use `create_app(gateway, port=0)` which lets the OS pick a free port — this avoids port conflicts in CI. The `live_server` fixture starts a real threaded HTTP server so we test actual HTTP behavior (headers, status codes, content) rather than mocking at the handler level. This gives higher confidence than unit tests for routing changes.
 `─────────────────────────────────────────────────`
 
 ---
@@ -9,16 +7,19 @@
 ## Summary
 
 ### Files changed
-- `bot/chat_ui.html` — All 7 tasks from the brief implemented (VAD, toggle, echo cancellation, silence threshold, visual feedback, filtered responses)
-- `docs/project-memory/backlog/README.md` — F-049, F-050, F-051 marked Complete (Sprint 20)
-- `docs/project-memory/sessions/S-2026-03-21-0617-hands-free-vad.md` — Session doc created
+- **`bot/static/favicon.svg`** (new) — SVG chat bubble favicon
+- **`bot/static/favicon.ico`** (new) — 16x16 ICO favicon
+- **`bot/server.py`** — Added `STATIC_DIR`, `/favicon.ico` + `/favicon.svg` routes, `_serve_static()` method, `<link rel="icon">` injection, localhost auth bypass logging
+- **`tests/test_favicon_and_auth.py`** (new) — 5 integration tests for favicon serving and auth bypass
+- **`docs/project-memory/backlog/README.md`** — Marked F-056, F-057, B-026 as Complete (Sprint 21)
+- **`docs/project-memory/sessions/S-2026-03-21-1654-sprint21-favicon-auth-bypass.md`** (new) — Session doc
 
 ### Commands run
-- `git pull origin main` — synced with main
-- `.venv/bin/python3 -m pytest tests/ -v` — 519 passed, 10 failed (pre-existing: missing openai/anthropic packages, stale doc count assertion)
+- `git pull origin main` — already up to date
+- `pytest tests/ -v` — 636 passed
 - `git commit` + `git push -u origin HEAD`
 
 ### Notes / follow-on work
-- 10 test failures are all pre-existing (missing `openai`/`anthropic` pip packages and a stale `test_total_status_docs_count` expecting 18 docs but 19 exist). None related to this change.
-- VAD WASM loading may need explicit path config if CDN caching misbehaves in some environments
-- Mobile Safari may restrict continuous mic access in background tabs — worth testing on device
+- The favicon uses an indigo (#6366f1) chat bubble design — can be replaced with a custom brand icon later
+- Auth bypass is automatic: when `GOOGLE_CLIENT_ID` is unset, the frontend skips the auth overlay (no code change needed in `chat_ui.html` — agentB's territory)
+- The `_serve_static()` method is generic enough to serve additional static assets if needed in the future

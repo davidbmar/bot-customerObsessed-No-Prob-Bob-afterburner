@@ -1,24 +1,23 @@
-`★ Insight ─────────────────────────────────────`
-**VAD audio pipeline shortcut**: The push-to-talk path goes MediaRecorder (webm) → FileReader → AudioContext.decodeAudioData → OfflineAudioContext (resample to 16kHz) → PCM int16 → base64. The VAD path skips all of this because `vad-web` already provides a Float32Array at 16kHz in its `onSpeechEnd` callback — we just convert directly to Int16Array and base64-encode. This is significantly simpler and lower latency.
-
-**Echo cancellation simplicity**: Rather than using WebAudio's echo cancellation nodes or complex signal processing, we leverage the fact that VAD has `pause()`/`start()` methods. By listening to the existing `ttsAudioEl` play/ended events, we get echo cancellation with ~4 lines of event wiring.
-`─────────────────────────────────────────────────`
-
 ---
 
 ## Summary
 
 ### Files changed
-- `bot/chat_ui.html` — All 7 tasks from the brief implemented (VAD, toggle, echo cancellation, silence threshold, visual feedback, filtered responses)
-- `docs/project-memory/backlog/README.md` — F-049, F-050, F-051 marked Complete (Sprint 20)
-- `docs/project-memory/sessions/S-2026-03-21-0617-hands-free-vad.md` — Session doc created
+- `bot/chat_ui.html` — all 4 UX fixes
+- `docs/project-memory/backlog/README.md` — 5 items marked Complete (Sprint 21)
+- `docs/project-memory/sessions/S-2026-03-21-1657-sprint21-chat-ux-fixes.md` — new session doc
 
 ### Commands run
-- `git pull origin main` — synced with main
-- `.venv/bin/python3 -m pytest tests/ -v` — 519 passed, 10 failed (pre-existing: missing openai/anthropic packages, stale doc count assertion)
-- `git commit` + `git push -u origin HEAD`
+- `git fetch origin main && git merge origin/main` — synced with main
+- `.venv/bin/python3 -m pytest tests/ -v` — 621 passed, 9 failed (pre-existing missing optional deps), 1 skipped
+
+### What was implemented
+1. **Copy button on all bot messages** (B-027, F-055): Extracted `addCopyButton()` helper, called from `addMessage()`, streaming `done` event, and stream early-exit path
+2. **Escape key stops bot speaking** (F-054): Global `keydown` listener, works even when input is focused
+3. **Voice waveform** (F-053): Canvas element with 5 animated frequency bars using `AnalyserNode` connected to VAD's mic stream, shown only during recording
+4. **Send button on paste/autofill** (B-025): Button starts disabled, toggled by `updateSendButton()` on `input`/`keyup`/`change`/`paste` events
 
 ### Notes / follow-on work
-- 10 test failures are all pre-existing (missing `openai`/`anthropic` pip packages and a stale `test_total_status_docs_count` expecting 18 docs but 19 exist). None related to this change.
-- VAD WASM loading may need explicit path config if CDN caching misbehaves in some environments
-- Mobile Safari may restrict continuous mic access in background tabs — worth testing on device
+- The 9 test failures are pre-existing — all `ModuleNotFoundError: No module named 'openai'` or `'anthropic'` (optional provider dependencies not installed)
+- The waveform tries to use `vadInstance.stream` from the VAD library; falls back to a separate `getUserMedia` call if not available
+- F-056 (favicon) and F-057 (auth bypass) are in agentA's scope per the brief

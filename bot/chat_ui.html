@@ -3881,20 +3881,29 @@ function startVAD() {
     redemptionFrames: redemptionFrames,
     minSpeechFrames: 5,
     onSpeechStart: function() {
-      console.log('[vad] speech start');
+      console.log('[vad] speech start, botSpeaking:', isBotSpeaking);
       if (isBotSpeaking) {
+        console.log('[vad] barge-in: stopping bot speech');
         stopAgentSpeaking();
       }
       setVadState('recording');
     },
     onSpeechEnd: function(audio) {
       console.log('[vad] speech end, samples:', audio.length);
+      // Skip very short audio during TTS (likely echo, not real speech)
+      // 16000 samples/sec * 0.3sec = 4800 samples minimum for real speech
+      if (vadIsSpeaking && audio.length < 4800) {
+        console.log('[vad] ignoring short echo during TTS');
+        setVadState('speaking');
+        return;
+      }
       setVadState('processing');
       processVADAudio(audio);
     },
     onVADMisfire: function() {
       console.log('[vad] misfire (too short)');
       if (handsfreeActive && !vadIsSpeaking) setVadState('listening');
+      if (vadIsSpeaking) setVadState('speaking');
     }
   }).then(function(micVAD) {
     vadInstance = micVAD;
@@ -4055,13 +4064,14 @@ function sendVADToServer(audioB64, sampleRate) {
   });
 }
 
-// Echo cancellation — pause VAD while TTS is playing
+// Echo cancellation — keep VAD running for barge-in detection
 ttsAudioEl.addEventListener('play', function() {
   vadIsSpeaking = true;
   if (vadInstance && handsfreeActive) {
-    vadInstance.pause();
+    // Don't pause VAD — let it detect speech for barge-in
+    // The onSpeechStart handler checks isBotSpeaking and calls stopAgentSpeaking()
     setVadState('speaking');
-    console.log('[vad] paused for TTS echo cancellation');
+    console.log('[vad] TTS playing, VAD still active for barge-in');
   }
 });
 

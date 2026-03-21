@@ -72,6 +72,7 @@ LLM_PROVIDERS = {
 class ToolCall:
     name: str
     arguments: dict[str, Any]
+    id: str = ""
 
 
 @dataclass
@@ -553,7 +554,7 @@ class AnthropicClient:
                 content_parts.append(block.text)
             elif block.type == "tool_use":
                 tool_calls.append(
-                    ToolCall(name=block.name, arguments=block.input or {})
+                    ToolCall(name=block.name, arguments=block.input or {}, id=block.id)
                 )
 
         usage = resp.usage

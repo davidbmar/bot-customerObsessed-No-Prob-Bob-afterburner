@@ -245,14 +245,43 @@ class Gateway:
             })
 
             # Add tool result to conversation for the follow-up LLM call
-            messages.append({
-                "role": "assistant",
-                "content": llm_resp.content or "",
-            })
-            messages.append({
-                "role": "tool",
-                "content": result,
-            })
+            if tc.id:
+                # Anthropic format: assistant has tool_use block, result is user with tool_result
+                messages.append({
+                    "role": "assistant",
+                    "content": [
+                        *(
+                            [{"type": "text", "text": llm_resp.content}]
+                            if llm_resp.content else []
+                        ),
+                        {
+                            "type": "tool_use",
+                            "id": tc.id,
+                            "name": tc.name,
+                            "input": tc.arguments,
+                        },
+                    ],
+                })
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tc.id,
+                            "content": result,
+                        }
+                    ],
+                })
+            else:
+                # OpenAI/Ollama format
+                messages.append({
+                    "role": "assistant",
+                    "content": llm_resp.content or "",
+                })
+                messages.append({
+                    "role": "tool",
+                    "content": result,
+                })
 
         # Re-query LLM with tool results so it can respond naturally
         follow_up = self.llm.chat(

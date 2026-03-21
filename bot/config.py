@@ -26,6 +26,8 @@ class BotConfig:
     server_host: str = "127.0.0.1"
     projects: dict[str, str] = field(default_factory=dict)
     active_project: str = ""
+    google_client_id: str = ""
+    allowed_emails: str = ""
 
     def __post_init__(self) -> None:
         if not self.data_dir:
@@ -87,6 +89,8 @@ class BotConfig:
         telegram = data.get("telegram", {})
         server = data.get("server", {})
 
+        auth = data.get("auth", {})
+
         return cls(
             personality=data.get("personality", "customer-discovery"),
             model=llm.get("model", "qwen3:4b"),
@@ -98,6 +102,8 @@ class BotConfig:
             server_host=server.get("host", "127.0.0.1"),
             projects=data.get("projects", {}),
             active_project=data.get("active_project", ""),
+            google_client_id=auth.get("google_client_id", ""),
+            allowed_emails=auth.get("allowed_emails", ""),
         )
 
     def save(self, path: Path | None = None) -> None:
@@ -121,6 +127,10 @@ class BotConfig:
             "server": {
                 "port": self.server_port,
                 "host": self.server_host,
+            },
+            "auth": {
+                "google_client_id": self.google_client_id,
+                "allowed_emails": self.allowed_emails,
             },
         }
         config_path.write_text(json.dumps(data, indent=2) + "\n")

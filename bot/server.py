@@ -13,12 +13,15 @@ if __name__ == "__main__" and __package__ is None:
         sys.path.insert(0, _parent)
     __package__ = "bot"
 
+import base64
 import json
 import logging
 import os
 import signal
+import struct
 import subprocess
 import threading
+import wave
 
 # Ignore SIGPIPE — prevents crash when external API clients (anthropic/openai)
 # encounter broken pipes in threaded HTTP handlers
@@ -26,6 +29,7 @@ if hasattr(signal, "SIGPIPE"):
     signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 import uuid
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -105,6 +109,10 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_get_llm_providers()
         elif path == "/api/llm/config":
             self._handle_get_llm_config(parsed)
+        elif path == "/api/auth/session":
+            self._handle_auth_session_check()
+        elif path == "/api/voice/voices":
+            self._handle_get_voices()
         else:
             self.send_error(404)
 
@@ -130,6 +138,14 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_post_llm_config()
         elif path == "/api/tools/save_discovery":
             self._handle_save_discovery()
+        elif path == "/api/auth/google":
+            self._handle_auth_google()
+        elif path == "/api/auth/logout":
+            self._handle_auth_logout()
+        elif path == "/api/voice/transcribe":
+            self._handle_voice_transcribe()
+        elif path == "/api/voice/synthesize":
+            self._handle_voice_synthesize()
         else:
             self.send_error(404)
 
@@ -467,17 +483,163 @@ class BotHTTPHandler(SimpleHTTPRequestHandler):
         path = result.split("saved to ")[-1] if "saved to" in result else result
         self._json_response({"ok": True, "path": path})
 
+    # -- Auth endpoints --
+
+    def _handle_auth_google(self) -> None:
+        """Authenticate with a Google Sign-In JWT."""
+        body = self._read_body()
+        if body is None:
+            return
+        jwt_token = body.get("credential", "").strip()
+        if not jwt_token:
+            self._json_response({"error": "Missing credential"}, status=400)
+            return
+        try:
+            from .auth import authenticate_google
+            user_id, session_token, user_info = authenticate_google(jwt_token)
+            self._json_response({
+                "session_token": session_token,
+                "user": user_info,
+            })
+        except ValueError as e:
+            self._json_response({"error": str(e)}, status=401)
+        except Exception as e:
+            log.exception("Google auth error")
+            self._json_response({"error": str(e)}, status=500)
+
+    def _handle_auth_logout(self) -> None:
+        """Invalidate a session token."""
+        body = self._read_body()
+        if body is None:
+            return
+        token = body.get("session_token", "").strip()
+        if token:
+            from .db import delete_auth_session
+            delete_auth_session(token)
+        self._json_response({"ok": True})
+
+    def _handle_auth_session_check(self) -> None:
+        """Check if a session token is still valid (GET with Authorization header)."""
+        auth_header = self.headers.get("Authorization", "")
+        token = ""
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        if not token:
+            self._json_response({"valid": False}, status=401)
+            return
+        from .auth import authenticate_session_token
+        result = authenticate_session_token(token)
+        if result:
+            _, user_info = result
+            self._json_response({"valid": True, "user": user_info})
+        else:
+            self._json_response({"valid": False}, status=401)
+
+    # -- Voice endpoints --
+
+    def _handle_get_voices(self) -> None:
+        """Return available TTS voices."""
+        try:
+            from .tts import list_voices
+            self._json_response({"voices": list_voices()})
+        except ImportError:
+            self._json_response({"voices": [], "error": "TTS not installed"})
+
+    def _handle_voice_transcribe(self) -> None:
+        """Transcribe uploaded audio (base64 PCM or WAV)."""
+        body = self._read_body()
+        if body is None:
+            return
+        audio_b64 = body.get("audio", "")
+        sample_rate = body.get("sample_rate", 48000)
+        audio_format = body.get("format", "pcm")
+
+        if not audio_b64:
+            self._json_response({"error": "Missing audio data"}, status=400)
+            return
+
+        try:
+            from .stt import transcribe
+            audio_bytes = base64.b64decode(audio_b64)
+
+            # If WAV format, extract PCM from WAV container
+            if audio_format == "wav":
+                with wave.open(BytesIO(audio_bytes), "rb") as wf:
+                    sample_rate = wf.getframerate()
+                    audio_bytes = wf.readframes(wf.getnframes())
+
+            text, no_speech_prob, avg_logprob, timing = transcribe(audio_bytes, sample_rate)
+            self._json_response({
+                "text": text,
+                "no_speech_prob": no_speech_prob,
+                "avg_logprob": avg_logprob,
+                "timing": timing,
+            })
+        except ImportError:
+            self._json_response({"error": "STT not installed (pip install faster-whisper)"}, status=501)
+        except Exception as e:
+            log.exception("STT error")
+            self._json_response({"error": str(e)}, status=500)
+
+    def _handle_voice_synthesize(self) -> None:
+        """Synthesize text to speech, return WAV audio."""
+        body = self._read_body()
+        if body is None:
+            return
+        text = body.get("text", "").strip()
+        voice_id = body.get("voice_id", "")
+
+        if not text:
+            self._json_response({"error": "Missing text"}, status=400)
+            return
+
+        try:
+            from .tts import synthesize, TARGET_RATE
+            pcm_bytes = synthesize(text, voice_id)
+
+            if not pcm_bytes:
+                self._json_response({"error": "TTS produced no audio"}, status=500)
+                return
+
+            # Wrap PCM in WAV container for browser playback
+            wav_buf = BytesIO()
+            with wave.open(wav_buf, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)  # int16
+                wf.setframerate(TARGET_RATE)
+                wf.writeframes(pcm_bytes)
+
+            wav_bytes = wav_buf.getvalue()
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Length", str(len(wav_bytes)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(wav_bytes)
+        except ImportError:
+            self._json_response({"error": "TTS not installed (pip install piper-tts)"}, status=501)
+        except Exception as e:
+            log.exception("TTS error")
+            self._json_response({"error": str(e)}, status=500)
+
     def _serve_chat_ui(self) -> None:
-        """Serve the self-contained chat UI HTML."""
+        """Serve the self-contained chat UI HTML, injecting config."""
         if not CHAT_UI_PATH.exists():
             self.send_error(500, "chat_ui.html not found")
             return
-        content = CHAT_UI_PATH.read_bytes()
+        content = CHAT_UI_PATH.read_text()
+        # Inject Google Client ID so the Sign-In button works
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        content = content.replace(
+            "</head>",
+            f'<script>window.__GOOGLE_CLIENT_ID__ = "{google_client_id}";</script>\n</head>',
+        )
+        content_bytes = content.encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Content-Length", str(len(content_bytes)))
         self.end_headers()
-        self.wfile.write(content)
+        self.wfile.write(content_bytes)
 
     def _read_body(self) -> dict | None:
         """Read and parse JSON request body."""
@@ -582,8 +744,17 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
     from .config import BotConfig
+    from .db import init_db
 
+    init_db()
     cfg = BotConfig.load()
+
+    # Export auth env vars so the auth module picks them up
+    if cfg.google_client_id:
+        os.environ.setdefault("GOOGLE_CLIENT_ID", cfg.google_client_id)
+    if cfg.allowed_emails:
+        os.environ.setdefault("ALLOWED_EMAILS", cfg.allowed_emails)
+
     gw = Gateway(
         personality_name=cfg.personality_name,
         model=cfg.model_name,

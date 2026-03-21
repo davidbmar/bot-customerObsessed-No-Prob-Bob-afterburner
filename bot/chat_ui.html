@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Discovery Agent</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #0d1117;
@@ -559,6 +560,137 @@
   .input-area button:hover { background: var(--accent); }
   .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Voice / Push-to-Talk */
+  .voice-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-talk {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-talk:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-talk.recording {
+    background: #f8514922;
+    border-color: var(--error);
+    color: var(--error);
+    animation: pulse-record 1s infinite;
+  }
+
+  .btn-talk.speaking {
+    background: #3fb95022;
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  @keyframes pulse-record {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
+  }
+
+  /* Auth overlay */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .auth-overlay.hidden { display: none; }
+
+  .auth-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .auth-card h1 { font-size: 24px; margin-bottom: 8px; }
+  .auth-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+  .auth-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .auth-user-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  .auth-user-card .user-details { text-align: left; }
+  .auth-user-card .user-name { font-weight: 600; font-size: 14px; }
+  .auth-user-card .user-email { font-size: 12px; color: var(--text-muted); }
+
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .user-badge img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+  }
+
+  .btn-signout {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-top: 8px;
+  }
+
+  .btn-signout:hover { color: var(--error); }
+
+  .btn-connect {
+    background: var(--accent-dim);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .btn-connect:hover { background: var(--accent); }
+
   /* Typing indicator */
   .typing-indicator {
     display: flex;
@@ -986,6 +1118,11 @@
     <button class="btn-small" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme" style="font-size:16px;padding:4px 8px;line-height:1">&#9790;</button>
     <button class="btn-small" id="debugToggle" onclick="toggleDebug()" title="Toggle debug panels">Debug</button>
     <a href="https://github.com/davidbmar/bot-customerObsessed-No-Prob-Bob-afterburner#setup-guide" target="_blank" class="btn-small" title="Setup Guide" style="text-decoration:none;font-size:14px;padding:4px 8px">Setup</a>
+    <div class="user-badge" id="userBadge" style="display:none">
+      <img id="topbarAvatar" src="" alt="">
+      <span id="topbarName"></span>
+      <button class="btn-signout" onclick="signOut()" style="margin:0">&times;</button>
+    </div>
     <div class="header-meta">
       <span class="status-dot loading" id="statusDot"></span>
       <span id="modelInfo">connecting...</span>
@@ -1016,6 +1153,9 @@
     <div class="input-area">
       <textarea id="input" placeholder="Type a message..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+      <div class="voice-controls">
+        <button class="btn-talk" id="talkBtn" title="Hold to speak">&#x1F3A4;</button>
+      </div>
       <button id="sendBtn" onclick="sendMessage()">Send</button>
     </div>
   </div>
@@ -1106,6 +1246,29 @@
       <button class="btn-settings danger" onclick="clearHistory()">Clear History</button>
     </div>
     <div id="testResult"></div>
+  </div>
+</div>
+
+<!-- Auth Overlay (shown when Google Sign-In is configured) -->
+<div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-card">
+    <h1>Customer Discovery Agent</h1>
+    <p>Sign in to start a conversation</p>
+
+    <!-- Google Sign-In button -->
+    <div id="authGoogleBtn"></div>
+
+    <!-- Signed-in user card (hidden until auth) -->
+    <div id="authUserCard" class="auth-user-card" style="display:none">
+      <img id="authAvatar" src="" alt="">
+      <div class="user-details">
+        <div class="user-name" id="authName"></div>
+        <div class="user-email" id="authEmail"></div>
+      </div>
+    </div>
+    <button class="btn-connect" id="authConnectBtn" style="display:none" onclick="completeAuth()">Continue</button>
+    <button class="btn-signout" id="authSignoutBtn" style="display:none" onclick="signOut()">Sign out</button>
+    <p id="authStatus" style="margin-top:12px;font-size:12px"></p>
   </div>
 </div>
 
@@ -1917,6 +2080,11 @@ function sendMessageStream(text) {
             appendDebugToGroup(group, debugData);
             updateSidebarDebug(debugData);
             saveConversation();
+
+            // Speak the response aloud if voice is available
+            if (typeof speakResponse === 'function' && fullText) {
+              speakResponse(fullText);
+            }
           } else if (evt.type === 'error') {
             var streamGroup = document.getElementById('streaming-group');
             if (streamGroup) streamGroup.remove();
@@ -1956,6 +2124,9 @@ function sendMessageNonStream(text) {
       } else {
         addMessage('assistant', data.response, data);
         updateSidebarDebug(data);
+        if (typeof speakResponse === 'function' && data.response) {
+          speakResponse(data.response);
+        }
       }
       saveConversation();
     });
@@ -2828,7 +2999,381 @@ document.getElementById('input').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
+// ==========================================================================
+// AUTH — Google Sign-In + session token persistence
+// ==========================================================================
+
+var currentUser = null;
+var sessionToken = null;
+var pendingGoogleJwt = null;
+
+function initAuth() {
+  // Check if Google client ID is configured by probing the API
+  var storedToken = localStorage.getItem('bot_session_token');
+  var storedUser = localStorage.getItem('bot_user_info');
+
+  if (storedToken && storedUser) {
+    // Validate stored session
+    fetch(API + '/api/auth/session', {
+      headers: { 'Authorization': 'Bearer ' + storedToken }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.valid) {
+        sessionToken = storedToken;
+        currentUser = data.user;
+        showUserBadge(currentUser);
+      } else {
+        localStorage.removeItem('bot_session_token');
+        localStorage.removeItem('bot_user_info');
+        showAuthOverlay();
+      }
+    })
+    .catch(function() {
+      // Server might not support auth — just continue without it
+    });
+  } else {
+    // Only show auth overlay if a Google Client ID is configured
+    setTimeout(function() {
+      if (window.__GOOGLE_CLIENT_ID__ && window.google && window.google.accounts) {
+        showAuthOverlay();
+      }
+      // If no client ID or no Google lib, no auth required — continue normally
+    }, 1000);
+  }
+}
+
+function showAuthOverlay() {
+  var overlay = document.getElementById('authOverlay');
+  overlay.classList.remove('hidden');
+
+  if (window.google && window.google.accounts) {
+    try {
+      google.accounts.id.initialize({
+        client_id: window.__GOOGLE_CLIENT_ID__,
+        callback: handleGoogleSignIn,
+        auto_prompt: false,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('authGoogleBtn'),
+        { theme: 'filled_black', size: 'large', width: 300 }
+      );
+    } catch(e) {
+      console.warn('Google Sign-In init failed:', e);
+      // Hide overlay if Google auth isn't working
+      overlay.classList.add('hidden');
+    }
+  }
+}
+
+function handleGoogleSignIn(response) {
+  pendingGoogleJwt = response.credential;
+  // Decode JWT for preview (server verifies)
+  try {
+    var parts = pendingGoogleJwt.split('.');
+    var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    document.getElementById('authGoogleBtn').style.display = 'none';
+    document.getElementById('authUserCard').style.display = 'flex';
+    document.getElementById('authAvatar').src = payload.picture || '';
+    document.getElementById('authName').textContent = payload.name || '';
+    document.getElementById('authEmail').textContent = payload.email || '';
+    document.getElementById('authConnectBtn').style.display = 'block';
+    document.getElementById('authSignoutBtn').style.display = 'block';
+  } catch(e) {
+    completeAuth(); // Just try to auth directly
+  }
+}
+
+function completeAuth() {
+  if (!pendingGoogleJwt) return;
+  document.getElementById('authStatus').textContent = 'Authenticating...';
+
+  fetch(API + '/api/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential: pendingGoogleJwt })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      document.getElementById('authStatus').textContent = 'Error: ' + data.error;
+      return;
+    }
+    sessionToken = data.session_token;
+    currentUser = data.user;
+    localStorage.setItem('bot_session_token', sessionToken);
+    localStorage.setItem('bot_user_info', JSON.stringify(currentUser));
+    pendingGoogleJwt = null;
+    document.getElementById('authOverlay').classList.add('hidden');
+    showUserBadge(currentUser);
+  })
+  .catch(function(e) {
+    document.getElementById('authStatus').textContent = 'Auth failed: ' + e.message;
+  });
+}
+
+function showUserBadge(user) {
+  if (!user) return;
+  var badge = document.getElementById('userBadge');
+  if (user.avatar_url) {
+    document.getElementById('topbarAvatar').src = user.avatar_url;
+  }
+  document.getElementById('topbarName').textContent = user.name || user.email || '';
+  badge.style.display = 'flex';
+}
+
+function signOut() {
+  if (sessionToken) {
+    fetch(API + '/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_token: sessionToken })
+    }).catch(function() {});
+  }
+  sessionToken = null;
+  currentUser = null;
+  pendingGoogleJwt = null;
+  localStorage.removeItem('bot_session_token');
+  localStorage.removeItem('bot_user_info');
+  document.getElementById('userBadge').style.display = 'none';
+
+  // Reset auth overlay
+  document.getElementById('authGoogleBtn').style.display = 'block';
+  document.getElementById('authUserCard').style.display = 'none';
+  document.getElementById('authConnectBtn').style.display = 'none';
+  document.getElementById('authSignoutBtn').style.display = 'none';
+  document.getElementById('authStatus').textContent = '';
+  showAuthOverlay();
+}
+
+// ==========================================================================
+// VOICE — Push-to-talk recording + TTS playback
+// ==========================================================================
+
+var isVoiceRecording = false;
+var voiceHeld = false;
+var mediaRecorder = null;
+var audioChunks = [];
+var agentAudio = null;
+
+var talkBtn = document.getElementById('talkBtn');
+
+// Hold-to-talk: touch events (mobile)
+talkBtn.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  console.log('[voice] touchstart');
+  voiceHeld = true;
+  startVoiceRecording();
+});
+talkBtn.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  console.log('[voice] touchend');
+  stopVoiceRecording();
+});
+talkBtn.addEventListener('touchcancel', function(e) {
+  e.preventDefault();
+  stopVoiceRecording();
+});
+
+// Safety net: stop recording if finger slides off button
+document.addEventListener('touchend', function() {
+  if (isVoiceRecording) stopVoiceRecording();
+});
+
+// Hold-to-talk: mouse events (desktop)
+talkBtn.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return;
+  console.log('[voice] mousedown');
+  voiceHeld = true;
+  startVoiceRecording();
+});
+talkBtn.addEventListener('mouseup', function() {
+  console.log('[voice] mouseup');
+  stopVoiceRecording();
+});
+talkBtn.addEventListener('mouseleave', function() {
+  if (isVoiceRecording) stopVoiceRecording();
+});
+
+function startVoiceRecording() {
+  if (isVoiceRecording) return;
+  console.log('[voice] startVoiceRecording called');
+
+  // Stop any playing agent audio
+  if (agentAudio) {
+    agentAudio.pause();
+    agentAudio = null;
+    talkBtn.classList.remove('speaking');
+  }
+
+  talkBtn.textContent = '...';
+
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(function(stream) {
+      // Guard: if user already released before mic was granted
+      if (!voiceHeld) {
+        console.log('[voice] user released before mic granted, stopping');
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        talkBtn.textContent = '\uD83C\uDFA4';
+        return;
+      }
+      isVoiceRecording = true;
+      talkBtn.classList.add('recording');
+      talkBtn.textContent = '\u23FA';
+      audioChunks = [];
+      console.log('[voice] recording started');
+
+      mediaRecorder = new MediaRecorder(stream);
+      var recorderMimeType = mediaRecorder.mimeType;
+
+      mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = function() {
+        console.log('[voice] mediaRecorder stopped, chunks:', audioChunks.length);
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        talkBtn.textContent = '\uD83C\uDFA4';
+        if (audioChunks.length === 0) return;
+
+        var blob = new Blob(audioChunks, { type: recorderMimeType });
+        console.log('[voice] blob size:', blob.size, 'type:', blob.type);
+        processVoiceRecording(blob);
+      };
+
+      mediaRecorder.start(100); // 100ms chunks for responsive stop
+    })
+    .catch(function(err) {
+      console.error('[voice] Mic access denied:', err);
+      talkBtn.textContent = '\uD83C\uDFA4';
+      showToast('Microphone access denied');
+    });
+}
+
+function stopVoiceRecording() {
+  voiceHeld = false;
+  if (!isVoiceRecording || !mediaRecorder) {
+    console.log('[voice] stopVoiceRecording: not recording');
+    talkBtn.textContent = '\uD83C\uDFA4';
+    return;
+  }
+  isVoiceRecording = false;
+  talkBtn.classList.remove('recording');
+  console.log('[voice] stopping recorder, state:', mediaRecorder.state);
+
+  if (mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  mediaRecorder = null;
+}
+
+function processVoiceRecording(blob) {
+  // Convert webm to WAV using AudioContext, then send for transcription
+  var reader = new FileReader();
+  reader.onload = function() {
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.decodeAudioData(reader.result).then(function(audioBuffer) {
+      // Convert to 16kHz mono PCM int16
+      var sampleRate = 16000;
+      var offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * sampleRate), sampleRate);
+      var source = offlineCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineCtx.destination);
+      source.start();
+
+      offlineCtx.startRendering().then(function(rendered) {
+        var pcmFloat = rendered.getChannelData(0);
+        var pcmInt16 = new Int16Array(pcmFloat.length);
+        for (var i = 0; i < pcmFloat.length; i++) {
+          var s = Math.max(-1, Math.min(1, pcmFloat[i]));
+          pcmInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+
+        // Base64 encode and send to server
+        var bytes = new Uint8Array(pcmInt16.buffer);
+        var binary = '';
+        for (var j = 0; j < bytes.length; j++) {
+          binary += String.fromCharCode(bytes[j]);
+        }
+        var b64 = btoa(binary);
+
+        sendVoiceToServer(b64, sampleRate);
+        audioCtx.close();
+      });
+    }).catch(function(err) {
+      console.error('Audio decode error:', err);
+      audioCtx.close();
+    });
+  };
+  reader.readAsArrayBuffer(blob);
+}
+
+function sendVoiceToServer(audioB64, sampleRate) {
+  console.log('[voice] sending to server, base64 length:', audioB64.length, 'sampleRate:', sampleRate);
+  // Show "Transcribing..." indicator
+  showTyping('Transcribing...');
+
+  fetch(API + '/api/voice/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ audio: audioB64, sample_rate: sampleRate, format: 'pcm' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      hideTyping();
+      showToast('STT error: ' + data.error);
+      return;
+    }
+
+    var text = (data.text || '').trim();
+    if (!text) {
+      hideTyping();
+      showToast('No speech detected');
+      return;
+    }
+
+    // Inject transcribed text into the chat as if the user typed it
+    hideTyping();
+    document.getElementById('input').value = text;
+    sendMessage();
+  })
+  .catch(function(err) {
+    hideTyping();
+    showToast('Transcription failed: ' + err.message);
+  });
+}
+
+// TTS: speak agent responses aloud
+function speakResponse(text) {
+  fetch(API + '/api/voice/synthesize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text })
+  })
+  .then(function(r) {
+    if (!r.ok) return null;
+    return r.blob();
+  })
+  .then(function(blob) {
+    if (!blob) return;
+    var url = URL.createObjectURL(blob);
+    agentAudio = new Audio(url);
+    talkBtn.classList.add('speaking');
+    agentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      talkBtn.classList.remove('speaking');
+      agentAudio = null;
+    };
+    agentAudio.play().catch(function() {
+      talkBtn.classList.remove('speaking');
+    });
+  })
+  .catch(function() {});
+}
+
 restoreTheme();
+initAuth();
 init();
 </script>
 </body>

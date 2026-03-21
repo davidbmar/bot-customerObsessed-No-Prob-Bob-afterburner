@@ -20,3 +20,14 @@ dist/
 build/
 *.pyc
 .env
+
+# Voice models (downloaded at runtime)
+models/
+
+# SQLite database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Server logs
+logs/

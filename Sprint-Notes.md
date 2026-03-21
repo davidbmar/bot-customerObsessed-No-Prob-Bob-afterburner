@@ -1,10 +1,10 @@
-# Sprint 23 — Agent Notes
+# Sprint 24 — Agent Notes
 
-*Started: 2026-03-21 17:34 UTC*
+*Started: 2026-03-21 17:44 UTC*
 
 Phase 1 Agents: 2
-- agentA-chat-polish
-- agentB-server-polish
+- agentA-voice-settings
+- agentB-server-docs
 
 Phase 2 Agents: 0
 (none)
@@ -13,59 +13,59 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentB-server-polish
+## agentA-voice-settings
 
-*Completed: 2026-03-21 17:38 UTC*
+*Completed: 2026-03-21 17:48 UTC*
+
+### Files changed
+- `bot/chat_ui.html` — Added Voice Detection section (2 sliders + 1 checkbox), JS functions for persistence/restart, barge-in guards, localStorage restore
+- `docs/project-memory/backlog/README.md` — F-061 marked Complete (Sprint 24)
+- `docs/project-memory/sessions/S-2026-03-21-1747-voice-settings.md` — Session doc (new)
+
+### Commands run
+- `git fetch origin main && git merge origin/main` — synced with main
+- `.venv/bin/python3 -m pytest tests/ -v` — 654 tests pass
+- `git push -u origin HEAD` — branch pushed
+
+### Notes / follow-on work
+- Slider changes destroy and recreate the VAD instance (Silero doesn't support live option updates). A 200ms delay between stop/start prevents microphone contention.
+- Barge-in toggle applies to both VAD hands-free and push-to-talk for consistent UX.
+- Default values match the previously hardcoded values (sensitivity 0.80, min speech 5, barge-in ON), so existing users see no behavior change until they adjust settings.
+
+
+---
+
+## agentB-server-docs
+
+*Completed: 2026-03-21 17:48 UTC*
 
 ```
-All done. Here's the summary:
+All tasks complete. Here's the summary:
 
 ---
 
 ## Files Changed
 
-| File | Change |
+| File | Action |
 |------|--------|
-| `tests/test_sprint23_server.py` | **New** — 11 tests: tool result formatting (B-033 guard), conversation endpoint robustness, /api/stats |
-| `bot/server.py` | Added `GET /api/stats` endpoint + `_count_sprints()`, `_count_tests()`, `_count_features()` helpers |
-| `docs/project-memory/backlog/README.md` | Added F-060, updated B-032 status |
-| `docs/project-memory/sessions/S-2026-03-21-1737-sprint23-server-polish.md` | Session doc |
+| `docs/PROJECT_STATUS_2026-03-20-sprint20.md` | Created — Sprint 20 (VAD, input filter, echo cancellation, fast path) |
+| `docs/PROJECT_STATUS_2026-03-21-sprint21.md` | Created — Sprint 21 (favicon, auth bypass, copy button, Escape, waveform) |
+| `docs/PROJECT_STATUS_2026-03-21-sprint22.md` | Created — Sprint 22 (conversation persistence, projects API) |
+| `docs/PROJECT_STATUS_2026-03-21-sprint23.md` | Created — Sprint 23 (paragraph spacing, notification sound, syntax highlighting, /api/stats) |
+| `bot/gateway.py` | Modified — gateway-level error handling in `_handle_tool_calls` |
+| `tests/test_sprint24_tool_errors.py` | Created — 5 tests for tool error handling |
+| `docs/project-memory/backlog/README.md` | Modified — F-062, F-063 marked Complete |
+| `docs/project-memory/sessions/S-2026-03-21-1747-sprint24-server-docs.md` | Created — session doc |
 
 ## Commands Run
 
 - `git pull origin main` — already up to date
-- `pytest tests/test_sprint23_server.py -v` — 11 passed
-- `pytest tests/ -v` — **654 passed**
-- `git commit` + `git push -u origin HEAD`
+- `python3 -m pytest tests/ -v` — **659 tests passed**
+- `git push -u origin HEAD` — pushed to `agentB-server-docs`
 
 ## Notes / Follow-on Work
 
-- **Frontend integration**: The `/api/stats` endpoint is ready for the Docs panel to call instead of hardcoded values (agentA / future sprint)
-- **B-033 regression guard**: 4 tests verify Anthropic format (tool_use + tool_result blocks with `id`) vs OpenAI format (role: tool) depending on `ToolCall.id`
-- **B-034** (paragraph spacing) is agentA's territory per the brief constraints
+- Dashboard data rebuild needed after merge so Sprints 20-23 appear in the dashboard UI
+- F-061 (configurable VAD/barge-in settings) is assigned to agentA per the brief
 ```
-
-
----
-
-## agentA-chat-polish
-
-*Completed: 2026-03-21 17:39 UTC*
-
-### Files changed
-- **`bot/chat_ui.html`** — 3 features added:
-  - B-034: Paragraph spacing migration in `restoreConversation()` and `switchToConversation()`
-  - F-046: Notification sound toggle (Settings checkbox + Web Audio API chime + localStorage)
-  - F-059: `highlightSyntax()` function + CSS classes (`.syn-kw`, `.syn-str`, `.syn-cmt`, `.syn-num`)
-- **`docs/project-memory/backlog/README.md`** — Marked B-034, F-046, F-059 as Complete (Sprint 23)
-- **`docs/project-memory/sessions/S-2026-03-21-1738-sprint23-chat-polish.md`** — Session doc
-
-### Commands run
-- `git pull origin main` — already up to date
-- `.venv/bin/python3 -m pytest tests/ -v` — **643 passed**
-- `git push -u origin HEAD` — pushed to `agentA-chat-polish`
-
-### Notes / follow-on work
-- The paragraph spacing regex `([.!?])([A-Z])` is a heuristic — edge cases like abbreviations (e.g., "U.S.Army") could get false positives, but this is acceptable for conversational text
-- The syntax highlighter is intentionally minimal (~35 lines). If more languages need precise highlighting later, consider integrating Prism.js or highlight.js (would be a new feature)
 

@@ -406,6 +406,7 @@ def tool_get_sprint_status(slug: str = "") -> str:
         return "No project specified and no active project set."
 
     # Try dashboard API first
+    dashboard_err = ""
     try:
         resp = httpx.get(
             f"{DASHBOARD_URL}/api/project/{resolved}/status",
@@ -424,14 +425,19 @@ def tool_get_sprint_status(slug: str = "") -> str:
                 if resp.status_code == 200:
                     return json.dumps(resp.json())
             return f"Project '{slug}' not found in dashboard."
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as exc:
+        dashboard_err = str(exc)
+        log.warning("Dashboard unavailable for sprint status: %s", dashboard_err)
 
     # Fall back to filesystem reading
     project_root = _resolve_project_root(slug or None)
     if not project_root:
+        if dashboard_err:
+            return f"Dashboard unavailable, using local data — but project '{slug}' not found locally either."
         return f"Project '{slug}' not found in dashboard registry."
     result = get_sprint_status(project_root)
+    if dashboard_err:
+        result["_note"] = "Dashboard unavailable, using local data"
     return json.dumps(result)
 
 
@@ -607,8 +613,8 @@ def tool_feedback_on_sprint(slug: str = "") -> str:
                     parts.append(f"\nDoes this match what you expected from Sprint {latest.get('number', '?')}?")
                     return "\n".join(parts)
                 return "No sprints found in dashboard data. Has a sprint been completed?"
-        except httpx.HTTPError:
-            pass
+        except httpx.HTTPError as exc:
+            log.warning("Dashboard unavailable for sprint feedback: %s", exc)
 
     # Filesystem fallback
     project_root = _resolve_project_root(slug or None)

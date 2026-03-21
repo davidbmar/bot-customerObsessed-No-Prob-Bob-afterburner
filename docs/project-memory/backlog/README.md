@@ -139,6 +139,6 @@ Track bugs and feature requests here.
 | F-075 | Active Project selector in Settings should list all registered Afterburner projects from /api/projects | Medium | Complete (Sprint 34 + hotfix) |
 | F-076 | list_projects tool — bot can list all registered Afterburner projects when user asks "what projects are there?" | Medium | Complete (Sprint 36 + hotfix) |
 | F-077 | Sprint agent worktree setup should symlink .venv so agents can run tests | High | Complete (hotfix — symlink added to sprint-init.sh) |
-| F-078 | Bot should offer to switch active project when user asks about a different project | Medium | Open |
+| F-078 | Bot should offer to switch active project when user asks about a different project | Medium | Complete (Sprint 40 + hotfix) |
 | F-079 | read_project_doc tool — bot can read README.md and other files from any registered project | High | Complete (hotfix) |
-| F-080 | Auto-rebuild dashboard data for new projects — detect when a registered project has no built data and trigger rebuild automatically | Medium | Open |
+| F-080 | Auto-rebuild dashboard data for new projects — detect when a registered project has no built data and trigger rebuild automatically | Medium | Complete (Sprint 40 + hotfix) |

@@ -668,6 +668,19 @@
     color: var(--success);
   }
 
+  .stop-generating {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  .stop-generating:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+
+  .vad-dot.paused {
+    background: #9ca3af;
+  }
+
   .vad-status {
     display: none;
     align-items: center;
@@ -2295,6 +2308,10 @@ function hideTyping() {
 }
 
 var lastSentText = '';
+var currentAbortController = null;
+var isStreaming = false;
+var streamAborted = false;
+var vadPaused = false;
 
 function sendMessage() {
   var input = document.getElementById('input');
@@ -2312,21 +2329,61 @@ function sendMessage() {
 
   showTyping('Streaming...');
 
+  isStreaming = true;
+  streamAborted = false;
+  currentAbortController = new AbortController();
+  updateSendButton();
+
   sendMessageStream(text).catch(function() {
     // SSE failed, fall back to non-streaming
     return sendMessageNonStream(text);
   }).finally(function() {
+    isStreaming = false;
+    currentAbortController = null;
     updateSendButton();
     input.focus();
   });
 }
 
+function stopGenerating() {
+  if (currentAbortController) {
+    streamAborted = true;
+    currentAbortController.abort();
+    isStreaming = false;
+    currentAbortController = null;
+    hideTyping();
+    updateSendButton();
+  }
+}
+
+function toggleVadPause() {
+  if (isStreaming) return;
+  vadPaused = !vadPaused;
+  if (vadPaused) {
+    if (vadInstance) vadInstance.pause();
+    sendBtn = document.getElementById('sendBtn');
+    sendBtn.textContent = '\u25B6';
+    sendBtn.title = 'Resume listening';
+    setVadState('paused');
+  } else {
+    if (vadInstance) vadInstance.start();
+    sendBtn = document.getElementById('sendBtn');
+    sendBtn.textContent = '\u23F8';
+    sendBtn.title = 'Pause listening';
+    setVadState('listening');
+  }
+}
+
 function sendMessageStream(text) {
-  return fetch(API + '/api/chat/stream', {
+  var fetchOptions = {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({message: text, conversation_id: conversationId})
-  }).then(function(resp) {
+  };
+  if (currentAbortController) {
+    fetchOptions.signal = currentAbortController.signal;
+  }
+  return fetch(API + '/api/chat/stream', fetchOptions).then(function(resp) {
     if (!resp.ok || !resp.body) {
       // If status is 401/503, parse the JSON error
       return resp.json().then(function(errData) {
@@ -2441,10 +2498,10 @@ function sendMessageStream(text) {
             updateSidebarDebug(debugData);
             saveConversation();
 
-            // Speak the response aloud if voice is available
-            if (typeof speakResponse === 'function' && fullText) {
+            // Speak the response aloud if voice is available (skip if streamAborted)
+            if (!streamAborted && typeof speakResponse === 'function' && fullText) {
               speakResponse(fullText);
-            } else {
+            } else if (!streamAborted) {
               // F-046: Play notification chime (only if TTS not speaking)
               playNotifyChime();
             }
@@ -3380,7 +3437,24 @@ function startTitleEdit(el) {
 function updateSendButton() {
   var input = document.getElementById('input');
   var btn = document.getElementById('sendBtn');
-  btn.disabled = !input.value.trim();
+  btn.classList.remove('stop-generating');
+  if (isStreaming) {
+    btn.textContent = '\u23F9';
+    btn.title = 'Stop generating';
+    btn.disabled = false;
+    btn.onclick = stopGenerating;
+    btn.classList.add('stop-generating');
+  } else if (handsfreeActive && !input.value.trim()) {
+    btn.textContent = vadPaused ? '\u25B6' : '\u23F8';
+    btn.title = vadPaused ? 'Resume listening' : 'Pause listening';
+    btn.disabled = false;
+    btn.onclick = toggleVadPause;
+  } else {
+    btn.textContent = 'Send';
+    btn.title = '';
+    btn.disabled = !input.value.trim();
+    btn.onclick = sendMessage;
+  }
 }
 
 (function() {
@@ -3946,13 +4020,16 @@ function toggleHandsfree() {
     vadStatus.classList.add('visible');
     localStorage.setItem('handsfreeMode', 'true');
     startVAD();
+    updateSendButton();
   } else {
     btn.classList.remove('active');
     talkBtn.style.display = '';
     vadStatus.classList.remove('visible');
     inputArea.className = 'input-area';
     localStorage.setItem('handsfreeMode', 'false');
+    vadPaused = false;
     stopVAD();
+    updateSendButton();
   }
 }
 
@@ -4025,6 +4102,10 @@ function setVadState(state, label) {
     dot.classList.add('speaking');
     inputArea.classList.add('vad-speaking');
     lbl.textContent = label || 'Bot speaking...';
+  } else if (state === 'paused') {
+    lbl.textContent = label || 'Paused';
+    dot.classList.add('paused');
+    stopWaveform();
   } else if (state === 'filtered') {
     inputArea.classList.add('vad-filtered');
     lbl.textContent = label || 'Filtered';

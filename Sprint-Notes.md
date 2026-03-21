@@ -1,10 +1,10 @@
-# Sprint 25 — Agent Notes
+# Sprint 26 — Agent Notes
 
-*Started: 2026-03-21 17:56 UTC*
+*Started: 2026-03-21 18:24 UTC*
 
 Phase 1 Agents: 2
-- agentA-button-states
-- agentB-button-tests
+- agentA-scroll-shortcuts
+- agentB-docs-tests
 
 Phase 2 Agents: 0
 (none)
@@ -13,44 +13,33 @@ Automated summaries from each agent are appended below as they complete.
 
 ---
 
-## agentA-button-states
+## agentB-docs-tests
 
-*Completed: 2026-03-21 18:01 UTC*
+*Completed: 2026-03-21 18:28 UTC*
 
 ### Files changed
-- **bot/chat_ui.html** — Added F-064 (Stop Generating) and F-065 (Pause/Resume) with full button state machine
-- **docs/project-memory/backlog/README.md** — Marked F-064, F-065 as Complete (Sprint 25)
-- **docs/project-memory/sessions/S-2026-03-21-1800-sprint25-button-states.md** — Session doc (new)
+- `docs/PROJECT_STATUS_2026-03-21-sprint24.md` — **new** — Sprint 24 status doc (VAD settings, PROJECT_STATUS catch-up, tool errors)
+- `docs/PROJECT_STATUS_2026-03-21-sprint25.md` — **new** — Sprint 25 status doc (Stop generating, Pause/Resume)
+- `tests/test_sprint26_scroll_fab.py` — **new** — 5 tests for scroll-to-bottom FAB (F-066)
+- `docs/project-memory/sessions/S-2026-03-21-1827-sprint26-docs-tests.md` — **new** — session doc
 
 ### Commands run
-- `python3 -m pytest tests/test_sprint25_button_states.py -v` — 17/17 passed
-- `python3 -m pytest tests/ -v` — 676/676 passed
-- `git push -u origin HEAD` — branch pushed
+- `git pull origin main` — already up to date
+- `pytest tests/ -v` — 682 passed, 4 pre-existing failures (missing openai module), 3 expected failures (FAB not yet implemented by agentA)
 
 ### Notes / follow-on work
-- No `.venv` in this worktree; tests ran fine with system Python since they're static HTML analysis
-- The `streamAborted` flag prevents TTS from playing partial responses after abort — manual E2E testing recommended to verify the user experience
-- The `toggleVadPause()` function guards against streaming with `if (isStreaming) return` so Stop always takes priority
+- **3 scroll FAB tests will pass after agentA implements F-066** — `test_scroll_fab_element_exists`, `test_scroll_fab_has_arrow_or_icon`, `test_messages_scroll_listener_exists` are test-first specs
+- **2 scroll FAB tests already pass** — `test_scroll_position_check_logic` and `test_scrollToBottom_function_exists` (existing code has scrollTop/scrollHeight/scrollToBottom)
+- **Dashboard rebuild needed** after sprint merge to show Sprints 24-25 in the dashboard
+- **Backlog is current** — no updates needed; F-064/F-065 already marked Complete (Sprint 25)
 
 
 ---
 
-## agentB-button-tests
+## agentA-scroll-shortcuts
 
-*Completed: 2026-03-21 18:01 UTC*
+*Completed: 2026-03-21 18:29 UTC*
 
-### Files changed
-- **`tests/test_sprint25_streaming_integration.py`** (new) — 8 integration tests for server-side streaming abort and concurrent request handling
-- **`docs/project-memory/backlog/README.md`** — F-064 and F-065 marked Complete (Sprint 25)
-- **`docs/project-memory/sessions/S-2026-03-21-1801-sprint25-streaming-integration-tests.md`** (new) — session doc
-
-### Commands run
-- `git pull origin main` — already up to date
-- `.venv/bin/python3 -m pytest tests/test_sprint25_streaming_integration.py -v` — 8/8 passed
-- `.venv/bin/python3 -m pytest tests/ -v` — 675 passed, 9 failed (all 9 failures are in `test_sprint25_button_states.py`, the UI spec tests owned by agentA)
-- `git push -u origin HEAD` — pushed to `agentB-button-tests`
-
-### Notes / follow-on work
-- The 9 failing tests in `test_sprint25_button_states.py` are **expected** — they are the spec tests that will pass once agentA implements the Stop Generating and Pause/Resume UI in `chat_ui.html`
-- My 8 new tests all pass and cover: client disconnect handling, zombie thread detection, concurrent streams, overlapping request types, and gateway-level abort behavior
+```
+```
 

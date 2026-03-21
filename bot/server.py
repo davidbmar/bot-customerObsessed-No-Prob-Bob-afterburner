@@ -774,6 +774,21 @@ def main() -> None:
     from .config import BotConfig
     from .db import init_db
 
+    # Load .env file into environment (so ANTHROPIC_API_KEY etc. are available)
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                # Don't strip inline comments from values that contain #
+                os.environ.setdefault(key, value)
+        logging.info("Loaded .env (%d vars)", sum(1 for l in env_path.read_text().splitlines() if l.strip() and not l.strip().startswith("#") and "=" in l))
+
     init_db()
     cfg = BotConfig.load()
 

@@ -1,20 +1,20 @@
-# Sprint 23
+# Sprint 24
 
 Goal
-- Fix paragraph spacing in restored bot messages — old conversations saved as textContent lose line breaks (B-034)
-- Add notification sound on bot response with toggle in settings (F-046)
-- Add code block syntax highlighting in bot messages (F-059)
+- Add configurable VAD and barge-in settings panel — expose Silero VAD thresholds as user-adjustable sliders (F-061)
+- Generate PROJECT_STATUS docs for Sprints 20-23 so dashboard shows recent sprint history (F-062)
+- Better error messages when bot tool calls fail — show what went wrong instead of generic error (F-063)
 
 Constraints
 - Use the project venv: .venv/bin/python3
 - All tests must pass: .venv/bin/python3 -m pytest tests/ -v
 - Agents run non-interactively — MUST NOT ask for confirmation
 - agentA owns bot/chat_ui.html ONLY — agentB MUST NOT touch chat_ui.html
-- agentB owns bot/server.py, tests/ — agentA MUST NOT touch these
+- agentB owns bot/server.py, bot/gateway.py, tests/, docs/ — agentA MUST NOT touch these
 
 Merge Order
-1. agentB-server-polish
-2. agentA-chat-polish
+1. agentB-server-docs
+2. agentA-voice-settings
 
 Merge Verification
 ```bash
@@ -23,82 +23,83 @@ cd /Users/davidmar/src/bot-customerObsessed-No-Prob-Bob-afterburner
 ```
 
 Previous Sprint
-- Sprint 22: conversation persistence fixed (save markdown, sidebar refresh), /api/projects endpoint, Active Project dropdown wired, Docs stats updated
-- 643 tests pass
-- Hotfix: tool result format fixed for Claude API (B-033)
-- Restored old conversations lose paragraph spacing (B-034)
+- Sprint 23: paragraph spacing fix, notification sound toggle, code syntax highlighting, /api/stats endpoint, tool result regression tests
+- 654 tests pass
+- Barge-in hotfix: VAD no longer paused during TTS, enables voice interruption
+- User wants configurable VAD thresholds like the apartment locator admin panel
+- Dashboard only shows Sprints 1-19, missing 20-23
 
-## agentA-chat-polish
+## agentA-voice-settings
 
 Objective
-- Fix paragraph spacing in restored conversations
-- Add notification sound toggle
-- Add code syntax highlighting
+- Add a Voice Settings section in the Settings panel with configurable VAD and barge-in parameters
 
 Tasks
-1. **Fix paragraph spacing in restored conversations** (B-034):
-   - In `saveConversation()` (~line 2821), for assistant messages: already using `bodyEl.dataset.markdown || bodyEl.textContent`
-   - The issue is that OLD conversations were saved with `textContent` which has no paragraph breaks
-   - Add a one-time migration in `restoreConversation()` and `switchToConversation()`:
-     - When loading messages from localStorage, if the content has no newlines but has patterns like `.A` or `?A` or `!A` (period/question/exclamation followed immediately by capital letter with no space), insert `\n\n` before the capital letter
-   - This heuristic fixes "understand.So" → "understand.\n\nSo" and "else?I'm" → "else?\n\nI'm"
-   - Apply the fix: `content = content.replace(/([.!?])([A-Z])/g, '$1\n\n$2')`
-   - Only apply when content has NO existing newlines (old format), so new markdown content is untouched
+1. **Add Voice Settings section to Settings panel** (F-061):
+   - In the Settings overlay in `bot/chat_ui.html`, after the "Silence Threshold" slider, add a new section header: "Voice Detection"
+   - Add these configurable sliders:
+     a. **Speech Sensitivity** — controls `positiveSpeechThreshold` on the Silero VAD instance
+        - Slider range: 0.5 (very sensitive) to 0.95 (strict, only clear speech)
+        - Default: 0.8 (current hardcoded value at ~line 3876)
+        - Label shows current value like "0.80"
+        - Description: "How confident VAD must be that audio is speech. Lower = catches quieter speech but may false-trigger."
+     b. **Barge-in Toggle** — checkbox to enable/disable interrupting the bot mid-speech
+        - Default: ON (current behavior)
+        - When OFF: the `onSpeechStart` handler should NOT call `stopAgentSpeaking()` even if `isBotSpeaking` is true
+        - Description: "Allow voice to interrupt the bot while it's speaking"
+     c. **Min Speech Duration** — controls `minSpeechFrames` on the VAD instance
+        - Slider range: 1 (instant) to 15 (needs ~0.5s of speech)
+        - Default: 5 (current hardcoded value)
+        - Description: "How long speech must sustain before it's confirmed. Higher = fewer false triggers."
 
-2. **Add notification sound on bot response** (F-046):
-   - Add a subtle notification sound when the bot finishes a response (not during streaming, only on completion)
-   - Use the Web Audio API to generate a short, pleasant chime — no external audio files needed
-   - Example: two short sine wave tones (440Hz then 554Hz, 80ms each) with quick fade
-   - Add a toggle in the Settings panel: "Notification sound" checkbox, default OFF
-   - Save preference in localStorage (`notifySound`)
-   - Play sound in the streaming `done` event handler, only if `notifySound` is enabled and tab is not focused (`!document.hasFocus()`)
-   - Do NOT play if TTS is about to speak (the voice IS the notification)
+2. **Wire sliders to VAD instance**:
+   - When sliders change, update the VAD instance's options if possible. Silero VAD may not support dynamic option changes — if so, destroy and recreate the VAD instance with new options.
+   - Store preferences in localStorage: `vadSensitivity`, `bargeInEnabled`, `vadMinSpeech`
+   - On page load, restore saved preferences and apply to VAD initialization
+   - Replace the hardcoded values at ~line 3876 (`positiveSpeechThreshold: 0.8`, `minSpeechFrames: 5`) with the stored/default values
 
-3. **Add code block syntax highlighting** (F-059):
-   - In `renderMarkdownToDOM()`, when rendering `<pre><code>` blocks:
-   - Add a lightweight syntax highlighter — not a full library, just basic token coloring:
-     - Keywords (function, const, let, var, if, else, return, import, class, def, for, while, try, catch) → accent color
-     - Strings (single/double quoted, backtick) → green
-     - Comments (// and #) → muted color
-     - Numbers → orange
-   - Apply via CSS classes on `<span>` elements inside `<code>`
-   - Add corresponding CSS rules using `var(--accent)` and other theme variables
-   - Keep it simple — ~30 lines of JS, no external dependencies
+3. **Add barge-in guard**:
+   - Read barge-in toggle state in `onSpeechStart` callback
+   - If barge-in is disabled: skip the `stopAgentSpeaking()` call, just start recording
 
-4. **Update backlog** — Mark B-034, F-046, F-059 as Complete (Sprint 23)
+4. **Update backlog** — Add F-061 and mark as Complete (Sprint 24)
 
 Acceptance Criteria
-- Old restored conversations show proper paragraph breaks (no "word.Next")
-- Settings has "Notification sound" toggle
-- Sound plays when bot responds (only when tab not focused, sound enabled, TTS not active)
-- Code blocks in bot messages have colored keywords/strings/comments
+- Settings panel shows Voice Detection section with 2 sliders and 1 checkbox
+- Changing Speech Sensitivity affects how easily VAD triggers
+- Toggling Barge-in OFF prevents voice from interrupting TTS
+- Settings persist across page reloads
 - `.venv/bin/python3 -m pytest tests/ -v` — all pass
 
-## agentB-server-polish
+## agentB-server-docs
 
 Objective
-- Add server-side tests and polish
+- Generate PROJECT_STATUS docs for Sprints 20-23 and improve tool error messages
 
 Tasks
-1. **Add test for tool result formatting** (B-033 regression guard):
-   - In `tests/`, add a test that verifies `ToolCall.id` is stored and that `_handle_tool_calls` formats messages correctly for both Anthropic (with id) and OpenAI (without id) cases
-   - Mock the LLM response to return a ToolCall with `id="test-123"` and verify the messages list has the correct Anthropic format
-   - Also test with `id=""` and verify the OpenAI format is used
+1. **Generate PROJECT_STATUS docs for Sprints 20-23** (F-062):
+   - Create these files in `docs/` following the `PROJECT_STATUS_TEMPLATE.md` format:
+     a. `docs/PROJECT_STATUS_2026-03-20-sprint20.md` — Sprint 20: Hands-free VAD, input filter, echo cancellation, fast path
+     b. `docs/PROJECT_STATUS_2026-03-21-sprint21.md` — Sprint 21: Favicon, auth bypass, copy button, Escape key, waveform, send button
+     c. `docs/PROJECT_STATUS_2026-03-21-sprint22.md` — Sprint 22: Conversation persistence, /api/projects, Active Project dropdown
+     d. `docs/PROJECT_STATUS_2026-03-21-sprint23.md` — Sprint 23: Paragraph spacing, notification sound, syntax highlighting, /api/stats
+   - Use `git log` to find actual dates and details for each sprint
+   - Each doc needs: sprint number, goal, merge table with `| # | Branch | Deliverable | Phase | Conflicts |` format
 
-2. **Test conversation new endpoint robustness**:
-   - Test POST `/api/conversations/new` multiple times returns unique IDs
-   - Test that conversation IDs follow expected format
+2. **Improve tool error messages** (F-063):
+   - In `bot/gateway.py` `_handle_tool_calls()`, when `execute_tool()` raises an exception or returns an error:
+     - Instead of letting the raw error propagate to the LLM response, catch it and format a user-friendly message
+     - Include the tool name and a brief explanation: "Tool 'get_sprint_status' failed: [reason]"
+   - In the follow-up LLM call, include a system note that the tool failed so the bot can explain it naturally
 
-3. **Update Docs panel sprint count** (via server):
-   - Add a `/api/stats` endpoint that returns `{"sprints": N, "tests": N, "features": N}` by counting:
-     - Sprints: count `docs/PROJECT_STATUS_*.md` files
-     - Tests: run `pytest --co -q 2>/dev/null | tail -1` and parse count (or hardcode for now)
-     - Features: count lines matching `| F-` in `docs/project-memory/backlog/README.md`
-   - This lets the frontend Docs panel auto-update stats in a future sprint
+3. **Write tests for tool error handling**:
+   - Test that when `execute_tool` raises, the gateway returns a response (not crashes)
+   - Test that the error message includes the tool name
 
-4. **Update backlog** — Mark items as Complete (Sprint 23)
+4. **Update backlog** — Add F-062, F-063 and mark as Complete (Sprint 24)
 
 Acceptance Criteria
-- Tool result format test passes for both Anthropic and OpenAI paths
-- `/api/stats` returns valid JSON with sprint/test/feature counts
-- All existing + new tests pass
+- `docs/PROJECT_STATUS_*.md` files exist for Sprints 20-23
+- Dashboard rebuild shows Sprints 20-23
+- Tool call errors show descriptive messages, not raw tracebacks
+- All tests pass

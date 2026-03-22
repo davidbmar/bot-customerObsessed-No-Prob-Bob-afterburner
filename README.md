@@ -542,14 +542,18 @@ Personalities support inheritance (customer-discovery extends base) and can be h
 
 The bot has 6 Afterburner integration tools:
 
-| Tool | What It Does |
-|------|-------------|
-| `save_discovery` | Saves conversation as a seed doc to a project |
-| `get_project_summary` | Shows what's been built and planned |
-| `add_to_backlog` | Adds features/bugs to project backlog |
-| `get_sprint_status` | Checks current sprint progress |
-| `generate_vision` | Creates a Vision doc from discovery |
-| `feedback_on_sprint` | "Here's what shipped — does it match?" |
+| Tool | What It Does | Access |
+|------|-------------|--------|
+| `list_projects` | Lists all registered Afterburner projects | Read |
+| `get_project_summary` | Shows sprint status, bugs, sessions + lifecycle docs | Read |
+| `get_sprint_status` | Checks current sprint progress via dashboard API | Read |
+| `feedback_on_sprint` | "Here's what shipped — does it match?" | Read |
+| `read_project_doc` | Reads README.md or any file from a project | Read |
+| `save_discovery` | Saves conversation as a seed doc to a project | Write |
+| `add_to_backlog` | Adds features/bugs to project backlog | Write |
+| `generate_vision` | Creates a Vision doc from discovery | Write |
+
+> **Security:** Telegram users get read-only tools only. Web chat users on localhost get full access. Write tools (save_discovery, add_to_backlog, generate_vision) are blocked for unauthenticated Telegram users to prevent data pollution.
 
 ---
 
